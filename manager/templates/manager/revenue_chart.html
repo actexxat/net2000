@@ -1,0 +1,49 @@
+{% extends 'manager/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "30-Day Revenue" %}{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="fw-bold">{% trans "30-Day Revenue" %}</h2>
+            <p class="text-muted mb-0">{% trans "Daily totals for the last 30 days." %}</p>
+        </div>
+        <a href="{% url 'session_history' %}" class="btn btn-outline-secondary">{% trans "Back" %}</a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <canvas id="revenueChart" height="120"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/chart.js' %}"></script>
+<script>
+    const labels = {{ dates_json| safe }};
+    const data = {{ totals_json| safe }};
+
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '{% trans "Daily Revenue (EGP)" %}',
+                data: data,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245,158,11,0.1)',
+                fill: true,
+                tension: 0.25,
+            }]
+        },
+        options: {
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+</script>
+{% endblock %}

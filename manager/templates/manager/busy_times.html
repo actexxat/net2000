@@ -1,0 +1,66 @@
+{% extends 'manager/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Busy Times Analysis" %}{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">{% trans "Busy & Slow Times" %}</h2>
+            <p class="text-muted mb-0">{% trans "Analysis of transaction volume by hour and day of week." %}</p>
+        </div>
+        <a href="{% url 'session_history' %}" class="btn btn-outline-secondary">{% trans "Back" %}</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white fw-bold">{% trans "Busiest Hours (00:00 - 23:00)" %}</div>
+                <div class="card-body">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white fw-bold">{% trans "Busiest Days of Week" %}</div>
+                <div class="card-body">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/chart.js' %}"></script>
+<script>
+    new Chart(document.getElementById('hourlyChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ hours_labels| safe }},
+        datasets: [{
+            label: '{% trans "Transactions" %}',
+            data: {{ hours_data| safe }},
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+
+    new Chart(document.getElementById('dailyChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ days_labels| safe }},
+        datasets: [{
+            label: '{% trans "Transactions" %}',
+            data: {{ days_data| safe }},
+        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+</script>
+{% endblock %}

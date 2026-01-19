@@ -1,0 +1,276 @@
+{% extends 'manager/base.html' %}
+{% load static i18n manager_extras %}
+
+{% block title %}{% trans "Daily Receipt" %} - {{ category_totals.date|date:"M d, Y" }}{% endblock %}
+
+{% block extra_head %}
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+    .receipt-container {
+        padding: 1.5rem;
+        background-color: #f8fafc;
+    }
+
+    /* Print styling preserved with improvements */
+    @media print {
+        @page { size: landscape; margin: 1cm; }
+        .navbar, .btn, header, footer, .no-print, .breadcrumb { display: none !important; }
+        .receipt-container { background-color: white !important; padding: 0 !important; }
+        .card { border: 1px solid #eee !important; box-shadow: none !important; margin-bottom: 1rem !important; }
+        .table { font-size: 10pt !important; }
+        .table th, .table td { border: 1px solid #ddd !important; padding: 4px 8px !important; }
+        body { color: black !important; }
+    }
+
+    /* Screen Styles */
+    .stat-pill {
+        background: white;
+        border-radius: 1rem;
+        padding: 1rem;
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    .stat-pill:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .receipt-card {
+        border-radius: 1.25rem;
+        border: none;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .table-receipt thead th {
+        background-color: #f8fafc;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        padding: 1rem 0.5rem;
+    }
+
+    .table-receipt tbody td {
+        padding: 0.75rem 0.5rem;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .total-row {
+        background-color: #f1f5f9 !important;
+        font-weight: 700;
+    }
+
+    .currency {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        font-weight: normal;
+        margin-left: 2px;
+    }
+
+    .category-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+    }
+
+    .bg-soft-primary { background-color: #eff6ff; color: #3b82f6; }
+    .bg-soft-success { background-color: #ecfdf5; color: #10b981; }
+    .bg-soft-warning { background-color: #fffbe7; color: #f59e0b; }
+    .bg-soft-danger { background-color: #fff1f2; color: #f43f5e; }
+    .bg-soft-info { background-color: #f0f9ff; color: #06b6d4; }
+</style>
+{% endblock %}
+
+{% block container_class %}container-fluid d-flex flex-column receipt-container{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column h-100">
+    <!-- Header -->
+    <div class="mb-4 d-flex justify-content-between align-items-end">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none">{% trans "Home" %}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'session_history' %}" class="text-decoration-none">{% trans "History" %}</a></li>
+                    <li class="breadcrumb-item active">{% trans "Receipt" %}</li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-center mb-1">
+                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 320px; height: 320px; position: absolute; top: -140px; right: -80px; opacity: 0.05; pointer-events: none; transform: rotate(-15deg);" class="no-print">
+                <h2 class="fw-bold text-dark mb-0 d-flex align-items-center">
+                    <img src="{% static 'img/logo.png' %}" alt="Logo" class="me-3" style="width: 48px; height: 48px;">
+                    <span>
+                        <i class="bi bi-receipt-cutoff me-2"></i>
+                        {% trans "Daily Receipt" %} 
+                        <span class="text-muted fw-normal ms-2">| {{ categorization_date|date:"F j, Y" }}</span>
+                    </span>
+                </h2>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                <i class="bi bi-printer me-2"></i> {% trans "Print" %}
+            </button>
+            <a href="{% url 'session_history' %}" class="btn btn-white border rounded-pill px-4 shadow-sm">
+                <i class="bi bi-arrow-left me-2"></i> {% trans "Back" %}
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Widgets -->
+    <div class="row g-3 mb-4 no-print">
+        <div class="col-md-3">
+            <div class="stat-pill d-flex align-items-center">
+                <div class="category-icon bg-soft-primary"><i class="bi bi-cup-hot"></i></div>
+                <div>
+                    <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">{% trans "Drinks" %}</div>
+                    <div class="h4 fw-bolder mb-0" style="font-size: 1.5rem;">{{ category_totals.drink|floatformat:2|translate_numbers }} <span class="currency">EGP</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-pill d-flex align-items-center">
+                <div class="category-icon bg-soft-success"><i class="bi bi-egg-fried"></i></div>
+                <div>
+                    <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">{% trans "Food" %}</div>
+                    <div class="h4 fw-bolder mb-0" style="font-size: 1.5rem;">{{ category_totals.food|floatformat:2|translate_numbers }} <span class="currency">EGP</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-pill d-flex align-items-center">
+                <div class="category-icon bg-soft-info"><i class="bi bi-printer"></i></div>
+                <div>
+                    <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">{% trans "Printing" %}</div>
+                    <div class="h4 fw-bolder mb-0" style="font-size: 1.5rem;">{{ category_totals.print_bw|add:category_totals.print_color|floatformat:2|translate_numbers }} <span class="currency">EGP</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-pill border-primary border-opacity-25 shadow-sm d-flex align-items-center">
+                <div class="category-icon bg-primary text-white"><i class="bi bi-cash-stack"></i></div>
+                <div>
+                    <div class="small text-primary text-uppercase fw-bold" style="font-size: 0.65rem;">{% trans "Total Revenue" %}</div>
+                    <div class="h3 fw-bolder mb-0 text-primary" style="font-size: 1.8rem;">{{ category_totals.final|floatformat:2|translate_numbers }} <span class="currency">EGP</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Breakdown Table -->
+    <div class="card receipt-card mb-4 overflow-hidden">
+        <div class="card-header bg-white py-3 border-bottom-0">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-list-columns me-2"></i>
+                {% trans "Details by Table" %}
+            </h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-receipt">
+                <thead>
+                    <tr>
+                        <th class="ps-4">{% trans "Table" %}</th>
+                        <th class="text-end">{% trans "Drinks" %}</th>
+                        <th class="text-end">{% trans "Food" %}</th>
+                        <th class="text-end">{% trans "Print B/W" %}</th>
+                        <th class="text-end">{% trans "Print Color" %}</th>
+                        <th class="text-end">{% trans "Fax" %}</th>
+                        <th class="text-end">{% trans "Copy B/W" %}</th>
+                        <th class="text-end">{% trans "Copy Color" %}</th>
+                        <th class="text-end">{% trans "Min chg" %}</th>
+                        <th class="text-end">{% trans "Other" %}</th>
+                        <th class="pe-4 text-end fw-bold">{% trans "Total" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in categorized_orders %}
+                    <tr>
+                        <td class="ps-4">
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3" style="font-size: 1.1rem; font-weight: 800;">
+                                {{ row.table|translate_numbers }}
+                            </span>
+                        </td>
+                        <td class="text-end">{% if row.drink > 0 %}{{ row.drink|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.food > 0 %}{{ row.food|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.print_bw > 0 %}{{ row.print_bw|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.print_color > 0 %}{{ row.print_color|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.fax > 0 %}{{ row.fax|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.copy_bw > 0 %}{{ row.copy_bw|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.copy_color > 0 %}{{ row.copy_color|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.min_charge > 0 %}{{ row.min_charge|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.other > 0 %}{{ row.other|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="pe-4 text-end fw-bolder text-dark" style="font-size: 1.25rem;">{{ row.total|floatformat:2|translate_numbers }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="11" class="text-center py-5 text-muted">{% trans "No paid orders recorded for this date." %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if categorized_orders %}
+                <tfoot class="total-row">
+                    <tr>
+                        <td class="ps-4 fw-bold">{% trans "TOTALS" %}</td>
+                        <td class="text-end fw-bold">{{ category_totals.drink|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.food|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.print_bw|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.print_color|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.fax|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.copy_bw|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.copy_color|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.min_charge|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.other|floatformat:1|translate_numbers }}</td>
+                        <td class="pe-4 text-end fw-bolder text-primary" style="font-size: 1.35rem;">{{ category_totals.final|floatformat:2|translate_numbers }}</td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+
+    <!-- Finalized Sessions Section -->
+    <div class="card receipt-card no-print">
+        <div class="card-header bg-white py-3 border-bottom-0">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-clock-history me-2"></i>
+                {% trans "Recorded Sessions (finalized bills)" %}
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+                {% for s in sessions %}
+                <div class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold text-dark">
+                            {% trans "Table" %} {{ s.table_number|translate_numbers }} 
+                            <span class="mx-2 text-muted fw-normal">|</span>
+                            <span class="text-muted small fw-normal">{{ s.people_count|translate_numbers }} {% trans "people" %}</span>
+                        </div>
+                        <div class="small text-muted mt-1">{{ s.items_summary|translate_text }}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-dark h6 mb-0">{{ s.total_amount|floatformat:2|translate_numbers }} <small class="fw-normal text-muted">EGP</small></div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-4 text-center text-muted">{% trans "No sessions recorded for this date." %}</div>
+                {% endfor %}
+            </div>
+            {% if sessions %}
+            <div class="p-4 bg-light text-end">
+                <span class="text-muted text-uppercase small fw-bold me-3">{% trans "Total Recorded" %}</span>
+                <span class="h4 fw-bold text-dark mb-0">{{ sessions_total|floatformat:2|translate_numbers }} <small class="fw-normal text-muted" style="font-size: 0.8rem;">EGP</small></span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

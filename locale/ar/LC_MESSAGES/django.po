@@ -1,0 +1,1239 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-14 20:09+0200\n"
+"PO-Revision-Date: 2026-01-09 17:06+0200\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Antigravity\n"
+
+#: .\manager\templates\manager\add_order.html:4
+#: .\manager\templates\manager\add_order.html:13
+msgid "Add Order"
+msgstr "إضافة طلب"
+
+#: .\manager\templates\manager\add_order.html:19
+msgid "Select Item"
+msgstr "اختر صنف"
+
+#: .\manager\templates\manager\add_order.html:27
+#: .\manager\templates\manager\partials\modals\order_modal.html:129
+#: .\manager\templates\menu\public_menu.html:461
+msgid "Confirm Order"
+msgstr "تأكيد الطلب"
+
+#: .\manager\templates\manager\add_order.html:28
+#: .\manager\templates\manager\partials\checkout_modal_content.html:56
+#: .\manager\templates\manager\partials\modals\copy_modal.html:45
+#: .\manager\templates\manager\partials\modals\custom_modal.html:22
+#: .\manager\templates\manager\partials\modals\fax_modal.html:23
+#: .\manager\templates\manager\partials\modals\print_modal.html:40
+msgid "Cancel"
+msgstr "إلغاء"
+
+#: .\manager\templates\manager\base.html:235
+#, fuzzy
+#| msgid "Transaction History"
+msgid "Notification History"
+msgstr "سجل المعاملات"
+
+#: .\manager\templates\manager\base.html:236
+msgid "Recent QR Orders"
+msgstr ""
+
+#: .\manager\templates\manager\base.html:259
+#: .\manager\templates\menu\public_menu.html:7
+msgid "Menu"
+msgstr "المنيو"
+
+#: .\manager\templates\manager\base.html:265
+#: .\manager\templates\manager\dashboard.html:4
+msgid "Dashboard"
+msgstr "لوحة التحكم"
+
+#: .\manager\templates\manager\base.html:269
+msgid "QR Menu"
+msgstr "منيو QR"
+
+#: .\manager\templates\manager\base.html:276
+msgid "Monitor"
+msgstr "المراقبة"
+
+#: .\manager\templates\manager\base.html:279
+msgid "Metrics"
+msgstr "الإحصائيات"
+
+#: .\manager\templates\manager\base.html:282
+#: .\manager\templates\manager\history.html:150
+#: .\manager\templates\manager\receipt.html:101
+msgid "History"
+msgstr "السجل"
+
+#: .\manager\templates\manager\base.html:291
+#, fuzzy
+#| msgid "Admin"
+msgid "Admin Panel"
+msgstr "الإدارة"
+
+#: .\manager\templates\manager\base.html:296
+msgid "Logout"
+msgstr "تسجيل خروج"
+
+#: .\manager\templates\manager\base.html:315
+msgid "Internet 2000 Solutions. All rights reserved"
+msgstr "حلول إنترنت 2000. جميع الحقوق محفوظة"
+
+#: .\manager\templates\manager\base.html:316
+#, fuzzy
+#| msgid "built with"
+msgid "built "
+msgstr "بني بواسطة"
+
+#: .\manager\templates\manager\base.html:316
+msgid "By"
+msgstr "بواسطة"
+
+#: .\manager\templates\manager\base.html:472
+msgid "Unknown"
+msgstr ""
+
+#: .\manager\templates\manager\base.html:532
+msgid "NEW ORDER"
+msgstr "طلب جديد"
+
+#: .\manager\templates\manager\base.html:534
+#: .\manager\templates\manager\history.html:188
+#: .\manager\templates\manager\history.html:221
+#: .\manager\templates\manager\monitor.html:40
+#: .\manager\templates\manager\partials\checkout_modal_content.html:6
+#: .\manager\templates\manager\partials\modals\copy_modal.html:6
+#: .\manager\templates\manager\partials\modals\custom_modal.html:6
+#: .\manager\templates\manager\partials\modals\fax_modal.html:6
+#: .\manager\templates\manager\partials\modals\print_modal.html:6
+#: .\manager\templates\manager\partials\table_card.html:7
+#: .\manager\templates\manager\receipt.html:179
+#: .\manager\templates\manager\receipt.html:249
+#: .\manager\templates\menu\public_menu.html:7
+#: .\manager\templates\menu\public_menu.html:337
+#: .\manager\templates\menu\qr_dashboard.html:63
+msgid "Table"
+msgstr "طاولة"
+
+#: .\manager\templates\manager\busy_times.html:4
+msgid "Busy Times Analysis"
+msgstr "تحليل أوقات الذروة"
+
+#: .\manager\templates\manager\busy_times.html:10
+msgid "Busy & Slow Times"
+msgstr "أوقات الذروة والركود"
+
+#: .\manager\templates\manager\busy_times.html:11
+msgid "Analysis of transaction volume by hour and day of week."
+msgstr "تحليل حجم المعاملات حسب الساعة ويوم الأسبوع."
+
+#: .\manager\templates\manager\busy_times.html:13
+#: .\manager\templates\manager\history.html:176
+#: .\manager\templates\manager\receipt.html:122
+#: .\manager\templates\manager\revenue_chart.html:13
+#: .\manager\templates\menu\qr_dashboard.html:48
+msgid "Back"
+msgstr "عودة"
+
+#: .\manager\templates\manager\busy_times.html:19
+msgid "Busiest Hours (00:00 - 23:00)"
+msgstr "الساعات الأكثر ازدحاماً (00:00 - 23:00)"
+
+#: .\manager\templates\manager\busy_times.html:27
+msgid "Busiest Days of Week"
+msgstr "الأيام الأكثر ازدحاماً في الأسبوع"
+
+#: .\manager\templates\manager\busy_times.html:45
+#: .\manager\templates\manager\busy_times.html:58
+msgid "Transactions"
+msgstr "المعاملات"
+
+#: .\manager\templates\manager\history.html:3
+#: .\manager\templates\manager\history.html:156
+msgid "Transaction History"
+msgstr "سجل المعاملات"
+
+#: .\manager\templates\manager\history.html:149
+#: .\manager\templates\manager\receipt.html:100
+msgid "Home"
+msgstr ""
+
+#: .\manager\templates\manager\history.html:158
+msgid "Review past check-outs and items sold."
+msgstr "مراجعة عمليات الدفع السابقة والأصناف المباعة."
+
+#: .\manager\templates\manager\history.html:173
+#, fuzzy
+#| msgid "Metrics"
+msgid "View Metrics"
+msgstr "الإحصائيات"
+
+#: .\manager\templates\manager\history.html:187
+msgid "Details"
+msgstr ""
+
+#: .\manager\templates\manager\history.html:189
+#: .\manager\templates\manager\monitor.html:41
+#: .\manager\templates\manager\partials\table_card.html:24
+msgid "People"
+msgstr "الأشخاص"
+
+#: .\manager\templates\manager\history.html:190
+#, fuzzy
+#| msgid "Order Summary"
+msgid "Items & Summary"
+msgstr "ملخص الطلب"
+
+#: .\manager\templates\manager\history.html:191
+#: .\manager\templates\manager\metrics.html:305
+msgid "Revenue"
+msgstr "الإيرادات"
+
+#: .\manager\templates\manager\history.html:203
+#: .\manager\templates\manager\receipt.html:4
+#: .\manager\templates\manager\receipt.html:111
+#, fuzzy
+#| msgid "Checkout Receipt"
+msgid "Daily Receipt"
+msgstr "إيصال الدفع"
+
+#: .\manager\templates\manager\history.html:236
+#: .\manager\templates\manager\metrics.html:101
+#: .\manager\templates\manager\metrics.html:176
+#: .\manager\templates\manager\metrics.html:180
+#: .\manager\templates\manager\metrics.html:228
+#: .\manager\templates\manager\metrics.html:326
+#: .\manager\templates\manager\monitor.html:27
+#: .\manager\templates\manager\monitor.html:45
+#: .\manager\templates\manager\monitor.html:49
+#: .\manager\templates\manager\monitor.html:51
+#: .\manager\templates\manager\monitor.html:61
+#: .\manager\templates\manager\partials\checkout_modal_content.html:32
+#: .\manager\templates\manager\partials\checkout_modal_content.html:44
+#: .\manager\templates\menu\public_menu.html:374
+msgid "EGP"
+msgstr "جنيه"
+
+#: .\manager\templates\manager\history.html:245
+#, fuzzy
+#| msgid "No transactions recorded yet."
+msgid "No transactions on this date."
+msgstr "لم يتم تسجيل أي معاملات بعد."
+
+#: .\manager\templates\manager\history.html:246
+msgid "Try selecting a different day."
+msgstr ""
+
+#: .\manager\templates\manager\metrics.html:4
+msgid "Business Metrics"
+msgstr "مؤشرات الأعمال"
+
+#: .\manager\templates\manager\metrics.html:80
+msgid "Business Insights"
+msgstr "رؤى الأعمال"
+
+#: .\manager\templates\manager\metrics.html:82
+msgid "Analyze performance, efficiency, and customer behavior."
+msgstr "تحليل الأداء والكفاءة وسلوك العملاء."
+
+#: .\manager\templates\manager\metrics.html:86
+msgid "Export Report"
+msgstr "تصدير التقرير"
+
+#: .\manager\templates\manager\metrics.html:98
+msgid "Revenue Today"
+msgstr "إيرادات اليوم"
+
+#: .\manager\templates\manager\metrics.html:109
+msgid "vs last week"
+msgstr ""
+
+#: .\manager\templates\manager\metrics.html:120
+msgid "Total Transactions"
+msgstr "إجمالي المعاملات"
+
+#: .\manager\templates\manager\metrics.html:122
+msgid "Lifetime completed check-outs"
+msgstr "إجمالي عمليات الدفع المكتملة"
+
+#: .\manager\templates\manager\metrics.html:132
+msgid "Occupancy Rate"
+msgstr "معدل الإشغال"
+
+#: .\manager\templates\manager\metrics.html:137
+msgid "Based on last 7 days"
+msgstr "بناءً على آخر 7 أيام"
+
+#: .\manager\templates\manager\metrics.html:147
+msgid "Next 3h Demand"
+msgstr "الطلب في 3 ساعات القادمة"
+
+#: .\manager\templates\manager\metrics.html:150
+msgid "10"
+msgstr "١٠"
+
+#: .\manager\templates\manager\metrics.html:153
+msgid "Rush Hours"
+msgstr "ساعات الذروة"
+
+#: .\manager\templates\manager\metrics.html:167
+msgid "Efficiency Metrics"
+msgstr "مؤشرات الكفاءة"
+
+#: .\manager\templates\manager\metrics.html:171
+msgid "Avg Session Duration"
+msgstr "متوسط مدة الجلسة"
+
+#: .\manager\templates\manager\metrics.html:175
+msgid "Avg Bill Size"
+msgstr "متوسط حجم الفاتورة"
+
+#: .\manager\templates\manager\metrics.html:179
+msgid "Avg Spend Per Person"
+msgstr "متوسط إنفاق الشخص"
+
+#: .\manager\templates\manager\metrics.html:184
+msgid "Opening / Closing"
+msgstr "الفتح / الإغلاق"
+
+#: .\manager\templates\manager\metrics.html:197
+msgid "Top Best Sellers"
+msgstr "الأكثر مبيعاً"
+
+#: .\manager\templates\manager\metrics.html:207
+msgid "sold"
+msgstr "مباع"
+
+#: .\manager\templates\manager\metrics.html:211
+msgid "No item data yet"
+msgstr "لا توجد بيانات للأصناف بعد"
+
+#: .\manager\templates\manager\metrics.html:221
+msgid "Revenue by Category"
+msgstr "الإيرادات حسب الفئة"
+
+#: .\manager\templates\manager\metrics.html:227
+#: .\manager\templates\manager\partials\table_card.html:115
+#: .\manager\templates\manager\receipt.html:187
+msgid "Other"
+msgstr "أخرى"
+
+#: .\manager\templates\manager\metrics.html:235
+msgid "No category data yet"
+msgstr "لا توجد بيانات للفئات بعد"
+
+#: .\manager\templates\manager\metrics.html:248
+msgid "Today's Printing Audit"
+msgstr "تدقيق الطباعة اليوم"
+
+#: .\manager\templates\manager\metrics.html:254
+msgid "B/W Pages"
+msgstr "صفحات أبيض/أسود"
+
+#: .\manager\templates\manager\metrics.html:261
+msgid "Color Pages"
+msgstr "صفحات ملونة"
+
+#: .\manager\templates\manager\metrics.html:266
+msgid "Top Revenue Tables"
+msgstr "أعلى الطاولات تحقيقاً للإيرادات"
+
+#: .\manager\templates\manager\metrics.html:282
+msgid "Hourly Revenue Heatmap"
+msgstr "خريطة الإيرادات بالساعة"
+
+#: .\manager\templates\manager\metrics.html:283
+msgid "Lifetime Averages"
+msgstr "المعدلات الإجمالية"
+
+#: .\manager\templates\manager\monitor.html:3
+#, fuzzy
+#| msgid "Monitor"
+msgid "Monitoring"
+msgstr "المراقبة"
+
+#: .\manager\templates\manager\monitor.html:8
+#, fuzzy
+#| msgid "Monitor"
+msgid "Live Monitoring"
+msgstr "المراقبة"
+
+#: .\manager\templates\manager\monitor.html:14
+#, fuzzy
+#| msgid "Table"
+msgid "Busy Tables"
+msgstr "طاولة"
+
+#: .\manager\templates\manager\monitor.html:20
+#, fuzzy
+#| msgid "People"
+msgid "Total People"
+msgstr "الأشخاص"
+
+#: .\manager\templates\manager\monitor.html:26
+msgid "Total Outstanding"
+msgstr "إجمالي المستحق"
+
+#: .\manager\templates\manager\monitor.html:44
+msgid "Due"
+msgstr "المستحق"
+
+#: .\manager\templates\manager\monitor.html:49
+#, fuzzy
+#| msgid "Add Item to Table"
+msgid "Items total"
+msgstr "إضافة صنف"
+
+#: .\manager\templates\manager\monitor.html:69
+msgid "No unpaid orders"
+msgstr "لا توجد طلبات غير مدفوعة"
+
+#: .\manager\templates\manager\monitor.html:76
+#, fuzzy
+#| msgid "Checkout Receipt"
+msgid "Checkout"
+msgstr "إيصال الدفع"
+
+#: .\manager\templates\manager\monitor.html:77
+msgid "Open"
+msgstr "فتح"
+
+#: .\manager\templates\manager\monitor.html:85
+msgid "No occupied tables currently."
+msgstr "لا توجد طاولات مشغولة حالياً."
+
+#: .\manager\templates\manager\partials\checkout_modal_content.html:6
+msgid "Checkout Receipt"
+msgstr "إيصال الدفع"
+
+#: .\manager\templates\manager\partials\checkout_modal_content.html:11
+msgid "Order Summary"
+msgstr "ملخص الطلب"
+
+#: .\manager\templates\manager\partials\checkout_modal_content.html:36
+#, fuzzy
+#| msgid "Items Ordered"
+msgid "No items ordered"
+msgstr "الأصناف المطلوبة"
+
+#: .\manager\templates\manager\partials\checkout_modal_content.html:41
+msgid "Final Amount to Pay"
+msgstr ""
+
+#: .\manager\templates\manager\partials\checkout_modal_content.html:50
+msgid "Includes"
+msgstr ""
+
+#: .\manager\templates\manager\partials\checkout_modal_content.html:50
+#, fuzzy
+#| msgid "Min Charge Gap"
+msgid "min charge"
+msgstr "فرق الحد الأدنى"
+
+#: .\manager\templates\manager\partials\checkout_modal_content.html:60
+msgid "CONFIRM & CLOSE TABLE"
+msgstr ""
+
+#: .\manager\templates\manager\partials\modals\copy_modal.html:6
+#: .\manager\templates\manager\partials\table_card.html:127
+#: .\manager\templates\manager\receipt.html:185
+msgid "Copy"
+msgstr "تصوير"
+
+#: .\manager\templates\manager\partials\modals\copy_modal.html:13
+#: .\manager\templates\manager\partials\modals\fax_modal.html:13
+#, fuzzy
+#| msgid "Number of pages"
+msgid "Number of papers"
+msgstr "عدد الصفحات"
+
+#: .\manager\templates\manager\partials\modals\copy_modal.html:18
+#, fuzzy
+#| msgid "Copy"
+msgid "Copy Type"
+msgstr "تصوير"
+
+#: .\manager\templates\manager\partials\modals\copy_modal.html:22
+#: .\manager\templates\manager\partials\modals\print_modal.html:22
+#: .\manager\templates\manager\receipt.html:182 .\manager\views.py:771
+msgid "B/W"
+msgstr "أبيض وأسود"
+
+#: .\manager\templates\manager\partials\modals\copy_modal.html:28
+#: .\manager\templates\manager\partials\modals\print_modal.html:28
+#: .\manager\templates\manager\receipt.html:183 .\manager\views.py:778
+msgid "Color"
+msgstr "ألوان"
+
+#: .\manager\templates\manager\partials\modals\copy_modal.html:34
+msgid "B/W Pricing: 1.00 EGP/page (≤100 pages), 0.75 EGP/page (>100 pages)"
+msgstr ""
+
+#: .\manager\templates\manager\partials\modals\copy_modal.html:39
+#: .\manager\templates\manager\partials\modals\fax_modal.html:17
+#, fuzzy
+#| msgid "Total cost (EGP)"
+msgid "Total Cost (EGP)"
+msgstr "التكلفة الإجمالية (جنيه)"
+
+#: .\manager\templates\manager\partials\modals\copy_modal.html:41
+#, fuzzy
+#| msgid "Enter the total cost for color printing."
+msgid "Enter the total cost for color copies."
+msgstr "أدخل التكلفة الإجمالية للطباعة الملونة."
+
+#: .\manager\templates\manager\partials\modals\copy_modal.html:47
+msgid "Add Copy to Bill"
+msgstr "إضافة تصوير للفاتورة"
+
+#: .\manager\templates\manager\partials\modals\custom_modal.html:6
+msgid "Custom Item"
+msgstr "صنف مخصص"
+
+#: .\manager\templates\manager\partials\modals\custom_modal.html:13
+msgid "Item Name / Description"
+msgstr "اسم الصنف / الوصف"
+
+#: .\manager\templates\manager\partials\modals\custom_modal.html:17
+msgid "Price (EGP)"
+msgstr "السعر (جنيه)"
+
+#: .\manager\templates\manager\partials\modals\custom_modal.html:24
+msgid "Add to Bill"
+msgstr "إضافة للفاتورة"
+
+#: .\manager\templates\manager\partials\modals\fax_modal.html:6
+#: .\manager\templates\manager\receipt.html:184
+msgid "Fax"
+msgstr "فاكس"
+
+#: .\manager\templates\manager\partials\modals\fax_modal.html:20
+msgid "Cost: EGP 5.00 per paper (suggested)"
+msgstr "التكلفة: 5.00 جنيه للورقة (مقترح)"
+
+#: .\manager\templates\manager\partials\modals\fax_modal.html:25
+msgid "Add Fax to Bill"
+msgstr "إضافة فاكس للفاتورة"
+
+#: .\manager\templates\manager\partials\modals\order_modal.html:13
+#: .\manager\templates\manager\partials\table_card.html:109
+msgid "Add Item"
+msgstr "إضافة صنف"
+
+#: .\manager\templates\manager\partials\modals\order_modal.html:28
+msgid "Search for items..."
+msgstr ""
+
+#: .\manager\templates\manager\partials\modals\order_modal.html:37
+msgid "All"
+msgstr "الكل"
+
+#: .\manager\templates\manager\partials\modals\order_modal.html:63
+msgid "Single"
+msgstr ""
+
+#: .\manager\templates\manager\partials\modals\order_modal.html:68
+msgid "Double"
+msgstr ""
+
+#: .\manager\templates\manager\partials\modals\order_modal.html:104
+#, fuzzy
+#| msgid "View Cart"
+msgid "Cart"
+msgstr "عرض الطلبات"
+
+#: .\manager\templates\manager\partials\modals\order_modal.html:115
+msgid "Cart is empty"
+msgstr "العربة فارغة"
+
+#: .\manager\templates\manager\partials\modals\order_modal.html:116
+msgid "Add items to complete order"
+msgstr "أضف أصناف لإكمال الطلب"
+
+#: .\manager\templates\manager\partials\modals\order_modal.html:122
+#: .\manager\templates\manager\receipt.html:188
+#: .\manager\templates\menu\public_menu.html:456
+msgid "Total"
+msgstr "الإجمالي"
+
+#: .\manager\templates\manager\partials\modals\print_modal.html:6
+#: .\manager\templates\manager\partials\table_card.html:122
+#: .\manager\templates\manager\receipt.html:119
+msgid "Print"
+msgstr "طباعة"
+
+#: .\manager\templates\manager\partials\modals\print_modal.html:13
+msgid "Number of pages"
+msgstr "عدد الصفحات"
+
+#: .\manager\templates\manager\partials\modals\print_modal.html:18
+msgid "Print Type"
+msgstr "نوع الطباعة"
+
+#: .\manager\templates\manager\partials\modals\print_modal.html:34
+msgid "Total cost (EGP)"
+msgstr "التكلفة الإجمالية (جنيه)"
+
+#: .\manager\templates\manager\partials\modals\print_modal.html:36
+msgid "Enter the total cost for color printing."
+msgstr "أدخل التكلفة الإجمالية للطباعة الملونة."
+
+#: .\manager\templates\manager\partials\modals\print_modal.html:42
+msgid "Add Print to Bill"
+msgstr "إضافة طباعة للفاتورة"
+
+#: .\manager\templates\manager\partials\notification_history.html:17
+#, fuzzy
+#| msgid "Mango"
+msgid "ago"
+msgstr "مانجو"
+
+#: .\manager\templates\manager\partials\notification_history.html:20
+msgid "Active"
+msgstr ""
+
+#: .\manager\templates\manager\partials\notification_history.html:31
+#, fuzzy
+#| msgid "No unpaid orders"
+msgid "No recent QR orders"
+msgstr "لا توجد طلبات غير مدفوعة"
+
+#: .\manager\templates\manager\partials\table_card.html:44
+msgid "Items Ordered"
+msgstr "الأصناف المطلوبة"
+
+#: .\manager\templates\manager\partials\table_card.html:51
+msgid "SERVE ALL"
+msgstr "تقديم الكل"
+
+#: .\manager\templates\manager\partials\table_card.html:70
+msgid "Ordered via QR"
+msgstr ""
+
+#: .\manager\templates\manager\partials\table_card.html:94
+msgid "Remove this item?"
+msgstr "هل تريد إزالة هذا الصنف؟"
+
+#: .\manager\templates\manager\partials\table_card.html:133
+msgid "CHECK OUT"
+msgstr "الدفع"
+
+#: .\manager\templates\manager\partials\table_card.html:144
+msgid "OPEN TABLE"
+msgstr "فتح طاولة"
+
+#: .\manager\templates\manager\receipt.html:102
+#, fuzzy
+#| msgid "Checkout Receipt"
+msgid "Receipt"
+msgstr "إيصال الدفع"
+
+#: .\manager\templates\manager\receipt.html:133
+#: .\manager\templates\manager\receipt.html:180
+msgid "Drinks"
+msgstr "مشروبات"
+
+#: .\manager\templates\manager\receipt.html:142
+#: .\manager\templates\manager\receipt.html:181
+msgid "Food"
+msgstr "طعام"
+
+#: .\manager\templates\manager\receipt.html:151
+#, fuzzy
+#| msgid "Print"
+msgid "Printing"
+msgstr "طباعة"
+
+#: .\manager\templates\manager\receipt.html:160
+msgid "Total Revenue"
+msgstr "إجمالي الإيرادات"
+
+#: .\manager\templates\manager\receipt.html:172
+msgid "Details by Table"
+msgstr ""
+
+#: .\manager\templates\manager\receipt.html:186
+#, fuzzy
+#| msgid "Min Charge Gap"
+msgid "Min chg"
+msgstr "فرق الحد الأدنى"
+
+#: .\manager\templates\manager\receipt.html:211
+msgid "No paid orders recorded for this date."
+msgstr "لم يتم تسجيل أي طلبات مدفوعة لهذا التاريخ."
+
+#: .\manager\templates\manager\receipt.html:218
+msgid "TOTALS"
+msgstr ""
+
+#: .\manager\templates\manager\receipt.html:240
+msgid "Recorded Sessions (finalized bills)"
+msgstr "الجلسات المسجلة (الفواتير النهائية)"
+
+#: .\manager\templates\manager\receipt.html:251
+#, fuzzy
+#| msgid "People"
+msgid "people"
+msgstr "الأشخاص"
+
+#: .\manager\templates\manager\receipt.html:260
+msgid "No sessions recorded for this date."
+msgstr "لم يتم تسجيل أي جلسات لهذا التاريخ."
+
+#: .\manager\templates\manager\receipt.html:265
+msgid "Total Recorded"
+msgstr "إجمالي المسجل"
+
+#: .\manager\templates\manager\revenue_chart.html:4
+#: .\manager\templates\manager\revenue_chart.html:10
+msgid "30-Day Revenue"
+msgstr "إيرادات 30 يوم"
+
+#: .\manager\templates\manager\revenue_chart.html:11
+msgid "Daily totals for the last 30 days."
+msgstr "الإجماليات اليومية لآخر 30 يوم."
+
+#: .\manager\templates\manager\revenue_chart.html:36
+msgid "Daily Revenue (EGP)"
+msgstr "الإيرادات اليومية (جنيه)"
+
+#: .\manager\templates\manager\unauthorized.html:4
+msgid "Access Denied"
+msgstr ""
+
+#: .\manager\templates\manager\unauthorized.html:12
+msgid "Not Authorized"
+msgstr ""
+
+#: .\manager\templates\manager\unauthorized.html:14
+msgid "Sorry, you don't have the required permissions to access this page."
+msgstr ""
+
+#: .\manager\templates\manager\unauthorized.html:16
+msgid "This section is restricted to administrative staff only."
+msgstr ""
+
+#: .\manager\templates\manager\unauthorized.html:20
+#, fuzzy
+#| msgid "Dashboard"
+msgid "Return to Dashboard"
+msgstr "لوحة التحكم"
+
+#: .\manager\templates\manager\unauthorized.html:23
+msgid "Sign in as different user"
+msgstr ""
+
+#: .\manager\templates\menu\public_menu.html:336
+msgid "Welcome"
+msgstr "أهلاً بك"
+
+#: .\manager\templates\menu\public_menu.html:382
+#, fuzzy
+#| msgid "Add to Cart: Single"
+msgid "Add: Single"
+msgstr "إضافة للطلب: سينجل"
+
+#: .\manager\templates\menu\public_menu.html:384
+msgid "Add to Cart"
+msgstr "إضافة للطلب"
+
+#: .\manager\templates\menu\public_menu.html:390
+#: .\manager\templates\menu\public_menu.html:411
+msgid "Any notes or instructions?"
+msgstr "أي ملاحظات أو تعليمات؟"
+
+#: .\manager\templates\menu\public_menu.html:397
+#: .\manager\templates\menu\public_menu.html:418
+msgid "CONFIRM & ADD"
+msgstr ""
+
+#: .\manager\templates\menu\public_menu.html:406
+#, fuzzy
+#| msgid "Add Item to Table"
+msgid "Add: Double"
+msgstr "إضافة صنف"
+
+#: .\manager\templates\menu\public_menu.html:437
+#, fuzzy
+#| msgid "Add Item"
+msgid "Items"
+msgstr "إضافة صنف"
+
+#: .\manager\templates\menu\public_menu.html:438
+msgid "View Cart"
+msgstr "عرض الطلبات"
+
+#: .\manager\templates\menu\public_menu.html:447
+msgid "Your Order"
+msgstr "طلبك"
+
+#: .\manager\templates\menu\public_menu.html:465
+msgid "Sending to management..."
+msgstr "جاري الإرسال للادارة..."
+
+#: .\manager\templates\menu\public_menu.html:624
+msgid "Order sent! Management is preparing it."
+msgstr "تم إرسال الطلب! الادارة تقوم بتحضيره الآن."
+
+#: .\manager\templates\menu\qr_dashboard.html:4
+msgid "QR Codes"
+msgstr ""
+
+#: .\manager\templates\menu\qr_dashboard.html:43
+msgid "QR Codes Management"
+msgstr ""
+
+#: .\manager\templates\menu\qr_dashboard.html:46
+#, fuzzy
+#| msgid "Print"
+msgid "Print All"
+msgstr "طباعة"
+
+#: .\manager\templates\menu\qr_dashboard.html:55
+msgid "System detected your local IP as"
+msgstr ""
+
+#: .\manager\templates\menu\qr_dashboard.html:56
+msgid ""
+"QR codes are being generated using this address so customers on your Wi-Fi "
+"can access the menu."
+msgstr ""
+
+#: .\manager\templates\menu\qr_dashboard.html:65
+msgid "Scan to Order"
+msgstr ""
+
+#: .\manager\templates\registration\login.html:69
+msgid "Management Portal"
+msgstr ""
+
+#: .\manager\templates\registration\login.html:74
+msgid "Invalid username or password. Please try again."
+msgstr ""
+
+#: .\manager\templates\registration\login.html:81
+msgid "Username"
+msgstr ""
+
+#: .\manager\templates\registration\login.html:85
+msgid "Password"
+msgstr ""
+
+#: .\manager\templates\registration\login.html:89
+msgid "LOGIN TO DASHBOARD"
+msgstr ""
+
+#: .\manager\templates\registration\login.html:95
+msgid "Back to Application"
+msgstr ""
+
+#: .\manager\views.py:193
+#, python-format
+msgid "Table %(number)s checked in."
+msgstr "تم فتح الطاولة %(number)s."
+
+#: .\manager\views.py:215
+#, python-format
+msgid "Updated people for Table %(number)s."
+msgstr "تم تحديث عدد الأشخاص للطاولة %(number)s."
+
+#: .\manager\views.py:247
+#, python-format
+msgid "Added %(item)s to Table %(number)s."
+msgstr "تمت إضافة %(item)s للطاولة %(number)s."
+
+#: .\manager\views.py:249
+#, fuzzy, python-format
+#| msgid "Added %(item)s to Table %(number)s."
+msgid "Added %(count)s items to Table %(number)s."
+msgstr "تمت إضافة %(item)s للطاولة %(number)s."
+
+#: .\manager\views.py:251
+#, fuzzy
+#| msgid "Failed to add item to bill."
+msgid "Failed to add items to bill."
+msgstr "فشل في إضافة الصنف للفاتورة."
+
+#: .\manager\views.py:319
+#, python-format
+msgid "Checked out Table %(number)s. Recorded EGP %(bill).2f"
+msgstr "تم إغلاق الطاولة %(number)s. تم تسجيل %(bill).2f جنيه"
+
+#: .\manager\views.py:377
+msgid "h"
+msgstr "س"
+
+#: .\manager\views.py:377 .\manager\views.py:379
+msgid "m"
+msgstr "د"
+
+#: .\manager\views.py:437
+msgid "AM"
+msgstr "ص"
+
+#: .\manager\views.py:437
+msgid "PM"
+msgstr "م"
+
+#: .\manager\views.py:437
+msgid "No more for today"
+msgstr "لا يوجد المزيد اليوم"
+
+#: .\manager\views.py:517
+#, fuzzy, python-format
+#| msgid "Updated people for Table %(number)s."
+msgid "Created Table %(number)s."
+msgstr "تم تحديث عدد الأشخاص للطاولة %(number)s."
+
+#: .\manager\views.py:519
+#, fuzzy
+#| msgid "Failed to add item to bill."
+msgid "Failed to create table."
+msgstr "فشل في إضافة الصنف للفاتورة."
+
+#: .\manager\views.py:541
+#, python-format
+msgid "Printing B/W (%(pages)s pages)"
+msgstr "طباعة أبيض/أسود (%(pages)s صفحات)"
+
+#: .\manager\views.py:548
+#, python-format
+msgid "Printing Color (%(pages)s pages)"
+msgstr "طباعة ألوان (%(pages)s صفحات)"
+
+#: .\manager\views.py:554
+msgid "Error: 'Printing Service' item not found. Please contact Admin."
+msgstr ""
+
+#: .\manager\views.py:564
+#, fuzzy, python-format
+#| msgid "Added %(item)s to Table %(number)s."
+msgid "Added %(name)s to Table %(number)s."
+msgstr "تمت إضافة %(item)s للطاولة %(number)s."
+
+#: .\manager\views.py:566
+#, fuzzy
+#| msgid "Failed to add item to bill."
+msgid "Failed to add print to bill."
+msgstr "فشل في إضافة الصنف للفاتورة."
+
+#: .\manager\views.py:726
+msgid "Error: 'Fax Service' item not found. Please contact Admin."
+msgstr ""
+
+#: .\manager\views.py:729
+#, python-format
+msgid "Fax Service (%(pages)s pages)"
+msgstr "خدمة فاكس (%(pages)s صفحات)"
+
+#: .\manager\views.py:738
+#, fuzzy, python-format
+#| msgid "Added %(item)s to Table %(number)s."
+msgid "Added Fax (%(pages)s pages) to Table %(number)s. Cost: %(cost)s"
+msgstr "تمت إضافة %(item)s للطاولة %(number)s."
+
+#: .\manager\views.py:780
+#, python-format
+msgid "Copy (%(type)s) (%(pages)s pages)"
+msgstr "تصوير (%(type)s) (%(pages)s صفحات)"
+
+#: .\manager\views.py:785
+msgid "Error: 'Copy Service' item not found. Please contact Admin."
+msgstr ""
+
+#: .\manager\views.py:796
+#, fuzzy, python-format
+#| msgid "Added %(item)s to Table %(number)s."
+msgid "Added %(name)s to Table %(number)s. Cost: %(cost)s"
+msgstr "تمت إضافة %(item)s للطاولة %(number)s."
+
+#: .\manager\views.py:802
+#, fuzzy
+#| msgid "Failed to add item to bill."
+msgid "Failed to add copy to bill."
+msgstr "فشل في إضافة الصنف للفاتورة."
+
+#: .\manager\views.py:890
+msgid "Custom Service"
+msgstr "خدمة مخصصة"
+
+#: .\manager\views.py:908
+#, fuzzy, python-format
+#| msgid "Added %(item)s to Table %(number)s."
+msgid "Added '%(name)s' to Table %(number)s. Price: %(price)s"
+msgstr "تمت إضافة %(item)s للطاولة %(number)s."
+
+#: .\manager\views.py:914
+#, fuzzy
+#| msgid "Failed to add item to bill."
+msgid "Failed to add custom item to bill."
+msgstr "فشل في إضافة الصنف للفاتورة."
+
+#: .\manager\views_menu.py:86
+#, python-format
+msgid "Ordered: %(item)s"
+msgstr "تم طلب: %(item)s"
+
+#: .\manager\views_menu.py:88
+#, fuzzy
+#| msgid "Failed to add item to bill."
+msgid "Failed to order."
+msgstr "فشل في إضافة الصنف للفاتورة."
+
+#, fuzzy
+#~| msgid "Add Item to Table"
+#~ msgid "Add Order for Table"
+#~ msgstr "إضافة صنف"
+
+#~ msgid "30d Revenue"
+#~ msgstr "إيرادات 30 يوم"
+
+#~ msgid "Traffic Analysis"
+#~ msgstr "تحليل الحركة"
+
+#~ msgid "View Report"
+#~ msgstr "عرض التقرير"
+
+#~ msgid "Expected Rush Hours"
+#~ msgstr "ساعات الذروة المتوقعة"
+
+#~ msgid "Next 3 Hours"
+#~ msgstr "أهم 3 ساعات قادمة"
+
+#~ msgid "Date & Time"
+#~ msgstr "التاريخ والوقت"
+
+#, fuzzy
+#~| msgid "Table"
+#~ msgid "Table #"
+#~ msgstr "طاولة"
+
+#, fuzzy
+#~| msgid "Items Ordered"
+#~ msgid "Items Purchased"
+#~ msgstr "الأصناف المطلوبة"
+
+#~ msgid "Add Item to Table"
+#~ msgstr "إضافة صنف"
+
+#~ msgid "Detailed orders and totals for the selected date."
+#~ msgstr "تفاصيل الطلبات والإجماليات للتاريخ المحدد."
+
+#, fuzzy
+#~| msgid "Checkout Receipt"
+#~ msgid "Print Receipt"
+#~ msgstr "إيصال الدفع"
+
+#~ msgid "Daily Orders Breakdown"
+#~ msgstr "تفاصيل الطلبات اليومية"
+
+#~ msgid "Time"
+#~ msgstr "الوقت"
+
+#, fuzzy
+#~| msgid "Print"
+#~ msgid "Print B/W"
+#~ msgstr "طباعة"
+
+#, fuzzy
+#~| msgid "Print"
+#~ msgid "Print Color"
+#~ msgstr "طباعة"
+
+#, fuzzy
+#~| msgid "Min Charge Gap"
+#~ msgid "Min Charge"
+#~ msgstr "فرق الحد الأدنى"
+
+#~ msgid "Daily Totals"
+#~ msgstr "الإجماليات اليومية"
+
+#, fuzzy
+#~| msgid "Monitor"
+#~ msgid "Mon"
+#~ msgstr "المراقبة"
+
+#, fuzzy
+#~| msgid "Set"
+#~ msgid "Sat"
+#~ msgstr "تعيين"
+
+#~ msgid "Espresso"
+#~ msgstr "إسبريسو"
+
+#~ msgid "Hot Drinks"
+#~ msgstr "مشروبات ساخنة"
+
+#~ msgid "Coffee"
+#~ msgstr "قهوة"
+
+#~ msgid "Iced Coffee"
+#~ msgstr "قهوة مثلجة"
+
+#~ msgid "Milk Shakes"
+#~ msgstr "ميلك شيك"
+
+#~ msgid "Fresh Juice"
+#~ msgstr "عصائر طبيعية"
+
+#~ msgid "Smoothies"
+#~ msgstr "سموثي"
+
+#~ msgid "Services"
+#~ msgstr "خدمات"
+
+#~ msgid "Macchiato"
+#~ msgstr "ماكياتو"
+
+#~ msgid "Americano"
+#~ msgstr "أمريكانو"
+
+#~ msgid "Flat White"
+#~ msgstr "فلات وايت"
+
+#~ msgid "Latte"
+#~ msgstr "لاتيه"
+
+#~ msgid "Cappuccino"
+#~ msgstr "كابتشينو"
+
+#~ msgid "Cortado"
+#~ msgstr "كورتادو"
+
+#~ msgid "Mocha"
+#~ msgstr "موكا"
+
+#~ msgid "Cinnamon Milk"
+#~ msgstr "قرفة باللبن"
+
+#~ msgid "Tea Anise"
+#~ msgstr "شاي يانسون"
+
+#~ msgid "Flavor Tea"
+#~ msgstr "شاي بنكهة"
+
+#~ msgid "Tea Latte"
+#~ msgstr "شاي لاتيه"
+
+#~ msgid "Nescafe Black"
+#~ msgstr "نسكافيه بلاك"
+
+#~ msgid "Nescafe Milk"
+#~ msgstr "نسكافيه باللبن"
+
+#~ msgid "Hot Cider"
+#~ msgstr "هوت سيدر"
+
+#~ msgid "Hot Chocolate"
+#~ msgstr "هوت شوكلت"
+
+#~ msgid "Turkish Coffee"
+#~ msgstr "قهوة تركي"
+
+#~ msgid "Hazelnut Coffee"
+#~ msgstr "قهوة بالبندق"
+
+#~ msgid "French Coffee"
+#~ msgstr "قهوة فرنساوي"
+
+#~ msgid "Caramel Coffee"
+#~ msgstr "قهوة بالكراميل"
+
+#~ msgid "Iced Americano"
+#~ msgstr "آيس أمريكانو"
+
+#~ msgid "Iced Latte"
+#~ msgstr "آيس لاتيه"
+
+#~ msgid "Iced Cappuccino"
+#~ msgstr "آيس كابتشينو"
+
+#~ msgid "Iced Caramel Macchiato"
+#~ msgstr "آيس كراميل ماكياتو"
+
+#~ msgid "Iced Mocha"
+#~ msgstr "آيس موكا"
+
+#~ msgid "Cafe Frappe"
+#~ msgstr "كافيه فرابيه"
+
+#~ msgid "Frappuccino Caramel"
+#~ msgstr "فرابتشينو كراميل"
+
+#~ msgid "Ice Spanish Latte"
+#~ msgstr "آيس سبانش لاتيه"
+
+#~ msgid "Chocolate"
+#~ msgstr "شوكلت"
+
+#~ msgid "Vanilla"
+#~ msgstr "فانيليا"
+
+#~ msgid "Caramel"
+#~ msgstr "كراميل"
+
+#~ msgid "Strawberry"
+#~ msgstr "فراولة"
+
+#~ msgid "Oreo"
+#~ msgstr "أوريو"
+
+#~ msgid "Nutella"
+#~ msgstr "نوتيلا"
+
+#~ msgid "Lotus"
+#~ msgstr "لوتس"
+
+#~ msgid "Guava"
+#~ msgstr "جوافة"
+
+#~ msgid "Kiwi"
+#~ msgstr "كيوي"
+
+#~ msgid "Lemon"
+#~ msgstr "ليمون"
+
+#~ msgid "Lemon Mint"
+#~ msgstr "ليمون نعناع"
+
+#~ msgid "Pineapple"
+#~ msgstr "أناناس"
+
+#~ msgid "Peach"
+#~ msgstr "خوخ"
+
+#~ msgid "Blueberry"
+#~ msgstr "بلوبيري"
+
+#~ msgid "Passion Fruit"
+#~ msgstr "باشن فروت"
+
+#~ msgid "Apple"
+#~ msgstr "تفاح"
+
+#~ msgid "Cherry"
+#~ msgstr "كريز"
+
+#~ msgid "Mix Smoothies"
+#~ msgstr "ميكس سموثي"
+
+#~ msgid "Food/sweets"
+#~ msgstr "طعام / حلويات"
+
+#~ msgid "Printing Service"
+#~ msgstr "خدمة الطباعة"
+
+#~ msgid "Fax Service"
+#~ msgstr "خدمة الفاكس"
+
+#~ msgid "Copy Service"
+#~ msgstr "خدمة التصوير"

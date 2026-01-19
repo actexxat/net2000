@@ -1,0 +1,20 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Django HTML templates - DO NOT AUTO-FORMAT
+[**/templates/**/*.html]
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = false
+insert_final_newline = false
+max_line_length = off
+
+# Disable formatters for Django templates
+[manager/templates/manager/{history,monitor}.html]
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = false
+insert_final_newline = false
+max_line_length = off

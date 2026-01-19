@@ -1,0 +1,242 @@
+{% extends 'manager/base.html' %}
+{% load static i18n manager_extras %}
+
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Compact item buttons for add-item modal */
+    .item-grid .row {
+        gap: .45rem;
+    }
+
+    .item-btn {
+        padding: .4rem .5rem;
+        font-size: .85rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .item-name {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        font-weight: 600;
+        /* Fade out the end of the text if it's too long */
+        mask-image: linear-gradient(90deg, #000 90%, transparent 100%);
+        -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent 100%);
+    }
+
+    .item-name span {
+        display: inline-block;
+    }
+
+    .item-price {
+        margin-left: .5rem;
+        font-size: .8rem;
+        color: #6b7280;
+    }
+
+    .modal-body .form-label {
+        font-size: .85rem;
+    }
+
+    .card-footer-mini {
+        font-size: 0.8rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        padding-top: 10px;
+    }
+
+    /* Table Hover Effect (Simplified) */
+    .table-container {
+        position: relative;
+        /* Ensure consistent height to prevent layout thrashing */
+        min-height: 200px;
+    }
+
+    .table-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        position: relative;
+        z-index: 10;
+        min-height: 200px;
+    }
+
+    .table-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
+        z-index: 100;
+    }
+
+    /* Refined Discard Button Animation */
+    .discard-btn {
+        opacity: 0.9;
+    }
+    
+    .discard-btn:hover {
+        opacity: 1 !important;
+        transform: scale(1.15);
+        background: rgba(220, 53, 69, 0.95) !important;
+        border-color: rgba(255,255,255,0.8) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        transition: all 0.2s ease-in-out;
+    }
+
+    /* --- THEMES --- */
+
+    /* Red Table Theme (Occupied) */
+    .card-occupied {
+        background: linear-gradient(135deg, #dc3545 0%, #a51d2a 100%) !important;
+        color: white !important;
+        border: 2px solid #8d0801 !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
+        --leg-color: #dc3545;
+    }
+
+    .card-occupied .text-muted { color: rgba(255, 255, 255, 0.8) !important; }
+    .card-occupied .badge.bg-light {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    }
+    .card-occupied .table-box { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    
+    .card-occupied .btn-outline-primary, .card-occupied .btn-outline-secondary, .card-occupied .btn-outline-info, .card-occupied .btn-outline-dark {
+        background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255, 255, 255, 0.3);
+    }
+    .card-occupied .btn-outline-primary:hover, .card-occupied .btn-outline-secondary:hover, .card-occupied .btn-outline-info:hover, .card-occupied .btn-outline-dark:hover {
+        background: white; color: #a51d2a;
+    }
+    .card-occupied .form-control, .card-occupied .input-group-text {
+        background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255, 255, 255, 0.3);
+    }
+    .card-occupied .form-control::placeholder { color: rgba(255, 255, 255, 0.5); }
+    .card-occupied .input-group-text { color: white; }
+
+    /* available */
+    .card-available {
+        border: 2px dashed #dee2e6 !important;
+        background: white !important;
+        --leg-color: #198754;
+    }
+
+
+    /* special */
+    .card-special {
+        background: linear-gradient(135deg, #6610f2 0%, #4b0db8 100%) !important;
+        color: white !important;
+        border: 2px solid #3d0a91 !important;
+        box-shadow: 0 10px 20px rgba(102, 16, 242, 0.2) !important;
+        --leg-color: #6610f2;
+    }
+
+    .card-special .text-muted { color: rgba(255, 255, 255, 0.8) !important; }
+    .card-special .badge.bg-light {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    }
+    .card-special .table-box { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    
+    .card-special .btn-outline-primary, .card-special .btn-outline-secondary, .card-special .btn-outline-dark {
+        background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255, 255, 255, 0.3);
+    }
+    .card-special .btn-outline-primary:hover, .card-special .btn-outline-secondary:hover, .card-special .btn-outline-dark:hover {
+        background: white; color: #6610f2;
+    }
+    .card-special .form-control, .card-special .input-group-text {
+        background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255, 255, 255, 0.3);
+    }
+    .card-special .form-control::placeholder { color: rgba(255, 255, 255, 0.5); }
+
+
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div id="dashboard-root">
+    <div id="masonry-grid" class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-4"
+         hx-get="{% url 'dashboard_grid' %}"
+         hx-trigger="every 2s [!document.querySelector('.modal.show')]"
+         hx-swap="innerHTML transition:false"
+         style="min-height: 80vh;">
+        {% include 'manager/partials/table_grid.html' %}
+    </div>
+</div>
+
+<!-- Container for Dynamic Checkout & Service Modals -->
+<div id="checkout-modal-container"></div>
+<div id="service-modal-container"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'vendor/masonry.pkgd.min.js' %}"></script>
+<script>
+    var msnry = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        initMasonry();
+
+        // Handle print type radio toggle
+        document.querySelectorAll('input[type=radio][name="print_type"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                var form = this.closest('form');
+                var grp = form.querySelector('div[id^="colorCostGroup"]');
+                if (grp) {
+                    grp.style.display = (this.value === 'color') ? 'block' : 'none';
+                }
+            });
+        });
+
+        // Handle Enter key for checkout confirmation
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                const openCheckoutModal = document.querySelector('.modal.show#checkoutModal');
+                if (openCheckoutModal) {
+                    const confirmBtn = openCheckoutModal.querySelector('button.btn-danger');
+                    if (confirmBtn) {
+                        event.preventDefault();
+                        if (!confirmBtn.disabled) confirmBtn.click();
+                    }
+                }
+            }
+        });
+    });
+
+    function initMasonry() {
+        var grid = document.querySelector('#masonry-grid');
+        if (!grid) return;
+
+        const isRtl = document.documentElement.getAttribute('dir') === 'rtl';
+        
+        if (!msnry) {
+            msnry = new Masonry(grid, {
+                itemSelector: '.col',
+                percentPosition: true,
+                horizontalOrder: true,
+                originLeft: !isRtl,
+                transitionDuration: '0s'
+            });
+        } else {
+            msnry.reloadItems();
+            msnry.layout();
+        }
+        window.msnry = msnry;
+    }
+
+    // Bind Masonry re-init to HTMX swaps - use afterSettle to ensure DOM is fully ready
+    document.addEventListener('htmx:afterSettle', function (event) {
+        if (event.detail.target.id === 'masonry-grid' || event.detail.target.id.startsWith('table-card-')) {
+            initMasonry();
+        }
+    });
+
+    document.addEventListener('htmx:responseError', function (event) { console.error("HTMX Error:", event.detail.error); });
+    document.addEventListener('htmx:sendError', function (event) { console.error("Network Error"); });
+
+</script>
+{% endblock %}

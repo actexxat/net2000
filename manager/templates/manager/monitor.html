@@ -1,0 +1,254 @@
+{% extends 'manager/base.html' %}
+{% load static i18n manager_extras %}
+
+{% block title %}{% trans "Live Monitor" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --card-radius: 16px;
+        --shadow-soft: 0 4px 12px rgba(0,0,0,0.05);
+        --shadow-hover: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    /* Background Watermark */
+    .bg-watermark {
+        position: fixed;
+        top: -10%;
+        right: -10%;
+        width: 600px;
+        opacity: 0.03;
+        transform: rotate(-15deg);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Dense Stat Cards */
+    .stat-widget {
+        background: white;
+        border: 0;
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow-soft);
+        padding: 0.8rem 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .stat-widget:hover { transform: translateY(-3px); }
+
+    .stat-widget .icon-box {
+        width: 42px; height: 42px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    /* Dense Live Table Card */
+    .live-card {
+        border: 0;
+        border-radius: var(--card-radius);
+        box-shadow: var(--shadow-soft);
+        background: white;
+        transition: all 0.2s ease;
+        overflow: hidden;
+        height: 100%;
+        display: flex; flex-direction: column;
+    }
+
+    .live-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .live-card-header {
+        background: linear-gradient(to right, #f8f9fa, white);
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .table-badge {
+        background: #212529;
+        color: white;
+        width: 36px; height: 36px;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800;
+        font-size: 1.1rem;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+    }
+
+    .live-dot {
+        width: 8px; height: 8px;
+        background: #dc3545;
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        animation: monitorPulse 2s infinite;
+    }
+
+    @keyframes monitorPulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+
+    .order-list {
+        max-height: 140px; /* Reduced specific height for density */
+        overflow-y: auto;
+        font-size: 0.85rem;
+    }
+    
+    .order-row {
+        padding: 0.4rem 0.8rem;
+        border-bottom: 1px dashed rgba(0,0,0,0.05);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .order-row:last-child { border-bottom: none; }
+    
+    .price-tag {
+        font-weight: 700;
+        color: #6c757d;
+        font-size: 0.8rem;
+    }
+
+    .total-footer {
+        background: #fcfcfd;
+        padding: 0.75rem 1rem;
+        border-top: 1px solid rgba(0,0,0,0.05);
+    }
+    
+    /* Custom Scrollbar for list */
+    .order-list::-webkit-scrollbar { width: 3px; }
+    .order-list::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<img src="{% static 'img/logo.png' %}" class="bg-watermark no-print">
+
+<!-- Compact Header -->
+<div class="monitor-header mb-4 d-flex flex-column flex-lg-row justify-content-between align-items-center gap-3">
+    <div class="d-flex align-items-center mb-2 mb-lg-0">
+        <div class="bg-dark text-white rounded-circle p-2 shadow me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        </div>
+        <div>
+            <h4 class="fw-bold mb-0 text-dark">{% trans "Live Monitor" %}</h4>
+            <div class="text-muted d-flex align-items-center gap-2" style="font-size: 0.85rem;">
+                <span class="live-dot d-inline-block"></span>
+                <span class="fw-bold text-uppercase">{% trans "Real-time" %}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dense Stats -->
+    <div class="d-flex gap-2 flex-wrap justify-content-center">
+        <div class="stat-widget">
+            <div class="icon-box bg-danger bg-opacity-10 text-danger">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+            </div>
+            <div>
+                <div class="h4 fw-bold mb-0 lh-1">{{busy_count|translate_numbers}}</div>
+                <div class="small text-muted fw-bold" style="font-size:0.7rem;">{% trans "ACTIVE" %}</div>
+            </div>
+        </div>
+        <div class="stat-widget">
+             <div class="icon-box bg-primary bg-opacity-10 text-primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+            </div>
+            <div>
+                <div class="h4 fw-bold mb-0 lh-1">{{total_people|translate_numbers}}</div>
+                <div class="small text-muted fw-bold" style="font-size:0.7rem;">{% trans "GUESTS" %}</div>
+            </div>
+        </div>
+        <div class="stat-widget">
+            <div class="icon-box bg-success bg-opacity-10 text-success">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <div>
+                <div class="h4 fw-bold mb-0 lh-1">{{total_due|floatformat:0|translate_numbers}}</div>
+                <div class="small text-muted fw-bold" style="font-size:0.7rem;">{% trans "DUE" %}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- High Density Grid -->
+<!-- Use row-cols classes for automatic sizing without explicit col divs everywhere -->
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3">
+    {% if busy_tables %}
+        {% for t in busy_tables %}
+        <div class="col">
+            <div class="live-card">
+                <!-- Header -->
+                <div class="live-card-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="table-badge">{{t.number|translate_numbers}}</div>
+                        <div class="d-flex flex-column">
+                            <span class="text-xs text-muted" style="font-size: 0.7rem; font-weight: 700;">{% trans "GUESTS" %}</span>
+                            <span class="fw-bold text-dark d-flex align-items-center gap-1" style="font-size: 0.9rem;">
+                                {{t.people|translate_numbers}}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                       <a href="{% url 'dashboard' %}" class="btn btn-light btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm" style="width: 32px; height: 32px;" title="{% trans 'View Table' %}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                       </a>
+                    </div>
+                </div>
+
+                <!-- Orders -->
+                <div class="order-list flex-grow-1 bg-white">
+                    {% if t.orders %}
+                        {% for o in t.orders %}
+                        <div class="order-row">
+                            <div class="text-truncate fw-semibold text-dark pe-2" style="max-width: 140px;">
+                                {{ o.name|translate_text }}
+                                {% if o.note %}<span class="text-warning small ms-1">📝</span>{% endif %}
+                            </div>
+                            <div class="price-tag">{{ o.price|floatformat:0|translate_numbers }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center h-100 opacity-50 p-4">
+                           <span class="small text-muted">{% trans "No orders" %}</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Footer -->
+                <div class="total-footer mt-auto">
+                    {% if t.shortfall > 0 %}
+                    <div class="d-flex justify-content-between align-items-center mb-1 text-danger" style="font-size: 0.75rem;">
+                        <span>{% trans "Min Chg" %}</span>
+                        <span class="fw-bold">+{{t.shortfall|floatformat:0|translate_numbers}}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">{% trans "TOTAL" %}</span>
+                        <div class="h5 fw-bold text-dark mb-0">
+                            {{t.final_total|floatformat:0|translate_numbers}}<small style="font-size: 0.6rem;">EGP</small>
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'check_out' t.id %}" class="btn btn-dark w-100 btn-sm fw-bold rounded-pill" style="font-size: 0.85rem;">
+                        {% trans "Checkout" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12 text-center py-5">
+            <div class="text-muted opacity-50">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                <div class="mt-2">{% trans "No active tables" %}</div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

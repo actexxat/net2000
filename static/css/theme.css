@@ -1,0 +1,26 @@
+/* Dashboard-only dark theme modifiers. Toggled by adding .dashboard-dark to #dashboard-root */
+.dashboard-dark {
+	background-color: #0f172a;
+	color: #e5e7eb;
+}
+.dashboard-dark .card,
+.dashboard-dark .modal-content,
+.dashboard-dark .bg-white {
+	background-color: #071029 !important;
+	color: #e5e7eb !important;
+	border-color: #1f2937 !important;
+}
+.dashboard-dark .table-card.card-available { background-color: #042331 !important; }
+.dashboard-dark .table-card.card-occupied { background-color: #0b1220 !important; }
+.dashboard-dark .text-muted { color: #9ca3af !important; }
+.dashboard-dark .item-price { color: #9ca3af !important; }
+.dashboard-dark .btn-outline-secondary { color: #e5e7eb; border-color: #374151; }
+.dashboard-dark .btn-outline-primary { color: #e5e7eb; border-color: #2563eb; }
+.dashboard-dark .btn-dark { background-color:#111827; color:#e5e7eb; }
+.dashboard-dark .status-dot.bg-danger { background-color:#ef4444 !important; }
+.dashboard-dark .status-dot.bg-success { background-color:#10b981 !important; }
+.dashboard-dark a { color: #93c5fd; }
+.dashboard-dark .input-group-text { background-color: transparent !important; color: #e5e7eb !important; }
+
+/* smooth transition when toggling */
+#dashboard-root, #dashboard-root .card, #dashboard-root .modal-content { transition: background-color .2s ease, color .2s ease; }

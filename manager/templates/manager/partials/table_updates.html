@@ -1,0 +1,4 @@
+{% for table in tables %}
+{% include 'manager/partials/table_card.html' with is_oob=True suppress_messages=True %}
+{% endfor %}
+{% include 'manager/partials/messages.html' with is_oob=True %}

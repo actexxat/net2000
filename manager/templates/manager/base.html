@@ -1,0 +1,631 @@
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Internet 2000{% endblock %}</title>
+    <link href="{% static 'vendor/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'vendor/htmx.min.js' %}"></script>
+    <script>
+        document.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        });
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+    <style>
+        body, h1, h2, h3, h4, h5, h6, .btn, .navbar, .form-control {
+            font-family: 'Tajawal', sans-serif !important;
+        }
+        .table-card {
+            transition: 0.28s ease;
+            border-radius: 15px;
+        }
+
+        .status-dot {
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .comic-brand {
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            font-weight: 900;
+            font-size: 1.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Order Notification Popup Styles */
+        #notification-stack {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            pointer-events: none;
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .order-notification {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateX(50px);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .order-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            color: white;
+        }
+
+        .notification-icon {
+            flex-shrink: 0;
+            animation: bellRing 1s ease-in-out infinite;
+        }
+
+        @keyframes bellRing {
+            0%, 100% { transform: rotate(0deg); }
+            10%, 30% { transform: rotate(-10deg); }
+            20%, 40% { transform: rotate(10deg); }
+        }
+
+        .notification-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notification-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .notification-message {
+            font-size: 1.3rem;
+            font-weight: 700;
+            line-height: 1.2;
+            word-wrap: break-word;
+        }
+
+        .notification-items-list {
+            margin-top: 5px;
+            font-size: 1rem;
+            opacity: 0.9;
+            background: rgba(0,0,0,0.1);
+            padding: 8px;
+            border-radius: 8px;
+            list-style: none;
+            padding-left: 0;
+            margin-bottom: 0;
+        }
+
+        .notification-items-list li {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 2px;
+            margin-bottom: 2px;
+        }
+        .notification-items-list li:last-child {
+            border-bottom: none;
+        }
+
+        .notification-close {
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+        }
+
+        .notification-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 576px) {
+            #notification-stack {
+                right: 10px;
+                left: 10px;
+                top: 10px;
+                max-width: calc(100% - 20px);
+            }
+            .notification-message {
+                font-size: 1.1rem;
+            }
+        }
+
+        .navbar-nav .nav-link {
+            padding: 8px 16px !important;
+            margin: 0 4px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .navbar-nav .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #fff !important;
+            transform: translateY(-1px);
+        }
+
+        .navbar-nav .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.25);
+            color: #fff !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-light d-flex flex-column min-vh-100">
+
+    {% block navbar %}
+    <nav class="navbar navbar-dark bg-danger mb-4 shadow px-3">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <!-- Brand -->
+            <a href="{% url 'dashboard' %}" class="navbar-brand mb-0 h1 comic-brand d-flex align-items-center text-white text-decoration-none">
+                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 40px; height: 40px; margin-right: 10px;">
+                Internet 2000
+            </a>
+
+            <!-- Right Actions -->
+            <div class="d-flex align-items-center gap-3">
+                <!-- Language Switcher -->
+                <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                    <select name="language" class="form-select form-select-sm border-0 bg-transparent text-white" 
+                            style="width:auto; cursor:pointer;" onchange="this.form.submit()">
+                        {% get_current_language as LANGUAGE_CODE %}
+                        {% get_available_languages as LANGUAGES %}
+                        {% get_language_info_list for LANGUAGES as languages %}
+                        {% for language in languages %}
+                        <option value="{{ language.code }}" {% if language.code == LANGUAGE_CODE %}selected{% endif %} class="text-dark">
+                            {{ language.code|upper }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+
+                <!-- Notification Bell -->
+                <div class="dropdown">
+                    <button class="btn btn-link text-white position-relative p-0 d-flex align-items-center justify-content-center" 
+                            type="button" id="notifyDropdown" data-bs-toggle="dropdown" aria-expanded="false" 
+                            hx-get="/notification-history/" hx-trigger="click" hx-target="#notificationHistoryBody">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zm.995-14.901a1 1 0 1 0-1.99 0A5.002 5.002 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901z"/>
+                        </svg>
+                        <!-- Optional Badge can be added here -->
+                    </button>
+                    <div class="dropdown-menu {% if LANGUAGE_BIDI %}dropdown-menu-start{% else %}dropdown-menu-end{% endif %} shadow-lg border-0 rounded-4 p-0" aria-labelledby="notifyDropdown" style="width: 320px; z-index: 1050;">
+                        <div class="p-3 border-bottom bg-light rounded-top-4 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-uppercase small" style="letter-spacing:1px;">{% trans "Notification History" %}</h6>
+                            <small class="text-muted">{% trans "Recent QR Orders" %}</small>
+                        </div>
+                        <div id="notificationHistoryBody">
+                            <div class="p-4 text-center">
+                                <div class="spinner-border text-danger spinner-border-sm" role="status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Burger Menu / Offcanvas Trigger -->
+                <button class="btn btn-link text-white p-0 border-0 d-flex align-items-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Offcanvas Menu -->
+    <div class="offcanvas {% if LANGUAGE_BIDI %}offcanvas-start rounded-end-4{% else %}offcanvas-end rounded-start-4{% endif %} border-0 shadow-lg" tabindex="-1" id="offcanvasMenu" aria-labelledby="offcanvasMenuLabel" style="width: 280px;">
+        <div class="offcanvas-header bg-danger text-white">
+            <h5 class="offcanvas-title comic-brand" id="offcanvasMenuLabel">{% trans "Menu" %}</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-0">
+            <div class="list-group list-group-flush fs-5">
+                <a href="{% url 'dashboard' %}" class="list-group-item list-group-item-action py-3 border-0 {% if request.resolver_match.url_name == 'dashboard' %}bg-light fw-bold text-danger{% endif %}">
+                    {% trans "Dashboard" %}
+                </a>
+                
+                <a href="{% url 'qr_dashboard' %}" class="list-group-item list-group-item-action py-3 border-0 {% if request.resolver_match.url_name == 'qr_dashboard' %}bg-light fw-bold text-danger{% endif %}">
+                    {% trans "QR Menu" %}
+                </a>
+
+                {% if user.is_superuser %}
+                <div class="my-2 border-top"></div>
+                
+                <a href="{% url 'monitor' %}" class="list-group-item list-group-item-action py-3 border-0 {% if request.resolver_match.url_name == 'monitor' %}bg-light fw-bold text-danger{% endif %}">
+                    {% trans "Monitor" %}
+                </a>
+                <a href="{% url 'metrics' %}" class="list-group-item list-group-item-action py-3 border-0 {% if request.resolver_match.url_name == 'metrics' %}bg-light fw-bold text-danger{% endif %}">
+                    {% trans "Metrics" %}
+                </a>
+                <a href="{% url 'session_history' %}" class="list-group-item list-group-item-action py-3 border-0 {% if request.resolver_match.url_name == 'session_history' %}bg-light fw-bold text-danger{% endif %}">
+                    {% trans "History" %}
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="mt-auto p-3 bg-light">
+                {% if user.is_authenticated %}
+                    {% if user.is_superuser %}
+                    <a href="/admin" class="btn btn-warning w-100 mb-2 fw-bold shadow-sm">
+                        {% trans "Admin Panel" %}
+                    </a>
+                    {% endif %}
+                    <form action="{% url 'app_logout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger w-100 fw-bold">{% trans "Logout" %}</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+    <div class="{% block container_class %}container{% endblock %} flex-grow-1">
+        {% block content %}{% endblock %}
+    </div>
+
+    <div id="message-wrapper">
+        {% include 'manager/partials/messages.html' %}
+    </div>
+    <div id="notification-stack"></div>
+
+    <!-- Styled Confirmation Modal -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header border-0 pb-0" style="background: linear-gradient(135deg, #dc3545 0%, #a51d2a 100%);">
+                    <h6 class="modal-title text-white fw-bold">
+                        <i class="bi bi-exclamation-triangle me-2"></i>{% trans "Confirm" %}
+                    </h6>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <p id="confirmMessage" class="mb-0 fw-medium"></p>
+                </div>
+                <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                        {% trans "Cancel" %}
+                    </button>
+                    <button type="button" class="btn btn-danger px-4" id="confirmBtn">
+                        {% trans "Discard" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+    <footer class="text-center mt-auto py-2 text-muted bg-muted" style="font-size: 0.9rem;">
+        &copy; <span id="year"></span> {% trans "Internet 2000 Solutions. All rights reserved" %} <span class="mx-2">|</span>
+        {% trans "built " %} {% trans "By" %} 
+        <span class="text-danger fw-bold cursor-pointer position-relative d-inline-block" 
+              onclick="toggleAuthorEmail(this)" 
+              style="cursor: pointer; border-bottom: 1px dashed #dc3545;">
+            Mustapha Mahmoud
+            <div class="author-popup shadow-sm rounded px-3 py-2 bg-dark text-white text-center" 
+                 style="display:none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 10px; font-size: 0.85rem; white-space: nowrap; z-index: 1000;">
+                mustaphamahmoud83@gmail.com
+                <div style="position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #212529 transparent transparent transparent;"></div>
+            </div>
+        </span>.
+    </footer>
+    <script>
+        function toggleAuthorEmail(el) {
+            const popup = el.querySelector('.author-popup');
+            const isVisible = popup.style.display === 'block';
+            
+            // Hide all other open popups if any
+            document.querySelectorAll('.author-popup').forEach(p => p.style.display = 'none');
+            
+            if (!isVisible) {
+                popup.style.display = 'block';
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    popup.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
+    <script src="{% static 'vendor/bootstrap.bundle.min.js' %}"></script>
+    <script>
+        // Get the current year
+        const currentYear = new Date().getFullYear();
+        // Inject it into the element with id="year"
+        document.getElementById('year').textContent = currentYear;
+    </script>
+    
+    <script>
+        // Intercept HTMX confirm dialogs to use styled Bootstrap modal
+        document.body.addEventListener('htmx:confirm', function(evt) {
+            // Only intercept if there's actually a confirm question (hx-confirm attribute)
+            if (!evt.detail.question) {
+                return; // Let HTMX handle it normally
+            }
+            
+            evt.preventDefault();
+            
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            const confirmMessage = document.getElementById('confirmMessage');
+            const confirmBtn = document.getElementById('confirmBtn');
+            
+            // Set the message from hx-confirm attribute
+            confirmMessage.textContent = evt.detail.question;
+            
+            // Remove any previous click handlers
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            // Add new click handler
+            newConfirmBtn.addEventListener('click', function() {
+                confirmModal.hide();
+                evt.detail.issueRequest(true);
+            });
+            
+            confirmModal.show();
+        });
+    </script>
+    
+    <script>
+        // Silent auto-refresh for dashboard with notifications
+        let lastCheck = '{{ server_now|default:"" }}' || new Date(Date.now() - 10000).toISOString();
+        let isChecking = false;
+        let audioContext = null;
+        let audioUnlocked = false;
+
+        // Create audio context and unlock on first user interaction
+        function unlockAudio() {
+            if (audioUnlocked) return;
+            
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                // Play a silent sound to unlock
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 0;
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.01);
+                
+                audioUnlocked = true;
+                document.removeEventListener('click', unlockAudio);
+                document.removeEventListener('touchstart', unlockAudio);
+            } catch(err) {
+                // Audio unlock failed silently
+            }
+        }
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+
+        // Function to play a loud notification beep
+        let lastSoundTime = 0;
+        function playNotificationSound() {
+            if (!audioContext) return;
+            
+            // Throttle sound to once every 500ms
+            const now = Date.now();
+            if (now - lastSoundTime < 500) return;
+            lastSoundTime = now;
+            
+            try {
+                // Create a loud, attention-grabbing beep sound
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                
+                gainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+                
+                // Play a second beep for emphasis
+                setTimeout(() => {
+                    const oscillator2 = audioContext.createOscillator();
+                    const gainNode2 = audioContext.createGain();
+                    
+                    oscillator2.type = 'sine';
+                    oscillator2.frequency.setValueAtTime(1000, audioContext.currentTime);
+                    
+                    gainNode2.gain.setValueAtTime(0.7, audioContext.currentTime);
+                    gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    
+                    oscillator2.connect(gainNode2);
+                    gainNode2.connect(audioContext.destination);
+                    
+                    oscillator2.start(audioContext.currentTime);
+                    oscillator2.stop(audioContext.currentTime + 0.5);
+                }, 200);
+            } catch(err) {
+                // Sound playback failed silently
+            }
+        }
+
+        function checkForUpdates() {
+            // Only run on dashboard page (supports /, /en/, /ar/, /manager/, /en/manager/, etc)
+            const path = window.location.pathname;
+            const isDashboard = path === '/' || path === '/en/' || path === '/ar/' || path.includes('/manager');
+            
+            if (!isDashboard) {
+                setTimeout(checkForUpdates, 5000);
+                return;
+            }
+
+            if (isChecking) {
+                setTimeout(checkForUpdates, 5000);
+                return;
+            }
+
+            isChecking = true;
+            
+            fetch(`/menu/check-updates/?last_check=${encodeURIComponent(lastCheck)}`)
+                .then(res => res.json())
+                .then(data => {
+                    lastCheck = data.timestamp;
+
+                    if (data.has_updates && data.orders && data.orders.length > 0) {
+                        console.log("New updates received:", data.orders);
+                        
+                        // Check for QR orders
+                        const qrOrders = data.orders.filter(o => {
+                            const source = (o.source || "").toString().toUpperCase();
+                            return source === 'QR' || source.includes('QR');
+                        });
+                        
+                        if (qrOrders.length > 0) {
+                            console.log("Significant QR orders found:", qrOrders);
+                            // Play loud notification sound
+                            playNotificationSound();
+                            
+                            // Group orders by table
+                            const groupedByTable = qrOrders.reduce((acc, order) => {
+                                const t = order.table || "{% trans 'Unknown' %}";
+                                if (!acc[t]) acc[t] = [];
+                                acc[t].push(order.item);
+                                return acc;
+                            }, {});
+                            
+                            // Show notification for each table
+                            Object.entries(groupedByTable).forEach(([tableNumber, items]) => {
+                                createOrderToast(tableNumber, items);
+                            });
+                        }
+                    }
+                })
+                .catch(err => {
+                    // Update check failed silently
+                })
+                .finally(() => {
+                    isChecking = false;
+                    setTimeout(checkForUpdates, 5000);
+                });
+        }
+
+        // Start checking for updates if user is authenticated
+        if (document.querySelector('a[href="/admin"]')) {
+            checkForUpdates();
+        }
+
+        function createOrderToast(tableNumber, items) {
+            const container = document.getElementById('notification-stack');
+            const id = 'toast-' + Math.random().toString(36).substr(2, 9);
+            
+            let itemsHtml = '';
+            if (items.length > 1) {
+                itemsHtml = `<ul class="notification-items-list">
+                    ${items.map(it => `<li>• ${it}</li>`).join('')}
+                </ul>`;
+            }
+
+            const toastHtml = `
+                <div id="${id}" class="order-notification" role="alert">
+                    <div class="notification-content">
+                        <div class="notification-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+                        </div>
+                        <div class="notification-text">
+                            <div class="notification-title">🔔 {% trans "NEW ORDER" %}</div>
+                            <div class="notification-message">
+                                {% trans "Table" %} ${tableNumber}
+                                ${items.length === 1 ? `: ${items[0]}` : ''}
+                            </div>
+                            ${itemsHtml}
+                        </div>
+                        <button type="button" class="notification-close" onclick="dismissNotification('${id}')">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('afterbegin', toastHtml); // Newest on top
+            
+            // Trigger animation
+            setTimeout(() => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('show');
+            }, 50);
+
+            const toastEl = document.getElementById(id);
+            
+            // Play sound repeatedly until dismissed
+            const soundInterval = setInterval(() => {
+                playNotificationSound();
+            }, 3000);
+            
+            // Store interval ID on the element
+            toastEl.dataset.soundInterval = soundInterval;
+            
+            // Auto-dismiss after 60 seconds (longer since it might be multiple items)
+            setTimeout(() => {
+                dismissNotification(id);
+            }, 60000);
+        }
+        
+        function dismissNotification(id) {
+            const toastEl = document.getElementById(id);
+            if (!toastEl) return;
+            
+            // Stop the repeating sound
+            if (toastEl.dataset.soundInterval) {
+                clearInterval(parseInt(toastEl.dataset.soundInterval));
+            }
+            
+            // Remove the notification
+            toastEl.classList.remove('show');
+            setTimeout(() => toastEl.remove(), 500);
+        }
+    </script>
+</body>
+
+</html>

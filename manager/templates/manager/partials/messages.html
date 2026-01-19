@@ -1,0 +1,34 @@
+<div id="global-message-container" hx-swap-oob="true"
+    style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:1050;">
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="d-flex align-items-center px-3 py-2 mb-2 shadow-sm rounded message-popup"
+        style="background:#fff; min-width:260px; border-radius:28px; animation: slide-down 0.3s ease-out;">
+        {% if msg.tags == 'success' %}
+        <div
+            style="width:36px;height:36px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            ✓
+        </div>
+        {% else %}
+        <div
+            style="width:36px;height:36px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;margin-right:12px;">
+            ✕
+        </div>
+        {% endif %}
+        <div style="flex:1;color:#111;font-weight:600;">{{ msg }}</div>
+        <button type="button" onclick="this.parentElement.style.display='none'"
+            style="background:transparent;border:none;color:#6b7280;font-size:16px;">✕</button>
+    </div>
+    {% endfor %}
+    <script>
+        setTimeout(function () {
+            var messages = document.querySelectorAll('.message-popup');
+            messages.forEach(msg => {
+                msg.style.opacity = '0';
+                msg.style.transition = 'opacity 0.5s ease-out';
+                setTimeout(() => msg.remove(), 500);
+            });
+        }, 4000);
+    </script>
+    {% endif %}
+</div>

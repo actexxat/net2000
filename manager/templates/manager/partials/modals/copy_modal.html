@@ -1,0 +1,116 @@
+{% load i18n manager_extras %}
+<div class="modal fade" id="copyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Copy" %} - {% trans "Table" %} {{ table.number|translate_numbers }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form hx-post="{% url 'add_copy' table.id %}" hx-target="#table-card-{{ table.id }}" hx-swap="outerHTML">
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold mb-2">{% trans "Number of papers" %}</label>
+                        <div class="bg-light p-3 rounded-4 border">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <button type="button" class="btn btn-white shadow-sm border rounded-circle d-flex align-items-center justify-content-center text-danger" style="width: 48px; height: 48px;" onclick="updatePages(-1)">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                </button>
+                                <input type="number" name="pages" id="pagesInput" class="form-control form-control-lg border-0 bg-transparent text-center fw-bolder m-0 shadow-none" value="1" min="1" style="max-width: 150px; font-size: 2.5rem; font-family: 'Outfit', sans-serif;" onclick="this.select()">
+                                <button type="button" class="btn btn-white shadow-sm border rounded-circle d-flex align-items-center justify-content-center text-success" style="width: 48px; height: 48px;" onclick="updatePages(1)">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                </button>
+                            </div>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap px-2">
+                                <button type="button" class="btn btn-sm btn-white border rounded-pill px-3 fw-bold shadow-sm" onclick="updatePages(5, true)">+5</button>
+                                <button type="button" class="btn btn-sm btn-white border rounded-pill px-3 fw-bold shadow-sm" onclick="updatePages(10, true)">+10</button>
+                                <button type="button" class="btn btn-sm btn-white border rounded-pill px-3 fw-bold shadow-sm" onclick="updatePages(50, true)">+50</button>
+                                <button type="button" class="btn btn-sm btn-white border rounded-pill px-3 fw-bold shadow-sm" onclick="updatePages(100, true)">+100</button>
+                            </div>
+                        </div>
+                    </div>
+
+            <div class="mb-3">
+                        <label class="form-label d-block">{% trans "Copy Type" %}</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="copy_type" id="copyTypeBW"
+                                value="bw" checked>
+                            <label class="form-check-label" for="copyTypeBW">{% trans "B/W" %}</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="copy_type"
+                                id="copyTypeColor" value="color">
+                            <label class="form-check-label" for="copyTypeColor">
+                                {% trans "Color" %}
+                            </label>
+                        </div>
+                        <div class="form-text mt-2" id="bwPricingInfo">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                {% trans "B/W Pricing: 1.00 EGP/page (≤100 pages), 0.75 EGP/page (>100 pages)" %}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="copyColorCostGroup" style="display:none;">
+                        <label class="form-label">{% trans "Total Cost (EGP)" %}</label>
+                        <input type="number" name="color_cost" step="0.5" class="form-control" placeholder="e.g. 10.00">
+                        <div class="form-text">{% trans "Enter the total cost for color copies." %}</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-dark" data-bs-dismiss="modal">
+                        {% trans "Add Copy to Bill" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        var modalEl = document.getElementById('copyModal');
+        if (!modalEl) return;
+
+        function cleanup() {
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+
+        cleanup();
+
+        var myModal = new bootstrap.Modal(modalEl);
+        myModal.show();
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            myModal.dispose();
+            modalEl.remove();
+            cleanup();
+        });
+
+        var bwInfo = document.getElementById('bwPricingInfo');
+        var colorGroup = document.getElementById('copyColorCostGroup');
+        var pagesInput = document.getElementById('pagesInput');
+
+        document.querySelectorAll('input[type=radio][name="copy_type"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                if (this.value === 'color') {
+                    if (colorGroup) colorGroup.style.display = 'block';
+                    if (bwInfo) bwInfo.style.display = 'none';
+                } else {
+                    if (colorGroup) colorGroup.style.display = 'none';
+                    if (bwInfo) bwInfo.style.display = 'block';
+                }
+            });
+        });
+
+        window.updatePages = function(amount, isAdd = false) {
+            let current = parseInt(pagesInput.value) || 0;
+            current += amount;
+            if (current < 1) current = 1;
+            pagesInput.value = current;
+        };
+    })();
+</script>

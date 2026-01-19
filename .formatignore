@@ -1,0 +1,4 @@
+# Ignore Django template files
+manager/templates/manager/history.html
+manager/templates/manager/monitor.html
+**/templates/**/*.html

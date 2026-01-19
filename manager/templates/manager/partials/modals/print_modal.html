@@ -1,0 +1,106 @@
+{% load i18n manager_extras %}
+<div class="modal fade" id="printModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Print" %} - {% trans "Table" %} {{ table.number|translate_numbers }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form hx-post="{% url 'add_print' table.id %}" hx-target="#table-card-{{ table.id }}" hx-swap="outerHTML">
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold mb-2">{% trans "Number of pages" %}</label>
+                        <div class="bg-light p-3 rounded-4 border">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <button type="button" class="btn btn-white shadow-sm border rounded-circle d-flex align-items-center justify-content-center text-danger" style="width: 48px; height: 48px;" onclick="updatePages(-1)">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                </button>
+                                <input type="number" name="pages" id="pagesInput" class="form-control form-control-lg border-0 bg-transparent text-center fw-bolder m-0 shadow-none" value="1" min="1" style="max-width: 150px; font-size: 2.5rem; font-family: 'Outfit', sans-serif;" onclick="this.select()">
+                                <button type="button" class="btn btn-white shadow-sm border rounded-circle d-flex align-items-center justify-content-center text-success" style="width: 48px; height: 48px;" onclick="updatePages(1)">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                </button>
+                            </div>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap px-2">
+                                <button type="button" class="btn btn-sm btn-white border rounded-pill px-3 fw-bold shadow-sm" onclick="updatePages(5)">+5</button>
+                                <button type="button" class="btn btn-sm btn-white border rounded-pill px-3 fw-bold shadow-sm" onclick="updatePages(10)">+10</button>
+                                <button type="button" class="btn btn-sm btn-white border rounded-pill px-3 fw-bold shadow-sm" onclick="updatePages(20)">+20</button>
+                                <button type="button" class="btn btn-sm btn-white border rounded-pill px-3 fw-bold shadow-sm" onclick="updatePages(50)">+50</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label d-block">{% trans "Print Type" %}</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="print_type"
+                                id="printTypeBW" value="bw" checked>
+                            <label class="form-check-label" for="printTypeBW">{% trans "B/W" %}</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="print_type"
+                                id="printTypeColor" value="color">
+                            <label class="form-check-label" for="printTypeColor">
+                                {% trans "Color" %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="colorCostGroup" style="display:none;">
+                        <label class="form-label">{% trans "Total cost (EGP)" %}</label>
+                        <input type="text" name="color_cost" class="form-control" placeholder="e.g. 50.00">
+                        <div class="form-text">{% trans "Enter the total cost for color printing." %}</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">
+                        {% trans "Add Print to Bill" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        var modalEl = document.getElementById('printModal');
+        if (!modalEl) return;
+
+        function cleanup() {
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+
+        cleanup();
+
+        var myModal = new bootstrap.Modal(modalEl);
+        myModal.show();
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            myModal.dispose();
+            modalEl.remove();
+            cleanup();
+        });
+
+        var pagesInput = document.getElementById('pagesInput');
+
+        document.querySelectorAll('input[type=radio][name="print_type"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                var grp = document.getElementById('colorCostGroup');
+                if (grp) {
+                    grp.style.display = (this.value === 'color') ? 'block' : 'none';
+                }
+            });
+        });
+
+        window.updatePages = function(amount) {
+            let current = parseInt(pagesInput.value) || 0;
+            current += amount;
+            if (current < 1) current = 1;
+            pagesInput.value = current;
+        };
+    })();
+</script>

@@ -1,0 +1,93 @@
+{% extends 'manager/base.html' %}
+{% load static i18n manager_extras %}
+
+{% block title %}{% trans "QR Codes" %}{% endblock %}
+
+{% block extra_head %}
+<!-- QRCode.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #printable-area, #printable-area * {
+            visibility: visible;
+        }
+        #printable-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .qr-card {
+            border: 1px solid #000 !important;
+            break-inside: avoid;
+        }
+    }
+    
+    .qr-card {
+        border: 2px dashed #ccc;
+        border-radius: 10px;
+        transition: transform 0.2s;
+    }
+    .qr-card:hover {
+        transform: translateY(-5px);
+        border-color: #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <h2>{% trans "QR Codes Management" %}</h2>
+    <div class="d-flex gap-2">
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="bi bi-printer"></i> {% trans "Print All" %}
+        </button>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">{% trans "Back" %}</a>
+    </div>
+</div>
+
+<div class="alert alert-info d-flex align-items-center no-print" role="alert">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <div>
+        {% trans "System detected your local IP as" %}: <strong>{{ local_ip }}</strong>. 
+        {% trans "QR codes are being generated using this address so customers on your Wi-Fi can access the menu." %}
+    </div>
+</div>
+
+<div id="printable-area" class="row g-4">    {% for table in tables %}
+    <div class="col-md-3 col-sm-6 text-center">
+        <div class="qr-card p-4 bg-white h-100 d-flex flex-column align-items-center justify-content-center">
+            <h4 class="fw-bold mb-3">{% trans "Table" %} {{ table.number }}</h4>
+            <div id="qr-{{ table.id }}" class="mb-3"></div>
+            <p class="text-muted small mb-0">{% trans "Scan to Order" %}</p>
+            <script>
+                (function() {
+                    let host = "{{ request.get_host }}";
+                    let protocol = "{{ request.scheme }}";
+                    let localIp = "{{ local_ip }}";
+                    
+                    // If accessing from localhost, use detected local network IP instead
+                    if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
+                        host = host.replace('localhost', localIp).replace('127.0.0.1', localIp);
+                    }
+                    
+                    let url = protocol + "://" + host + "{% url 'public_menu' table.id %}";
+                    
+                    new QRCode(document.getElementById("qr-{{ table.id }}"), {
+                        text: url,
+                        width: 128,
+                        height: 128,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                })();
+            </script>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

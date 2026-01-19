@@ -1,0 +1,35 @@
+{% extends 'manager/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% trans "Add Order" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white d-flex align-items-center">
+                    <img src="{% static 'img/logo.png' %}" alt="Logo" class="me-3" style="width: 40px; height: 40px; filter: brightness(0) invert(1);">
+                    <h3 class="mb-0">{% trans "Add Order" %}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">{% trans "Select Item" %}</label>
+                            <select name="item_id" class="form-select form-select-lg">
+                                {% for item in items %}
+                                <option value="{{ item.id }}">{{ item.name }} - EGP {{ item.price|floatformat:2 }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-lg w-100">{% trans "Confirm Order" %}</button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-link w-100 mt-2">{% trans "Cancel" %}</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% load i18n manager_extras %}
+<div class="modal fade" id="checkoutModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">{% trans "Checkout Receipt" %} - {% trans "Table" %} {{ table.number|translate_numbers }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4 text-center">
+                    <h6 class="text-muted text-uppercase small fw-bold">{% trans "Order Summary" %}</h6>
+                </div>
+
+                <div class="list-group list-group-flush mb-3">
+                    {% for ord in actual_orders_list %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div class="d-flex flex-column">
+                            <span>
+                                {% if ord.item_category_display %}<small class="opacity-75">({{ ord.item_category_display|translate_text }})</small>{% endif %}
+                                {{ ord.item_name_display|translate_text }}
+                            </span>
+                            {% if ord.customer_note_display %}
+                            <small class="text-muted italic" style="font-size: 0.8rem;">📝 "{{ ord.customer_note_display }}"</small>
+                            {% endif %}
+                        </div>
+                        <span class="fw-bold">
+                            {% if ord.transaction_price is not None %}
+                                {{ ord.transaction_price|floatformat:2|translate_numbers }}
+                            {% elif ord.item %}
+                                {{ ord.item.price|floatformat:2|translate_numbers }}
+                            {% endif %} 
+                            {% trans "EGP" %}
+                        </span>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted">{% trans "No items ordered" %}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="bg-dark text-white p-4 rounded-4 shadow-lg border-danger border-2 text-center" style="border: 2px solid #dc3545;">
+                    <div class="small text-uppercase opacity-75 mb-1" style="letter-spacing: 1px;">{% trans "Final Amount to Pay" %}</div>
+                    <div class="display-4 fw-bold text-danger">
+                        {{ final_total|floatformat:2|translate_numbers }} 
+                        <span class="fs-4">{% trans "EGP" %}</span>
+                    </div>
+                    
+                    {% if shortfall > 0 %}
+                    <div class="mt-2 small text-warning">
+                        <i class="bi bi-info-circle me-1"></i>
+                        {% trans "Includes" %} {{ shortfall|floatformat:2|translate_numbers }} EGP {% trans "min charge" %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="modal-footer p-3 border-0">
+                <button type="button" class="btn btn-link text-muted text-decoration-none me-auto" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                <form action="{% url 'check_out' table.id %}" method="POST" class="m-0 w-100 mt-2">
+                    {% csrf_token %}
+                    <button type="submit" id="confirmCheckoutBtn" class="btn btn-danger btn-lg w-100 py-3 fw-bold fs-4 rounded-3 shadow">
+                        {% trans "CONFIRM & CLOSE TABLE" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        var modalEl = document.getElementById('checkoutModal');
+        if (!modalEl) return;
+
+        function cleanup() {
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+
+        cleanup();
+
+        var myModal = new bootstrap.Modal(modalEl);
+        myModal.show();
+
+        modalEl.addEventListener('shown.bs.modal', function () {
+            document.getElementById('confirmCheckoutBtn').focus();
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            myModal.dispose();
+            modalEl.remove();
+            cleanup();
+        });
+    })();
+</script>

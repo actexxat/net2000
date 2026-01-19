@@ -1,0 +1,154 @@
+# Template Formatting Fix Walkthrough
+
+This walkthrough documents the successful activation of a custom template loader to handle broken Django template tags caused by auto-formatters.
+
+## Problem
+Auto-formatters (like Prettier) were splitting Django template tags across multiple lines, causing rendering errors or visible raw code in the browser.
+Example of broken syntax:
+```django
+{%
+  some_tag
+%}
+```
+
+## Solution
+We enabled the `FixedTemplateLoader` in `d:\net2000\core\settings.py`. This custom loader detects these split tags and rejoins them before Django's parser processes them.
+
+### Changes
+1.  **Modified [core/settings.py](file:///d:/net2000/core/settings.py)**:
+    -   Configured `TEMPLATES` to use explicit `loaders`.
+    -   Added `manager.template_loaders.FixedTemplateLoader` as the primary loader.
+    -   Manually added `d:\net2000\manager\templates` to `DIRS` to ensure the custom loader processes the app's templates.
+
+```python
+# settings.py snippet
+'loaders': [
+    'manager.template_loaders.FixedTemplateLoader',
+    'django.template.loaders.filesystem.Loader',
+    'django.template.loaders.app_directories.Loader',
+],
+```
+
+## Verification
+-   **Server Health**: The Django development server reloaded successfully without errors.
+-   **Page Rendering**: Validated that `http://127.0.0.1:8000/history/` returns a successful response (Status 200) and content renders correctly, indicating the templates are being processed by the fix.
+
+# Full-Screen History Table Walkthrough
+
+This walkthrough details the changes made to make the Transaction History table fill the entire page width and height, utilizing a modern, responsive layout.
+
+## Changes
+
+### 1. Flexible Container in `base.html`
+We modified the base template to allow child pages to override the main container class.
+```html
+<!-- base.html -->
+<div class="{% block container_class %}container{% endblock %} flex-grow-1">
+```
+
+### 2. Full-Screen Layout in `history.html`
+We completely restructured the history page to use:
+-   **`container-fluid`**: To span the full width of the viewport.
+-   **Flexbox Columns**: To organize the header, stats, and table vertically.
+-   **`flex-grow-1`**: To force the table container to expand and fill all remaining vertical space.
+-   **Sticky Header**: Added `sticky-top` to the table header so it remains visible while scrolling the table body.
+
+```html
+<!-- history.html structure -->
+{% block container_class %}container-fluid d-flex flex-column{% endblock %}
+
+<div class="d-flex flex-column h-100">
+    <!-- Header & Stats (Fixed Height) -->
+    <div class="pt-3 px-3">...</div>
+
+    <!-- Table Container (Fills Remaining Space) -->
+    <div class="card ... flex-grow-1 mx-3 mb-3">
+        <div class="table-responsive h-100 overflow-auto">
+            <table class="table ...">
+                <thead class="sticky-top">...</thead>
+                ...
+            </table>
+        </div>
+    </div>
+</div>
+```
+
+## Verification
+-   **Full Width**: The table now extends to the edges of the window (with small margins).
+-   **Full Height**: The table container pushes to the bottom of the page (above the footer).
+-   **Scrolling**: If the table content exceeds the viewable area, a vertical scrollbar appears *within the table card*, keeping the header and page stats visible.
+
+# Printed Receipt A4 Optimization
+
+This section details the CSS adjustments made to ensure the daily receipt prints effectively on A4 paper.
+
+## Changes
+Modified `manager/receipt.html` inside the `@media print` block:
+-   **Margins & Orientation**: Set standard `1cm` margins and `landscape` orientation.
+-   **Font Sizes**: Increased body text to `11pt` (from 7pt), headers to `16pt`/`12pt`, and table text to `10pt` for better readability and to fill the page.
+-   **Table Layout**:
+    -   Removed fixed narrow widths    -   **Category Tabs**: Replaced the search bar idea with **Category Tabs** in the modal header.
+        -   Users can click "All" or specific categories (e.g., "Hot Options") to filter the list instantly.
+        -   Verified that filtering is robust and adding items from filtered views functions correctly.
+    -   **Verification**: Visually confirmed the wider modal layout, static text, and tab functionality using browser simulation.
+-   **Bug Fixes**:
+    -   **Copy/Fax 500 Error**: Fixed a variable shadowing issue in [add_copy](file:///d:/net2000/manager/views.py#616-659) and [add_fax](file:///d:/net2000/manager/views.py#579-614) views that caused a server error upon confirmation. Verified both features now work correctly.
+
+![Browser Verification Flow](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/checkout_verification_1768064859878.webp)
+![Update People Verification](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/checkout_after_update_people_1768065430254.webp)
+![Add Item Modal & Tabs Verification](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/verify_tabs_functionality_1768069892471.webp)
+![Copy/Fax Fix Verification](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/verify_copy_fax_fix_1768070493742.webp)and to the full printable width of an A4 landscape page, rather than being restricted to a small portion of it.
+    -   Added padding (`6px 4px`) to cells for a less cramped look.
+    -   Ensured proper borders and alignment for print.
+-   **Cleanup**: Hid unnecessary elements (navbar, buttons) and removed card shadows/borders to ensure a clean white background.
+
+## Verification
+-   **Simulated Print View**: Confirmed via code inspection that print styles override screen styles, forcing 100% width and black-on-white text.
+-   **Content Fit**: The table is now configured to expand to the full printable width of an A4 landscape page, rather than being restricted to a small portion of it.
+
+## Equal Column Spacing
+To ensure uniform alignment on both screen and print:
+-   Implemented `table-layout: fixed` on the receipt table.
+-   Set a fixed width of `9.09%` (100% / 11 columns) for all header and data cells.
+-   Removed specific width overrides for individual columns, ensuring "Time", "Table", and data columns all share the same horizontal space.
+
+## Table Transactions Aggregation
+To address the request "every table to have its own row":
+-   Refactored [daily_receipt](file:///d:/net2000/manager/views.py#724-854) view to aggregate all paid orders by **Table Number** instead of listing individual chronological sessions.
+-   Removed the **Time** column from the receipt table since the row now represents the entire day's summary for that table.
+-   Adjusted column widths to `10%` each (10 columns) for perfect alignment.
+-   Adjusted column widths to `10%` each (10 columns) for perfect alignment.
+-   Verified via testing that multiple orders for the same table are summed into a single row.
+
+## Header Refinement
+-   Replaced abbreviated headers (e.g., "Tbl", "Drk", "P-BW", "Min") with full words ("Table", "Drinks", "Print B/W", "Min Charge") in `receipt.html` to improve clarity, as space permits.
+
+## Font Size Adjustments
+To improve readability:
+-   **History Page**: Increased table font size to `1.05rem`.
+-   **Receipt Page (Screen)**: Increased table font size to `0.85rem` (from 0.75rem).
+-   **Printed Receipt**: Increased body font to `12pt` and table text to `11pt` (from 11pt/10pt).
+
+## Admin Registration
+-   Registered [TableSession](file:///d:/net2000/manager/models.py#39-50) in [manager/admin.py](file:///d:/net2000/manager/admin.py) to allow manual management (deletion) of historical session records from the Django Admin interface.
+
+## Checkout Enhancements & Food Removal
+-   **Dynamic Checkout Modal**: Replaced standard checkout modal with a dynamic one that fetches real-time data when the "Checkout" button is clicked.
+    -   Displays itemized list of orders and prices.
+    -   Explicitly shows "Min Charge Shortfall" if the minimum charge applies, clarifying why the total might be higher than the sum of items (e.g., if total &lt; 30 EGP and no drinks ordered).
+-   **Food/Sweets Removal**: Completely removed the "Food/Sweets" button and functionality from the dashboard and database as requested.
+-   **Verification**:
+    -   **Backend Logic**: Automated script confirmed that min-charge shortfall is correctly calculated (e.g., reduces when drinks are ordered) and that final totals match expected values.
+-   **Sticky Header**: Added `sticky-top` to the table header so it remains visible while scrolling.
+-   **Personal Minimum Charge**:
+    -   **Rule**: Every person must independently meet the minimum charge (e.g., 25 EGP) through their own drink order.
+    -   **Calculation**: The system assigns drink orders to people. If a person's drink is cheaper than the minimum, or they have no drink, a "shortfall" is automatically added for that person.
+    -   **Verification**: Comprehensive testing confirmed that the system correctly distinguishes between drink-covered and uncovered individuals, even with multiple drinks per person.
+
+![Personal Min Charge Verification](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/verify_personal_mincharge_ui_1768079856261.webp)
+![Custom Item Service](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/verify_custom_item_service_new_1768072868642.webp)
+![Manual Cost Entry (Copy/Fax)](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/verify_manual_copy_fax_cost_1768072289912.webp)
+![Copy/Fax Fix Verification](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/verify_copy_fax_fix_1768070493742.webp)
+![Add Item Modal & Tabs Verification](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/verify_tabs_functionality_1768069892471.webp)
+![Update People Verification](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/checkout_after_update_people_1768065430254.webp)
+![Browser Verification Flow](file:///C:/Users/Start/.gemini/antigravity/brain/a485541a-4036-420d-ad63-2ccc4c949756/checkout_verification_1768064859878.webp)

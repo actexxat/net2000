@@ -1,0 +1,34 @@
+{% load i18n manager_extras %}
+<div id="live-order-list" class="d-flex flex-column gap-2" hx-swap-oob="true">
+    {% if not orders %}
+    <div class="text-center text-muted fst-italic py-3">{% trans "No active orders yet" %}</div>
+    {% else %}
+    {% for order in orders %}
+    <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded shadow-sm border-start border-4 border-danger animate-slide-in">
+        <div>
+            <div class="fw-bold text-dark">{{ order.item_name_display }}</div>
+            <div class="small text-muted">{{ order.timestamp|time:"H:i:s" }}</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold">{{ order.transaction_price|floatformat:0 }}</span>
+            <button class="btn btn-sm text-danger p-0" 
+                    hx-post="{% url 'discard_order' order.id %}"
+                    hx-confirm="{% trans 'Remove this item?' %}"
+                    hx-target="#live-order-list"
+                    hx-swap="none">
+                <i class="bi bi-x-circle-fill fs-5"></i>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+<style>
+    .animate-slide-in {
+        animation: slideInLeft 0.3s ease-out;
+    }
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+</style>

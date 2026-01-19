@@ -1,0 +1,54 @@
+{% load i18n manager_extras %}
+<div class="modal fade" id="customModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Custom Item" %} - {% trans "Table" %} {{ table.number|translate_numbers }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form hx-post="{% url 'add_custom_item' table.id %}" hx-target="#table-card-{{ table.id }}" hx-swap="outerHTML">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Item Name / Description" %}</label>
+                        <input type="text" name="item_name" class="form-control" placeholder="e.g. Scanning" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Price (EGP)" %}</label>
+                        <input type="number" name="price" step="0.5" class="form-control" placeholder="e.g. 15.00" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {% trans "Add to Bill" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        var modalEl = document.getElementById('customModal');
+        if (!modalEl) return;
+
+        function cleanup() {
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+
+        cleanup();
+
+        var myModal = new bootstrap.Modal(modalEl);
+        myModal.show();
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            myModal.dispose();
+            modalEl.remove();
+            cleanup();
+        });
+    })();
+</script>
