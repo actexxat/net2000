@@ -150,6 +150,14 @@
     }
     .card-special .form-control::placeholder { color: rgba(255, 255, 255, 0.5); }
 
+    /* Highlight for the last interacted card */
+    .last-interacted {
+        box-shadow: 0 0 25px rgba(13, 110, 253, 0.4) !important;
+        transform: translateY(-5px) scale(1.02) !important;
+        border: 2px solid #0d6efd !important;
+        z-index: 50 !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
 
 </style>
 {% endblock %}
@@ -177,9 +185,21 @@
 <script src="{% static 'vendor/masonry.pkgd.min.js' %}"></script>
 <script>
     var msnry = null;
+    var lastInteractedTableId = localStorage.getItem('lastInteractedTableId');
 
     document.addEventListener('DOMContentLoaded', function () {
         initMasonry();
+        applyLastInteracted();
+
+        // Track clicks on table cards to mark them as last interacted
+        document.addEventListener('click', function (event) {
+            const card = event.target.closest('.table-card');
+            if (card) {
+                lastInteractedTableId = card.id;
+                localStorage.setItem('lastInteractedTableId', lastInteractedTableId);
+                applyLastInteracted();
+            }
+        });
 
         // Handle print type radio toggle
         document.querySelectorAll('input[type=radio][name="print_type"]').forEach(function (radio) {
@@ -232,8 +252,19 @@
     document.addEventListener('htmx:afterSettle', function (event) {
         if (event.detail.target.id === 'masonry-grid' || event.detail.target.id.startsWith('table-card-')) {
             initMasonry();
+            applyLastInteracted();
         }
     });
+
+    function applyLastInteracted() {
+        if (lastInteractedTableId) {
+            const card = document.getElementById(lastInteractedTableId);
+            if (card) {
+                document.querySelectorAll('.table-card').forEach(c => c.classList.remove('last-interacted'));
+                card.classList.add('last-interacted');
+            }
+        }
+    }
 
     document.addEventListener('htmx:responseError', function (event) { console.error("HTMX Error:", event.detail.error); });
     document.addEventListener('htmx:sendError', function (event) { console.error("Network Error"); });
