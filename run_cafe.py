@@ -15,8 +15,9 @@ from waitress import serve
 def open_browser():
     """Open the default browser after a short delay to ensure server is ready"""
     import time
-    time.sleep(2)  # Wait 2 seconds for server to start
-    webbrowser.open('http://localhost:8000')
+    time.sleep(3)  # Wait 3 seconds for server to start
+    print("[ACTION] Opening browser to http://127.0.0.1:8000...")
+    webbrowser.open('http://127.0.0.1:8000')
 
 if __name__ == '__main__':
     print("--------------------------------------------------")

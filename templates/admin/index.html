@@ -5,5 +5,23 @@
 {% endblock %}
 
 {% block content %}
-{{ block.super }}
+<div id="content-main">
+    {{ block.super }}
+</div>
+
+<div id="content-related" style="margin-top: 20px;">
+    <div class="module" id="system-maintenance">
+        <h2 style="background: #dc3545;">System Maintenance</h2>
+        <ul style="padding: 10px;">
+            <li style="list-style: none; margin-bottom: 10px;">
+                <a href="{% url 'session_history' %}" class="button" style="background: #dc3545; color: white; padding: 10px; text-decoration: none; border-radius: 4px; display: block; text-align: center;">
+                    🗑️ Clear Old Data (Orders/Sessions)
+                </a>
+            </li>
+            <li style="list-style: none;">
+                <p style="font-size: 0.8em; color: #666;">Delete past transaction records to keep the database light and fast.</p>
+            </li>
+        </ul>
+    </div>
+</div>
 {% endblock %}

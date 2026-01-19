@@ -137,6 +137,11 @@
         background: #94a3b8;
     }
 </style>
+<script>
+    function confirmClearData() {
+        return confirm("{% trans 'Are you absolutely sure? This will permanently delete records.'|escapejs %}");
+    }
+</script>
 {% endblock %}
 
 {% block container_class %}container-fluid d-flex flex-column history-container{% endblock %}
@@ -171,12 +176,49 @@
                            style="outline: none; box-shadow: none; min-width: 150px;">
                 </div>
             </form>
+            <button type="button" class="btn btn-outline-danger border shadow-sm rounded-pill px-4 me-2" data-bs-toggle="modal" data-bs-target="#clearDataModal">
+                <i class="bi bi-trash me-2"></i> {% trans "Clear Data" %}
+            </button>
             <a href="{% url 'metrics' %}" class="btn btn-outline-primary border shadow-sm rounded-pill px-4 me-2">
                 <i class="bi bi-graph-up me-2"></i> {% trans "View Metrics" %}
             </a>
             <a href="{% url 'dashboard' %}" class="btn btn-white border shadow-sm rounded-pill px-4">
                 <i class="bi bi-arrow-left me-2"></i> {% trans "Back" %}
             </a>
+        </div>
+    </div>
+
+    <!-- Clear Data Modal -->
+    <div class="modal fade" id="clearDataModal" tabindex="-1" aria-labelledby="clearDataModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="clearDataModalLabel">{% trans "Clear Old Data" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <p class="text-muted">{% trans "Choose a date to delete all paid orders and sessions up to that day. This action cannot be undone." %}</p>
+                    <form id="clearDataForm" action="{% url 'clear_data' %}" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="until_date" class="form-label fw-bold">{% trans "Delete data up to (inclusive):" %}</label>
+                            <input type="date" name="until_date" id="until_date" class="form-control rounded-pill border shadow-sm" required>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="clear_all" id="clear_all">
+                            <label class="form-check-label text-danger" for="clear_all">
+                                {% trans "Force delete ALL orders (including unpaid/unfinalized)" %}
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" form="clearDataForm" class="btn btn-danger rounded-pill px-4" onclick="return confirmClearData()">
+                        <i class="bi bi-trash me-1"></i> {% trans "Execute Delete" %}
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     

@@ -34,7 +34,7 @@ def _get_table_context(table, settings=None):
     Optimized to use prefetched 'active_orders' if available.
     """
     if not settings:
-        settings, _ = GlobalSettings.objects.get_or_create(id=1)
+        settings, created = GlobalSettings.objects.get_or_create(id=1)
     
     if table.is_occupied:
         # Use prefetched orders if available, otherwise query DB
@@ -78,10 +78,22 @@ def _get_table_context(table, settings=None):
         table.shortfall = shortfall
         table.final_total = order_total + shortfall
         table.orders = unpaid_orders
+        
+        # Calculate Progress
+        if int(table.number) != 0 and table.current_people > 0:
+            total_target = table.current_people * settings.min_charge_per_person
+            if total_target > 0:
+                covered = total_target - shortfall
+                table.min_charge_progress = int((covered / total_target) * 100)
+            else:
+                table.min_charge_progress = 100
+        else:
+            table.min_charge_progress = 100
     else:
         table.actual_orders = 0
         table.shortfall = 0
         table.final_total = 0
+        table.min_charge_progress = 0
     return table
 
 def _get_sorted_tables(sort_by_status=True):
@@ -90,7 +102,7 @@ def _get_sorted_tables(sort_by_status=True):
     from .models import Table, Order, GlobalSettings, Item
     
     # Ensure Table 0 exists and is always occupied
-    t0, _ = Table.objects.get_or_create(number=0, defaults={'capacity': 50, 'is_occupied': True})
+    t0, created = Table.objects.get_or_create(number=0, defaults={'capacity': 50, 'is_occupied': True})
     if not t0.is_occupied:
         t0.is_occupied = True
         t0.save()
@@ -180,10 +192,37 @@ def dashboard(request):
     grouped_items = {k: sorted(v, key=lambda x: x.name) for k, v in sorted(grouped.items())}
     
     # Get the global minimum charge (creates a default of 25 if none exists)
+    # Quick Fire Items (Top 5 selling)
+    # Quick Fire Items (Specific User Request)
+    target_names = ["turkish coffee", "tea", "water", "latte", "redbull", "twist", "v cola", "sun top", "volt"]
+    quick_items = []
+    
+    # 1. Fetch prefered items in order
+    for name_query in target_names:
+        # fuzzy match or exact match logic
+        found = next((i for i in items if name_query in i.name.lower()), None)
+        if found and found not in quick_items:
+            quick_items.append(found)
+
+    # 2. Fill remainder with top sellers if needed (up to 12 items for bar)
+    if len(quick_items) < 12:
+        top_ids = Order.objects.filter(item__isnull=False).values('item').annotate(c=Count('id')).order_by('-c')[:12]
+        for t in top_ids:
+            try:
+                candidate = Item.objects.get(id=t['item'])
+                if candidate not in quick_items:
+                    quick_items.append(candidate)
+            except Item.DoesNotExist:
+                continue
+    
+    # Limit to reasonable number
+    quick_items = quick_items[:12]
+
     return render(request, 'manager/dashboard.html', {
         'tables': tables,
         'items': items,
         'grouped_items': grouped_items,
+        'quick_items': quick_items,
         'global_min_charge': settings.min_charge_per_person,
         'server_now': timezone.now().isoformat()
     })
@@ -194,29 +233,43 @@ def dashboard_grid(request):
     import hashlib
     from django.http import HttpResponse, HttpResponseNotModified
     from django.template.loader import render_to_string
+    from django.db.models import Max, Count, Sum
     
-    # 1. Fetch Data
-    # Use sort_by_status=True so spectator devices see the active tables move to top
-    tables = _get_sorted_tables(sort_by_status=True)
+    # 1. Cheap State Check (DB Aggregation) to avoid rendering
+    # We want to catch: New Orders, Deleted Orders, Served Status Change, People Count Change, Table Status Change
     
-    # 2. Render content to string first
-    # Reverting to full grid replacement to ensure tables "move" on spectator devices as requested
-    content = render_to_string('manager/partials/table_grid.html', {'tables': tables}, request=request)
+    orders_agg = Order.objects.filter(is_paid=False).aggregate(
+        cnt=Count('id'), 
+        max_id=Max('id'), 
+        served_cnt=Sum('is_served')
+    )
     
-    # 3. Hash the actual HTML content
-    et = hashlib.md5(content.encode('utf-8')).hexdigest()
+    tables_agg = Table.objects.aggregate(
+        occupied_cnt=Count('id', filter=models.Q(is_occupied=True)),
+        people_sum=Sum('current_people')
+    )
     
-    # Handle quoted ETags from browsers (e.g. "hash" or W/"hash")
+    # Create a unique state string
+    # We add a 'version' salt (v2) to ensure template changes invalidate the cache
+    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{orders_agg['served_cnt']}-{tables_agg['occupied_cnt']}-{tables_agg['people_sum']}-v2"
+    
+    # Explicitly check if 'last_updated' session variable (if we used one) matches? 
+    # Or just hash this state.
+    et = hashlib.md5(state_str.encode('utf-8')).hexdigest()
+    
+    # Handle quoted ETags
     client_etag = request.headers.get('If-None-Match', '')
     if client_etag.startswith('W/'):
         client_etag = client_etag[2:]
     client_etag = client_etag.strip('"')
     
-    print(f"DEBUG ETag: Server={et} | Client={client_etag} | Match={client_etag == et}")
-    
     if client_etag == et:
         return HttpResponseNotModified()
 
+    # 2. Fetch Data & Render (Only if changed)
+    tables = _get_sorted_tables(sort_by_status=True)
+    content = render_to_string('manager/partials/table_grid.html', {'tables': tables}, request=request)
+    
     response = HttpResponse(content)
     response['ETag'] = f'"{et}"'
     return response
@@ -233,6 +286,11 @@ def check_in(request, table_id):
     """Marks a table as occupied. Accepts people_count from POST if provided."""
     if request.method == "POST":
         table = get_object_or_404(Table, id=table_id)
+        
+        # Security: Clear any ghost orders that might exist on this 'closed' table
+        # This prevents the "newly opened table has orders" confusion
+        table.order_set.filter(is_paid=False).delete()
+        
         table.is_occupied = True
         table.opened_at = timezone.now()
         try:
@@ -757,7 +815,7 @@ def monitor(request):
     )
     tables = Table.objects.filter(is_occupied=True).prefetch_related(unpaid_orders_prefetch).order_by('number')
     all_tables = Table.objects.all().order_by('number')
-    settings, _ = GlobalSettings.objects.get_or_create(id=1)
+    settings, created = GlobalSettings.objects.get_or_create(id=1)
 
     busy_tables = []
     total_people = 0
@@ -820,6 +878,7 @@ def monitor(request):
         'total_due': total_due,
         'all_tables': all_tables,
     }
+    return render(request, 'manager/monitor.html', context)
 
 @require_POST
 @login_required
@@ -860,7 +919,7 @@ def add_order_direct(request, table_id):
     )
     
     # Refresh table context for the card update
-    settings, _ = GlobalSettings.objects.get_or_create(id=1)
+    settings, created = GlobalSettings.objects.get_or_create(id=1)
     _get_table_context(table, settings)
     
     # Render the updated table card
@@ -1150,6 +1209,16 @@ def discard_order(request, order_id):
         order = get_object_or_404(Order, id=order_id)
         table = order.table
         item_name = order.item_name_display
+        
+        # Save for Undo
+        request.session['deleted_order'] = {
+            'item_id': order.item.id if order.item else None,
+            'description': order.description,
+            'price': str(order.transaction_price) if order.transaction_price else '0.00',
+            'table_id': table.id,
+            'order_type': order.order_source
+        }
+        
         order.delete()
         
         if table:
@@ -1175,18 +1244,79 @@ def discard_order(request, order_id):
                 count_loc = translate_numbers(active_orders.count())
                 badge_html = f'<span class="badge bg-danger rounded-pill" id="live-order-badge" hx-swap-oob="true">{count_loc}</span>'
                 
-                # 4. Toast Notification
+                # 4. Toast Notification with UNDO
+                # We construct a toast message that includes a clickable Undo action
+                undo_url = request.build_absolute_uri('/restores-latest/') # Need to register this
+                msg = _("Removed %(item)s") % {'item': item_name}
+                # Create a small interactive HTML button for the toast
+                action_html = f"""
+                <button class='btn btn-sm btn-light ms-2 py-0 fw-bold' 
+                        hx-post='/restore-order/' 
+                        hx-swap='none'
+                        onclick='this.closest(".message-popup").remove()'>
+                    { _('UNDO') }
+                </button>
+                """
+                
                 toast_html = render_to_string('manager/partials/toast_notification.html', {
-                    'message': _("Item removed: %(item)s") % {'item': item_name},
-                    'level': 'info'
+                    'message': f"{msg} {action_html}",
+                    'level': 'dark', # Dark toast for contrast
+                    'safe_mode': True # Tell template to render HTML
                 }, request=request)
                 
                 return HttpResponse(card_html + live_list_html + badge_html + toast_html)
-                
+            
+            # Fallback for non-HTMX
             messages.success(request, _("Item removed: %(item)s") % {'item': item_name})
             return render(request, 'manager/partials/table_card.html', {'table': table})
             
     return redirect('dashboard')
+
+@login_required
+def restore_order(request):
+    """Restores the last deleted order from session."""
+    if request.method == "POST":
+        data = request.session.get('deleted_order')
+        if not data:
+            return HttpResponse(status=204) # Do nothing
+            
+        try:
+            table = Table.objects.get(id=data['table_id'])
+            item = Item.objects.get(id=data['item_id']) if data['item_id'] else None
+            
+            Order.objects.create(
+                table=table,
+                item=item,
+                description=data['description'],
+                transaction_price=Decimal(data['price']),
+                order_source=data['order_type'],
+                is_paid=False
+            )
+            
+            # Clear session
+            del request.session['deleted_order']
+            
+            # Return Updates
+            _get_table_context(table)
+            
+            from django.template.loader import render_to_string
+            card_html = render_to_string('manager/partials/table_card.html', {
+                'table': table,
+                'is_oob': True,
+                'suppress_messages': True
+            }, request=request)
+             
+            toast_html = render_to_string('manager/partials/toast_notification.html', {
+                'message': _("Order restored!"),
+                'level': 'success'
+            }, request=request)
+            
+            return HttpResponse(card_html + toast_html)
+            
+        except Exception:
+            pass
+            
+    return HttpResponse(status=204)
 
 @login_required
 def serve_all_orders(request, table_id):
@@ -1303,3 +1433,75 @@ def daily_receipt(request, year, month, day):
         'sessions': sessions,
         'sessions_total': totals['final'],
     })
+
+@superuser_required
+def clear_data(request):
+    """View to clear old order and session data up to a selected date."""
+    if request.method == "POST":
+        until_date_str = request.POST.get('until_date')
+        clear_all = request.POST.get('clear_all') == 'on' 
+        
+        if not until_date_str:
+            messages.error(request, _("Please select a date."))
+            return redirect('session_history')
+        
+        try:
+            # More robust parsing to avoid 500 errors on some Windows 7 locales
+            y, m, d = map(int, until_date_str.split('-'))
+            until_date = datetime.date(y, m, d)
+            # Create end-of-day datetime
+            naive_dt = datetime.datetime.combine(until_date, datetime.time.max)
+            until_dt = timezone.make_aware(naive_dt)
+            
+            # print(f"[CLEANUP] Executing delete up to {until_dt} (Clear All: {clear_all})")
+            
+            # 1. Delete Orders
+            if clear_all:
+                orders_count, deleted_info = Order.objects.filter(timestamp__lte=until_dt).delete()
+            else:
+                orders_count, deleted_info = Order.objects.filter(is_paid=True, timestamp__lte=until_dt).delete()
+            
+            # 2. Delete TableSessions
+            sessions_count, deleted_info = TableSession.objects.filter(check_out_time__lte=until_dt).delete()
+            
+            messages.success(request, _("Cleanup Complete: Deleted %(orders)d orders and %(sessions)d sessions up to %(date)s.") % {
+                'orders': orders_count,
+                'sessions': sessions_count,
+                'date': until_date_str
+            })
+            
+        except Exception as e:
+            # print(f"[CLEANUP ERROR] {str(e)}")
+            messages.error(request, _("An error occurred during cleanup: %(error)s") % {'error': str(e)})
+            
+    # Redirect back to the referrer (history page) or fallback to today's history
+    return redirect(request.META.get('HTTP_REFERER', 'session_history'))
+
+@login_required
+def dismiss_table(request, table_id):
+    """Resets the table and deletes all its unpaid orders without saving to history."""
+    if request.method == "POST":
+        table = get_object_or_404(Table, id=table_id)
+        
+        # 1. Delete all unpaid orders for this table
+        table.order_set.filter(is_paid=False).delete()
+        
+        # 2. Reset the table
+        if int(table.number) != 0:
+            table.is_occupied = False
+            table.current_people = 0
+        else:
+            # Table 0 is special, just reset metadata
+            table.is_occupied = True
+            table.current_people = 1
+            table.opened_at = timezone.now()
+            
+        table.save()
+        messages.info(request, _("Table %(number)s has been dismissed.") % {'number': table.number})
+        
+        if request.headers.get('HX-Request'):
+            # Return full grid to re-sort if necessary
+            tables = _get_sorted_tables()
+            return render(request, 'manager/partials/table_grid.html', {'tables': tables})
+            
+    return redirect('dashboard')

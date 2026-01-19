@@ -18,11 +18,25 @@ from pathlib import Path
 IS_FROZEN = getattr(sys, 'frozen', False)
 
 if IS_FROZEN:
-    # 1. BUNDLE_DIR: The internal temp folder where PyInstaller extracts code/static/templates.
-    # sys._MEIPASS is the standard PyInstaller internal path.
-    BUNDLE_DIR = Path(getattr(sys, '_MEIPASS', os.path.dirname(sys.executable)))
-    # 2. BASE_DIR: The folder containing the .exe (for DB and Media).
+    # sys._MEIPASS is the internal path where PyInstaller extracts/locates files.
+    # In newer PyInstaller versions with --onedir, this points to the '_internal' folder.
+    meipass = getattr(sys, '_MEIPASS', None)
+    if meipass:
+        BUNDLE_DIR = Path(meipass)
+    else:
+        BUNDLE_DIR = Path(sys.executable).resolve().parent
+    
+    # BASE_DIR is the permanent folder (where the EXE resides)
+    # If using --onedir, the EXE is in the root, and code is in _internal.
+    # BUT sometimes PyInstaller behavior varies.
     BASE_DIR = Path(sys.executable).resolve().parent
+    
+    pass
+    # print(f"[BOOT] Frozen Mode detected.")
+    # print(f"[BOOT] sys.executable: {sys.executable}")
+    # print(f"[BOOT] sys._MEIPASS: {meipass}")
+    # print(f"[BOOT] BUNDLE_DIR: {BUNDLE_DIR}")
+    # print(f"[BOOT] BASE_DIR: {BASE_DIR}")
 else:
     BUNDLE_DIR = Path(__file__).resolve().parent.parent
     BASE_DIR = BUNDLE_DIR
@@ -154,15 +168,26 @@ import mimetypes
 mimetypes.add_type("text/css", ".css", True)
 mimetypes.add_type("text/javascript", ".js", True)
 
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [BUNDLE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+if IS_FROZEN:
+    pass
+    # print(f"[DEBUG] Frozen Mode: BUNDLE_DIR={BUNDLE_DIR}")
+    # print(f"[DEBUG] Frozen Mode: BASE_DIR={BASE_DIR}")
+
+STATIC_URL = '/static/'
+_static_dir = BUNDLE_DIR / 'static'
+STATICFILES_DIRS = [str(_static_dir)] if _static_dir.exists() else []
+STATIC_ROOT = str(BUNDLE_DIR / 'staticfiles')
+
+if IS_FROZEN:
+    pass
+    # print(f"[BOOT] STATIC_ROOT: {STATIC_ROOT}")
+
+# Use WhiteNoise to serve static files
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # Use Simple storage to avoid manifest/compression issues on older Windows systems
         "BACKEND": "whitenoise.storage.StaticFilesStorage",
     },
 }

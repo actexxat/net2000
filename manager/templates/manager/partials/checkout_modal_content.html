@@ -1,90 +1,128 @@
 {% load i18n manager_extras %}
 <div class="modal fade" id="checkoutModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">{% trans "Checkout Receipt" %} - {% trans "Table" %} {{ table.number|translate_numbers }}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-4 text-center">
-                    <h6 class="text-muted text-uppercase small fw-bold">{% trans "Order Summary" %}</h6>
+        <div class="modal-content bg-transparent border-0">
+            
+            <!-- Receipt Container -->
+            <div class="receipt-container position-relative bg-white shadow-lg mx-auto" style="width: 100%; max-width: 380px; font-family: 'Courier New', Courier, monospace;">
+                
+                <!-- Receipt Header -->
+                <div class="text-center pt-4 pb-2 border-bottom border-2 border-dark border-opacity-10">
+                    <div class="fw-bold fs-4 text-uppercase">{% trans "Receipt" %}</div>
+                    <div class="text-muted small">{% trans "Table" %} #{{ table.number|translate_numbers }}</div>
+                    <div class="text-muted small">{{ table.opened_at|date:"Y-m-d H:i" }}</div>
                 </div>
 
-                <div class="list-group list-group-flush mb-3">
-                    {% for ord in actual_orders_list %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <div class="d-flex flex-column">
-                            <span>
-                                {% if ord.item_category_display %}<small class="opacity-75">({{ ord.item_category_display|translate_text }})</small>{% endif %}
+                <!-- Items List -->
+                <div class="receipt-body p-4">
+                    <table class="w-100 mb-3" style="font-size: 0.9rem;">
+                        {% for ord in actual_orders_list %}
+                        <tr>
+                            <td class="align-top pb-2 pt-1" style="padding-right: 8px;">
                                 {{ ord.item_name_display|translate_text }}
-                            </span>
-                            {% if ord.customer_note_display %}
-                            <small class="text-muted italic" style="font-size: 0.8rem;">📝 "{{ ord.customer_note_display }}"</small>
-                            {% endif %}
-                        </div>
-                        <span class="fw-bold">
-                            {% if ord.transaction_price is not None %}
-                                {{ ord.transaction_price|floatformat:2|translate_numbers }}
-                            {% elif ord.item %}
-                                {{ ord.item.price|floatformat:2|translate_numbers }}
-                            {% endif %} 
-                            {% trans "EGP" %}
-                        </span>
-                    </div>
-                    {% empty %}
-                    <div class="text-center text-muted">{% trans "No items ordered" %}</div>
-                    {% endfor %}
-                </div>
+                                {% if ord.item_category_display %}<div class="text-muted" style="font-size: 0.7em;">({{ ord.item_category_display|translate_text }})</div>{% endif %}
+                                {% if ord.customer_note_display %}<div class="fst-italic text-muted" style="font-size: 0.7em;">"{{ ord.customer_note_display }}"</div>{% endif %}
+                            </td>
+                            <td class="align-top text-end pb-2 pt-1 fw-bold">
+                                {% if ord.transaction_price is not None %}
+                                    {{ ord.transaction_price|floatformat:2|translate_numbers }}
+                                {% elif ord.item %}
+                                    {{ ord.item.price|floatformat:2|translate_numbers }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted fst-italic">{% trans "No items ordered" %}</td></tr>
+                        {% endfor %}
+                    </table>
 
-                <div class="bg-dark text-white p-4 rounded-4 shadow-lg border-danger border-2 text-center" style="border: 2px solid #dc3545;">
-                    <div class="small text-uppercase opacity-75 mb-1" style="letter-spacing: 1px;">{% trans "Final Amount to Pay" %}</div>
-                    <div class="display-4 fw-bold text-danger">
-                        {{ final_total|floatformat:2|translate_numbers }} 
-                        <span class="fs-4">{% trans "EGP" %}</span>
-                    </div>
+                    <div class="border-top border-top-dashed border-dark border-opacity-25 py-2"></div>
                     
+                    <div class="d-flex justify-content-between fw-bold mb-1">
+                        <span>{% trans "Subtotal" %}</span>
+                        <span>{{ total_orders_price|floatformat:2|translate_numbers }}</span>
+                    </div>
+
+                    <!-- Min Charge Progress -->
                     {% if shortfall > 0 %}
-                    <div class="mt-2 small text-warning">
-                        <i class="bi bi-info-circle me-1"></i>
-                        {% trans "Includes" %} {{ shortfall|floatformat:2|translate_numbers }} EGP {% trans "min charge" %}
+                    <div class="my-3 p-2 bg-warning bg-opacity-10 border border-warning rounded">
+                        <div class="d-flex justify-content-between small text-warning mb-1 fw-bold">
+                            <span>{% trans "Minimum Charge" %}</span>
+                            <span>{{ shortfall|floatformat:2|translate_numbers }} {% trans "Added" %}</span>
+                        </div>
+                        <div class="progress" style="height: 10px; background-color: rgba(0,0,0,0.1);">
+                             <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ table.min_charge_progress }}%" aria-valuenow="{{ table.min_charge_progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="small text-muted text-center mt-1" style="font-size: 0.7rem;">
+                            {% trans "Order more to use this credit!" %}
+                        </div>
+                    </div>
+                    {% else %}
+                     <div class="d-flex justify-content-between text-success small mb-1">
+                        <span>{% trans "Min. Charge" %}</span>
+                        <span>{% trans "Met" %} ✓</span>
                     </div>
                     {% endif %}
+                    
+                    <div class="border-top border-2 border-dark my-2"></div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fs-4 fw-bold">{% trans "TOTAL" %}</span>
+                        <span class="fs-3 fw-bold bg-dark text-white px-2 py-1 rounded">{{ final_total|floatformat:2|translate_numbers }}</span>
+                    </div>
                 </div>
+                
+                <!-- Jagged Edge (Pure CSS) -->
+                <div class="jagged-edge"></div>
+                
             </div>
-            <div class="modal-footer p-3 border-0">
-                <button type="button" class="btn btn-link text-muted text-decoration-none me-auto" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
-                <form action="{% url 'check_out' table.id %}" method="POST" class="m-0 w-100 mt-2">
+            
+            <div class="text-center mt-4">
+                 <form action="{% url 'check_out' table.id %}" method="POST">
                     {% csrf_token %}
-                    <button type="submit" id="confirmCheckoutBtn" class="btn btn-danger btn-lg w-100 py-3 fw-bold fs-4 rounded-3 shadow">
-                        {% trans "CONFIRM & CLOSE TABLE" %}
+                    <button type="submit" id="confirmCheckoutBtn" class="btn btn-danger btn-lg rounded-pill shadow-lg px-5 fw-bold animate-pulse text-uppercase border-2 border-white">
+                        <i class="bi bi-check-lg me-2"></i> {% trans "Confirm Payment" %}
                     </button>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-link text-white text-decoration-none opacity-75" data-bs-dismiss="modal">{% trans "Go Back" %}</button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .jagged-edge {
+        background: radial-gradient(circle, transparent 50%, white 50%);         
+        background-size: 20px 20px;
+        background-position: center bottom;
+        height: 10px;
+        position: absolute;
+        bottom: -10px;
+        left: 0; 
+        right: 0;
+        transform: rotate(180deg);
+    }
+    .border-top-dashed { border-top-style: dashed !important; }
+</style>
+
 <script>
     (function() {
         var modalEl = document.getElementById('checkoutModal');
         if (!modalEl) return;
-
         function cleanup() {
             document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
             document.body.classList.remove('modal-open');
             document.body.style.overflow = '';
             document.body.style.paddingRight = '';
         }
-
         cleanup();
-
         var myModal = new bootstrap.Modal(modalEl);
         myModal.show();
-
         modalEl.addEventListener('shown.bs.modal', function () {
             document.getElementById('confirmCheckoutBtn').focus();
         });
-
         modalEl.addEventListener('hidden.bs.modal', function () {
             myModal.dispose();
             modalEl.remove();

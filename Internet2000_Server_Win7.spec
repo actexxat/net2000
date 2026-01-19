@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_all
 from PyInstaller.utils.hooks import copy_metadata
 
-datas = [('templates', 'templates'), ('static', 'static'), ('locale', 'locale'), ('manager/templates', 'manager/templates')]
+datas = [('templates', 'templates'), ('staticfiles', 'staticfiles'), ('locale', 'locale'), ('manager/templates', 'manager/templates')]
 binaries = []
 hiddenimports = ['waitress', 'whitenoise', 'whitenoise.middleware', 'django.core.management', 'django.db.backends.sqlite3']
 datas += copy_metadata('setuptools')

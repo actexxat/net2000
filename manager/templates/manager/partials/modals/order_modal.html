@@ -177,60 +177,97 @@
         aspect-ratio: 1 / 1.15;
         overflow: hidden;
         position: relative;
-        background-color: #222;
-        border-radius: 12px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        background-color: #f8f9fa; /* Default fallback */
+        border-radius: 16px; /* rounder */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        border: 2px solid transparent;
+        transition: all 0.2s;
     }
+
+    /* Category Colors (Pastel) */
+    .category-section[data-category="hot"] .item-card-dynamic { background-color: #ffb3ba; border-color: #ff9aa2; }
+    .category-section[data-category="cold"] .item-card-dynamic { background-color: #bae1ff; border-color: #aecdff; }
+    .category-section[data-category="juice"] .item-card-dynamic { background-color: #ffffba; border-color: #f9f9a2; }
+    .category-section[data-category="fresh"] .item-card-dynamic { background-color: #baffc9; border-color: #a3ffb8; }
+    .category-section[data-category="food"] .item-card-dynamic, .category-section[data-category="dessert"] .item-card-dynamic { background-color: #ffd1dc; border-color: #ffb7c5; }
+    .category-section[data-category="other"] .item-card-dynamic { background-color: #e2daeb; border-color: #dcd0ea; }
+
     .item-card-dynamic.has-image {
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
     }
+    
+    /* Overlay for Text Legibility on Pastels */
     .item-card-overlay {
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
-        background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 70%, transparent 100%);
-        padding: 8px 6px !important;
+        background: rgba(255, 255, 255, 0.85); /* Light glass */
+        backdrop-filter: blur(4px);
+        padding: 10px 8px !important;
         z-index: 1;
-        min-height: 75px;
+        min-height: 65px;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        color: white;
+        color: #333; /* Dark text for contrast */
+        border-top: 1px solid rgba(255,255,255,0.5);
     }
     
+    .item-card-dynamic.has-image .item-card-overlay {
+         background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 100%);
+         color: white;
+         border-top: none;
+    }
+
+    /* Redbull Exception */
     .item-card-dynamic.is-redbull {
-        background-color: #f8f9fa;
+        background-color: #fff;
         background-size: contain !important;
         background-repeat: no-repeat !important;
-        background-position: center 10% !important;
+        background-position: center 20% !important;
+        border-color: #0d6efd;
     }
     .is-redbull .item-card-overlay {
-        background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 70%, transparent 100%);
+        background: rgba(13, 62, 146, 0.9);
+        color: white;
     }
 
+    /* Buttons inside card */
     .btn-xs {
-        padding: 0.15rem 0.2rem;
-        font-size: 0.75rem;
+        padding: 0.25rem 0.2rem;
+        font-size: 0.8rem;
         line-height: 1;
-        border-radius: 6px;
+        border-radius: 8px;
     }
+    /* Buttons on light cards -> Dark/Solid */
     .btn-glass {
-        background: rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(4px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: white;
+        background: rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        color: #222;
+        font-weight: 800;
     }
     .btn-glass:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(0, 0, 0, 0.2);
+        color: #000;
+    }
+
+    /* Buttons on dark image cards -> White/Glass */
+    .has-image .btn-glass, .is-redbull .btn-glass {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         color: white;
     }
-    .fs-xs { font-size: 0.65rem; }
+    .has-image .btn-glass:hover, .is-redbull .btn-glass:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
 
-    #menu-scroll-area::-webkit-scrollbar { width: 4px; }
-    #menu-scroll-area::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.1); border-radius: 10px; }
+    .fs-xs { font-size: 0.75rem; }
+
+    #menu-scroll-area::-webkit-scrollbar { width: 6px; }
+    #menu-scroll-area::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 10px; }
     
     @media (max-width: 767.98px) {
         #cart-sidebar {

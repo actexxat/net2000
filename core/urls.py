@@ -15,6 +15,7 @@ urlpatterns = [
     # Manager Actions
     path('toggle-served/<int:order_id>/', manager_views.toggle_served, name='serve_order_toggle'),
     path('discard-order/<int:order_id>/', manager_views.discard_order, name='discard_order'),
+    path('restore-order/', manager_views.restore_order, name='restore_order'),
     path('serve-all-orders/<int:table_id>/', manager_views.serve_all_orders, name='serve_all_orders'),
     path('', manager_views.dashboard, name='dashboard'),
     path('dashboard/grid/', manager_views.dashboard_grid, name='dashboard_grid'),
@@ -26,6 +27,7 @@ urlpatterns = [
     path('table/<int:table_id>/add_order/', manager_views.add_order, name='add_order'),
     path('table/<int:table_id>/add_order_direct/', manager_views.add_order_direct, name='add_order_direct'),
     path('table/<int:table_id>/checkout/', manager_views.check_out, name='check_out'),
+    path('table/<int:table_id>/dismiss/', manager_views.dismiss_table, name='dismiss_table'),
     path('update-people/<int:table_id>/', manager_views.update_people, name='update_people'),
     path('refresh-table/<int:table_id>/', manager_views.refresh_table, name='refresh_table'),
     path('create-table/', manager_views.create_table, name='create_table'), 
@@ -40,6 +42,7 @@ urlpatterns = [
     
     # History & Stats
     path('history/', manager_views.session_history, name='session_history'),
+    path('clear-data/', manager_views.clear_data, name='clear_data'),
     path('metrics/', manager_views.metrics_dashboard, name='metrics'),
     path('monitor/', manager_views.monitor, name='monitor'),
     path('unauthorized/', manager_views.unauthorized, name='unauthorized'),
@@ -55,4 +58,5 @@ urlpatterns = [
 if settings.DEBUG or getattr(settings, 'IS_FROZEN', False):
     urlpatterns += [
         re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+        re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
     ]

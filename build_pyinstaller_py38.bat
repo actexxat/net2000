@@ -9,11 +9,15 @@ echo [1/4] Cleaning previous builds...
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 
+:: 1.5 Collect Static Files
+echo [1.5/4] Collecting static files...
+d:\net2000\py38_env\python.exe run_collectstatic.py
+
 :: 2. Run PyInstaller
 echo [2/4] Running PyInstaller...
 d:\net2000\py38_env\python.exe -m PyInstaller --noconfirm --onedir --console --name "Internet2000_Server_Win7" ^
     --add-data "templates;templates" ^
-    --add-data "static;static" ^
+    --add-data "staticfiles;staticfiles" ^
     --add-data "locale;locale" ^
     --add-data "manager/templates;manager/templates" ^
     --hidden-import "waitress" ^
@@ -48,6 +52,7 @@ if exist media (
     xcopy /e /i /y media "%DIST_DIR%\media"
     echo   - media folder copied.
 )
+timeout /t 3 /nobreak >nul
 
 :: 4. Create specialized Dist-scripts (Launching the EXE)
 echo [4/5] Creating service scripts for production...
@@ -62,6 +67,21 @@ echo timeout /t 2 /nobreak ^>nul
 echo echo [ACTION] Starting Server...
 echo start "" "Internet2000_Server_Win7.exe"
 ) > "%DIST_DIR%\START_SERVER.bat"
+echo   - START_SERVER.bat created.
+
+(
+echo @echo off
+echo cd /d %%~dp0
+echo TITLE Internet 2000 - Cafe Server (Terminal Mode)
+echo echo [ACTION] Checking for existing instances...
+echo taskkill /F /IM Internet2000_Server_Win7.exe /T 2^>nul 2^>^&1
+echo timeout /t 2 /nobreak ^>nul
+echo echo [ACTION] Starting Server in Terminal Mode...
+echo echo [INFO] Press Ctrl+C to stop the server.
+echo Internet2000_Server_Win7.exe
+echo pause
+) > "%DIST_DIR%\RUN_IN_TERMINAL.bat"
+echo   - RUN_IN_TERMINAL.bat created.
 
 (
 echo @echo off
@@ -74,6 +94,14 @@ echo echo [ACTION] Backing up to backups\db_backup_%%datestr%%_%%timestr%%.sqlit
 echo copy db.sqlite3 backups\db_backup_%%datestr%%_%%timestr%%.sqlite3 /y
 echo timeout /t 3
 ) > "%DIST_DIR%\BACKUP_DATABASE.bat"
+echo   - BACKUP_DATABASE.bat created.
+
+(
+echo #!/bin/bash
+echo echo "Starting Internet 2000 Server..."
+echo ./Internet2000_Server_Win7.exe
+) > "%DIST_DIR%\RUN_SERVER.sh"
+echo   - RUN_SERVER.sh created.
 
 if exist manual.md (
     copy manual.md "%DIST_DIR%\"

@@ -4,7 +4,7 @@
     data-table-id="{{ table.id }}"
     {% if is_oob %}hx-swap-oob="true"{% endif %}>
     <div class="card-body p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
             <h4 class="mb-0 fw-bold">{% trans "Table" %} {{ table.number|translate_numbers }}</h4>
             <div class="d-flex align-items-center">
                 {% if table.is_occupied %}
@@ -18,6 +18,19 @@
                       style="width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.1);"></span>
             </div>
         </div>
+        
+        {% if table.is_occupied and table.number != 0 %}
+        <!-- Table Health Bar -->
+        <div class="progress mb-3 shadow-sm" style="height: 8px; background-color: rgba(0,0,0,0.05);">
+            <div class="progress-bar {% if table.min_charge_progress >= 100 %}bg-success{% elif table.min_charge_progress >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                 role="progressbar" 
+                 style="width: {{ table.min_charge_progress }}%; transition: width 0.5s ease; border-radius: 10px;" 
+                 aria-valuenow="{{ table.min_charge_progress }}" aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+        {% else %}
+        <div class="mb-3"></div>
+        {% endif %}
         <div class="table-details-static">
             {% if table.is_occupied %}
             {% if table.number != 0 %}
@@ -93,7 +106,7 @@
                                 hx-post="{% url 'discard_order' order.id %}" 
                                 hx-target="#table-card-{{ table.id }}" 
                                 hx-swap="outerHTML" 
-                                hx-confirm="{% trans 'Discard this item?' %}">
+                                hx-swap="outerHTML">
                             &times;
                         </button>
                     </div>
@@ -129,11 +142,23 @@
                             <img src="{% static 'img/copy_icon.png' %}" alt="{% trans 'Copy' %}" style="width: 24px; height: 24px;">
                         </button>
                     </div>
-                    <button type="button" class="btn btn-light btn-lg mt-1 fw-bold text-danger animate-pulse shadow-sm" 
-                        hx-get="{% url 'checkout_preview' table.id %}" 
-                        hx-target="#checkout-modal-container">
-                        <i class="bi bi-cash-stack me-2"></i> {% trans "CHECK OUT" %}
-                    </button>
+                    <div class="d-flex gap-2 mt-1">
+                        <button type="button" class="btn btn-light btn-lg fw-bold text-danger animate-pulse shadow-sm flex-grow-1 d-flex align-items-center justify-content-center" 
+                            hx-get="{% url 'checkout_preview' table.id %}" 
+                            hx-target="#checkout-modal-container"
+                            style="font-size: 1rem;">
+                            <i class="bi bi-cash-stack me-2"></i> {% trans "CHECK OUT" %}
+                        </button>
+                        <button type="button" class="btn btn-outline-danger shadow-sm d-flex align-items-center justify-content-center p-0" 
+                            style="width: 42px; min-width: 42px;"
+                            hx-post="{% url 'dismiss_table' table.id %}"
+                            hx-confirm="{% trans 'Are you sure? This will remove all orders and reset the table without saving to history.' %}"
+                            hx-target="#masonry-grid"
+                            hx-swap="innerHTML"
+                            title="{% trans 'Dismiss Table (No History)' %}">
+                            <i class="bi bi-trash-fill" style="font-size: 1.1rem;"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 

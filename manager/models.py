@@ -46,7 +46,7 @@ class Order(models.Model):
         ]
 
     def __str__(self):
-        name = self.display_name
+        name = self.item_name_display
         price = self.transaction_price if self.transaction_price is not None else (self.item.price if self.item else 0)
         table_num = self.table.number if self.table else "Unknown"
         return f"{name} ({price} EGP) for Table {table_num}"
