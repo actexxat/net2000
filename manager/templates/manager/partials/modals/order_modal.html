@@ -1,10 +1,10 @@
 {% load i18n manager_extras %}
-<div class="modal fade" id="orderModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="orderModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-fullscreen">
         <div class="modal-content border-0 bg-light">
             
             <!-- Header -->
-            <div class="modal-header border-0 bg-white shadow-sm py-2" style="height: 60px;">
+            <div class="modal-header border-0 bg-white shadow-sm py-2" style="height: 60px; z-index: 105;">
                 <div class="d-flex align-items-center w-100">
                     <button type="button" class="btn btn-light rounded-circle me-3" data-bs-dismiss="modal">
                         <i class="bi bi-arrow-left fs-4"></i>
@@ -18,19 +18,19 @@
                     
                     <!-- Search Bar (Centered) -->
                     <div class="mx-auto w-50 d-none d-md-block">
-                        <div class="input-group rounded-pill overflow-hidden bg-light border">
-                            <span class="input-group-text bg-light border-0 ps-3 text-muted">
+                        <div class="input-group rounded-pill overflow-hidden bg-light border shadow-sm focus-ring">
+                            <span class="input-group-text bg-white border-0 ps-3 text-muted">
                                 <i class="bi bi-search"></i>
                             </span>
-                            <input type="text" id="itemSearchDynamic" class="form-control border-0 bg-light" 
-                                   placeholder="{% trans 'Search for items...' %}" 
-                                   onkeyup="searchItemsDynamic()" autofocus>
+                            <input type="text" id="itemSearchDynamic" class="form-control border-0 bg-white" 
+                                   placeholder="{% trans 'Type to search...' %}" 
+                                   onkeyup="searchItemsDynamic()" autocomplete="off">
                         </div>
                     </div>
 
                     <!-- Toggle Current Orders Drawer -->
                     <button class="btn btn-outline-dark rounded-pill ms-auto px-3 d-flex align-items-center gap-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#liveOrderDrawer">
-                        <span class="small fw-bold text-uppercase opacity-75">{% trans "Current Orders" %}</span>
+                        <span class="small fw-bold text-uppercase opacity-75">{% trans "Current" %}</span>
                         <span class="badge bg-danger rounded-pill" id="live-order-badge">
                            {{ table.order_set.count|translate_numbers }}
                         </span>
@@ -41,20 +41,20 @@
             <div class="modal-body p-0 position-relative overflow-hidden">
                 <div class="row h-100 g-0">
                     <!-- Menu Side (Left) -->
-                    <div class="col-12 col-md-8 col-lg-9 h-100 overflow-y-auto p-3" id="menu-scroll-area">
+                    <div class="col-12 col-md-8 col-lg-9 h-100 overflow-y-auto p-3 custom-scrollbar" id="menu-scroll-area">
                         
                         <!-- Top Tabs -->
-                        <div class="d-flex gap-2 pb-3 sticky-top bg-light" style="z-index: 10; overflow-x: auto; -webkit-overflow-scrolling: touch; top: 0;">
-                            <button class="btn btn-dark rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm" 
+                        <div class="d-flex gap-2 pb-3 sticky-top bg-light" style="z-index: 10; overflow-x: auto; padding-top: 5px;">
+                            <button class="btn btn-dark rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm transition-all" 
                                     onclick="filterCategoryDynamic('all', this)">{% trans "All" %}</button>
                             {% for category in grouped_items %}
-                            <button class="btn btn-white border text-dark bg-white rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm" 
+                            <button class="btn btn-white border text-dark bg-white rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm transition-all" 
                                     onclick="filterCategoryDynamic('{{ category|slugify }}', this)">{{ category|translate_text }}</button>
                             {% endfor %}
                         </div>
 
                         <!-- Grid -->
-                        <div id="menu-container-dynamic" class="pb-5">
+                        <div id="menu-container-dynamic" class="pb-5 select-none">
                             {% for category, cat_items in grouped_items.items %}
                             <div class="mb-5 category-section" data-category="{{ category|slugify }}">
                                 <h5 class="fw-bold text-dark mb-3 border-start border-4 border-danger ps-2">{{ category|translate_text }}</h5>
@@ -62,29 +62,82 @@
                                     {% for it in cat_items %}
                                     <div class="col">
                                         {% if it.double_variant %}
-                                        <div class="card h-100 border-0 shadow-sm hover-lift item-card-dynamic {% if it.image %}has-image{% endif %} {% if 'Redbull' in it.name %}is-redbull{% endif %}"
-                                             {% if it.image %}style="background-image: url('{{ it.image.url }}');"{% endif %}>
-                                            <div class="item-card-overlay">
-                                                <div class="fw-bold text-white mb-1 text-truncate-2 small line-height-tight" style="font-size: 0.75rem;">{{ it.short_name|default:it.name|translate_text }}</div>
-                                                <div class="mt-auto d-flex gap-1">
-                                                    <button class="btn btn-glass btn-xs flex-grow-1 fw-bold py-1 px-0"
-                                                            onclick="window.addToCartLocal('{{ it.id }}', '{{ it.short_name|default:it.name|escapejs }}', {{ it.price|stringformat:'.2f' }}, this)">
-                                                        S<br><small style="font-size: 0.6rem;">{{ it.price|floatformat:0 }}</small>
-                                                    </button>
-                                                    <button class="btn btn-glass btn-xs flex-grow-1 fw-bold py-1 px-0"
-                                                            onclick="window.addToCartLocal('{{ it.double_variant.id }}', '{{ it.double_variant.name|escapejs }}', {{ it.double_variant.price|stringformat:'.2f' }}, this)">
-                                                        D<br><small style="font-size: 0.6rem;">{{ it.double_variant.price|floatformat:0 }}</small>
-                                                    </button>
+                                        <!-- Split Card for Variants: "Twin Cinema" Layout -->
+                                        <div class="card h-100 border-0 shadow-sm overflow-hidden item-card-dynamic position-relative"
+                                             style="border-radius: 16px; background-color: #f8f9fa;">
+                                            <!-- Shared Background Image -->
+                                            <div class="position-absolute tab-content w-100 h-100 top-0 start-0" 
+                                                 style="{% if it.image %}background-image: url('{{ it.image.url }}');{% else %}background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);{% endif %} background-size: cover; background-position: center;">
+                                            </div>
+                                            
+                                            <!-- Top Label (Shared) -->
+                                            <div class="position-absolute top-0 w-100 p-2 text-center" style="z-index: 10;">
+                                                <span class="badge bg-black bg-opacity-50 backdrop-blur fw-normal letter-spacing-1 text-uppercase border border-white border-opacity-25" 
+                                                      style="font-size: 0.65rem;">{{ it.short_name|default:it.name|translate_text }}</span>
+                                            </div>
+
+                                            <!-- Vertical Divider -->
+                                            <div class="position-absolute top-0 bottom-0 start-50 border-end border-white border-opacity-25" style="z-index: 5;"></div>
+
+                                            <!-- Split Controls Container -->
+                                            <div class="d-flex h-100 position-relative" style="z-index: 5;">
+                                                <!-- Single Zone -->
+                                                <div class="flex-fill d-flex flex-column justify-content-end align-items-center pb-3 ripple-area cursor-pointer"
+                                                     onclick="window.cartManager.add('{{ it.id }}', '{{ it.short_name|default:it.name|escapejs }}', {{ it.price|stringformat:'.2f' }}, this)">
+                                                     
+                                                     <div class="text-center w-100 pt-5 mt-auto" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0) 100%);">
+                                                         <div class="text-white-50 small fw-bold mb-0" style="font-size: 0.6rem;">SINGLE</div>
+                                                         <div class="text-white fw-bold fs-4 lh-1 text-shadow">{{ it.price|floatformat:0 }}</div>
+                                                     </div>
+                                                     
+                                                     <!-- Badge -->
+                                                     <span class="card-qty-badge position-absolute top-50 start-25 translate-middle badge rounded-pill bg-danger border border-white shadow scale-in d-none" 
+                                                           id="badge-{{ it.id }}">0</span>
+                                                </div>
+                                                
+                                                <!-- Double Zone -->
+                                                <div class="flex-fill d-flex flex-column justify-content-end align-items-center pb-3 ripple-area cursor-pointer"
+                                                     onclick="window.cartManager.add('{{ it.double_variant.id }}', '{{ it.double_variant.name|escapejs }}', {{ it.double_variant.price|stringformat:'.2f' }}, this)">
+                                                     
+                                                     <div class="text-center w-100 pt-5 mt-auto" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0) 100%);">
+                                                         <div class="text-white-50 small fw-bold mb-0" style="font-size: 0.6rem;">DOUBLE</div>
+                                                         <div class="text-warning fw-bold fs-4 lh-1 text-shadow">{{ it.double_variant.price|floatformat:0 }}</div>
+                                                     </div>
+
+                                                      <!-- Badge -->
+                                                     <span class="card-qty-badge position-absolute top-50 start-75 translate-middle badge rounded-pill bg-warning text-dark border border-white shadow scale-in d-none" 
+                                                           id="badge-{{ it.double_variant.id }}">0</span>
                                                 </div>
                                             </div>
                                         </div>
                                         {% else %}
-                                        <div class="card h-100 border-0 shadow-sm hover-lift item-card-dynamic {% if it.image %}has-image{% endif %} {% if 'Redbull' in it.name %}is-redbull{% endif %}"
-                                             {% if it.image %}style="background-image: url('{{ it.image.url }}');"{% endif %}
-                                             onclick="window.addToCartLocal('{{ it.id }}', '{{ it.name|escapejs }}', {{ it.price|stringformat:'.2f' }}, this)">
-                                            <div class="item-card-overlay d-flex flex-column align-items-center justify-content-center text-center">
-                                                <div class="fw-bold text-white mb-1 small line-height-tight" style="font-size: 0.75rem;">{{ it.name|translate_text }}</div>
-                                                <span class="badge bg-danger fs-xs" style="font-size: 0.6rem; background: rgba(220, 53, 69, 0.8) !important;">{{ it.price|floatformat:0 }}</span>
+                                        <!-- Standard Interactive Card: "Cinema" Layout -->
+                                        <div class="card h-100 border-0 shadow-sm overflow-hidden cursor-pointer item-card-dynamic position-relative"
+                                             style="border-radius: 16px; background-color: #2c3e50; min-height: 160px;"
+                                             onclick="window.cartManager.add('{{ it.id }}', '{{ it.name|escapejs }}', {{ it.price|stringformat:'.2f' }}, this)">
+                                            
+                                            <!-- Full Background Image -->
+                                            <div class="position-absolute w-100 h-100 top-0 start-0 transition-transform" 
+                                                 style="{% if it.image %}background-image: url('{{ it.image.url }}');{% else %}background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);{% endif %} background-size: cover; background-position: center;">
+                                            </div>
+
+                                            <!-- Qty Badge -->
+                                            <span class="card-qty-badge position-absolute top-0 end-0 m-2 badge rounded-pill bg-danger border border-white shadow scale-in d-none" 
+                                                  style="z-index: 5; font-size: 0.9rem; padding: 0.35em 0.6em;" id="badge-{{ it.id }}">0</span>
+
+                                            <!-- Bottom Gradient & Content -->
+                                            <div class="position-absolute bottom-0 w-100 d-flex flex-column justify-content-end p-3" 
+                                                 style="height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%); z-index: 2;">
+                                                
+                                                <div class="d-flex justify-content-between align-items-end w-100">
+                                                    <div class="text-white fw-bold lh-sm text-shadow text-truncate-2 small pe-2" style="font-size: 0.9rem; letter-spacing: 0.3px;">
+                                                        {{ it.name|translate_text }}
+                                                    </div>
+                                                    <div class="text-warning fw-bold fs-5 lh-1 text-shadow">
+                                                        {{ it.price|floatformat:0 }}
+                                                        <span class="text-white-50 fs-xs d-block text-end" style="font-size: 0.6rem;">EGP</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         {% endif %}
@@ -97,39 +150,44 @@
                     </div>
 
                     <!-- Cart Side (Right) -->
-                    <div class="col-12 col-md-4 col-lg-3 h-100 bg-white border-start d-flex flex-column shadow-lg" id="cart-sidebar" style="z-index: 100;">
-                        <div class="p-3 border-bottom bg-light">
-                            <h6 class="fw-bold mb-0 d-flex justify-content-between align-items-center">
-                                {% trans "New Orders in Cart" %}
-                                <span class="badge bg-danger rounded-pill" id="cart-count-badge">0</span>
-                            </h6>
+                    <div class="col-12 col-md-4 col-lg-3 h-100 bg-white border-start d-flex flex-column shadow-lg z-2 position-relative">
+                        <!-- Cart Header -->
+                        <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0 text-uppercase letter-spacing-1">{% trans "Current Order" %}</h6>
+                            <button class="btn btn-sm btn-outline-danger py-0" onclick="window.cartManager.clear()">{% trans "Clear" %}</button>
                         </div>
                         
-                        <div class="flex-grow-1 overflow-y-auto p-3" id="local-cart-items">
-                            <div class="text-center text-muted py-5 opacity-50">
-                                <i class="bi bi-cart3 fs-1 d-block mb-2"></i>
-                                {% trans "Cart is empty" %}
+                        <!-- Cart Items List -->
+                        <div class="flex-grow-1 overflow-y-auto p-0" id="local-cart-items">
+                            <!-- Empty State -->
+                            <div class="h-100 d-flex flex-column align-items-center justify-content-center text-muted opacity-50">
+                                <i class="bi bi-basket3 fs-1 mb-2"></i>
+                                <div class="small">{% trans "Select items" %}</div>
                             </div>
                         </div>
 
-                        <div class="p-3 border-top bg-light mt-auto">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="fw-bold text-muted">{% trans "Total" %}</span>
-                                <h4 class="fw-bold text-danger mb-0"><span id="cart-total-text">0</span> <small class="fs-6">EGP</small></h4>
+                        <!-- Checkout & Total -->
+                        <div class="p-3 border-top bg-white mt-auto shadow-up">
+                            <div class="d-flex justify-content-between align-items-end mb-3">
+                                <div class="text-muted small fw-bold text-uppercase">{% trans "Total Amount" %}</div>
+                                <div class="fw-bold text-dark lh-1">
+                                    <span id="cart-total-text" class="fs-2">0</span>
+                                    <span class="fs-6 text-muted">EGP</span>
+                                </div>
                             </div>
                             
                             <form id="submit-cart-form" hx-post="{% url 'add_order' table.id %}" hx-target="#table-card-{{ table.id }}" hx-swap="outerHTML" hx-on::after-request="if(event.detail.successful) { bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide(); }">
                                 <div id="cart-hidden-inputs"></div>
-                                <button type="submit" id="confirm-btn" class="btn btn-danger w-100 py-3 fw-bold rounded-3 shadow-sm d-flex justify-content-between align-items-center px-4" disabled>
-                                    <span>{% trans "CONFIRM & SEND" %}</span>
-                                    <i class="bi bi-send-fill"></i>
+                                <button type="submit" id="confirm-btn" class="btn btn-danger w-100 py-3 fw-bold rounded-3 shadow-sm d-flex justify-content-between align-items-center px-4 transition-transform" disabled>
+                                    <span>{% trans "CONFIRM ITEMS" %}</span>
+                                    <span class="badge bg-white text-danger rounded-pill" id="cart-count-badge">0</span>
                                 </button>
                             </form>
                         </div>
                     </div>
                 </div>
 
-                <!-- Live Order Drawer (Current Table Items) -->
+                <!-- Live Order Drawer (Existing) -->
                 <div class="offcanvas offcanvas-end shadow-lg" data-bs-backdrop="false" tabindex="-1" id="liveOrderDrawer" aria-labelledby="liveOrderLabel" style="width: 350px;">
                     <div class="offcanvas-header bg-dark text-white">
                         <h5 class="offcanvas-title fw-bold" id="liveOrderLabel">{% trans "Existing Orders" %}</h5>
@@ -137,21 +195,21 @@
                     </div>
                     <div class="offcanvas-body bg-light p-3">
                         <div id="live-order-list" class="d-flex flex-column gap-2">
-                            {% for order in table.order_set.all|dictsortreversed:"timestamp" %}
-                            {% if not order.is_paid %}
-                            <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded shadow-sm border-start border-4 border-danger">
-                                <div>
-                                    <div class="fw-bold text-dark">{{ order.item_name_display }}</div>
-                                    <div class="small text-muted">{{ order.timestamp|time:"H:i:s" }}</div>
-                                </div>
-                                <button class="btn btn-sm text-danger p-0" 
-                                        hx-post="{% url 'discard_order' order.id %}"
-                                        hx-confirm="{% trans 'Remove this item?' %}">
-                                    <i class="bi bi-x-circle-fill fs-5"></i>
-                                </button>
-                            </div>
-                            {% endif %}
-                            {% endfor %}
+                             {% for order in table.order_set.all|dictsortreversed:"timestamp" %}
+                             {% if not order.is_paid %}
+                             <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded shadow-sm border-start border-4 border-danger">
+                                 <div>
+                                     <div class="fw-bold text-dark">{{ order.item_name_display }}</div>
+                                     <div class="small text-muted">{{ order.timestamp|time:"H:i:s" }}</div>
+                                 </div>
+                                 <button class="btn btn-sm text-danger p-0" 
+                                         hx-post="{% url 'discard_order' order.id %}"
+                                         hx-confirm="{% trans 'Remove this item?' %}">
+                                     <i class="bi bi-x-circle-fill fs-5"></i>
+                                 </button>
+                             </div>
+                             {% endif %}
+                             {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -162,252 +220,212 @@
 </div>
 
 <style>
-    .line-height-tight { line-height: 1.1; }
-    .hover-lift { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
-    .hover-lift:active { transform: scale(0.95); }
-    .card-flash-add { animation: flashBlue 0.3s ease-out; }
+    .backdrop-blur { backdrop-filter: blur(4px); }
+    .text-shadow { text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+    .cursor-pointer { cursor: pointer; }
+    .select-none { user-select: none; }
+    .scale-in { animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes scaleIn { 0% { transform: translate(-50%, -50%) scale(0); } 100% { transform: translate(-50%, -50%) scale(1); } }
     
-    @keyframes flashBlue {
-        0% { background-color: rgba(13, 110, 253, 0.4); }
-        100% { background-color: white; }
-    }
+    /* Interactive States */
+    .card-backdrop { transition: background 0.2s; }
+    .item-card-dynamic:active .card-backdrop { background-color: rgba(220, 53, 69, 0.2) !important; }
+    .item-card-dynamic:active { transform: scale(0.98); }
     
-    /* Smaller & Stylish Card Styles */
-    .item-card-dynamic {
-        aspect-ratio: 1 / 1.15;
-        overflow: hidden;
-        position: relative;
-        background-color: #f8f9fa; /* Default fallback */
-        border-radius: 16px; /* rounder */
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        border: 2px solid transparent;
-        transition: all 0.2s;
-    }
-
-    /* Category Colors (Pastel) */
-    .category-section[data-category="hot"] .item-card-dynamic { background-color: #ffb3ba; border-color: #ff9aa2; }
-    .category-section[data-category="cold"] .item-card-dynamic { background-color: #bae1ff; border-color: #aecdff; }
-    .category-section[data-category="juice"] .item-card-dynamic { background-color: #ffffba; border-color: #f9f9a2; }
-    .category-section[data-category="fresh"] .item-card-dynamic { background-color: #baffc9; border-color: #a3ffb8; }
-    .category-section[data-category="food"] .item-card-dynamic, .category-section[data-category="dessert"] .item-card-dynamic { background-color: #ffd1dc; border-color: #ffb7c5; }
-    .category-section[data-category="other"] .item-card-dynamic { background-color: #e2daeb; border-color: #dcd0ea; }
-
-    .item-card-dynamic.has-image {
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-    }
-    
-    /* Overlay for Text Legibility on Pastels */
-    .item-card-overlay {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: rgba(255, 255, 255, 0.85); /* Light glass */
-        backdrop-filter: blur(4px);
-        padding: 10px 8px !important;
-        z-index: 1;
-        min-height: 65px;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        color: #333; /* Dark text for contrast */
-        border-top: 1px solid rgba(255,255,255,0.5);
-    }
-    
-    .item-card-dynamic.has-image .item-card-overlay {
-         background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 100%);
-         color: white;
-         border-top: none;
-    }
-
-    /* Redbull Exception */
-    .item-card-dynamic.is-redbull {
-        background-color: #fff;
-        background-size: contain !important;
-        background-repeat: no-repeat !important;
-        background-position: center 20% !important;
-        border-color: #0d6efd;
-    }
-    .is-redbull .item-card-overlay {
-        background: rgba(13, 62, 146, 0.9);
-        color: white;
-    }
-
-    /* Buttons inside card */
-    .btn-xs {
-        padding: 0.25rem 0.2rem;
-        font-size: 0.8rem;
-        line-height: 1;
-        border-radius: 8px;
-    }
-    /* Buttons on light cards -> Dark/Solid */
-    .btn-glass {
-        background: rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        color: #222;
-        font-weight: 800;
-    }
-    .btn-glass:hover {
-        background: rgba(0, 0, 0, 0.2);
-        color: #000;
-    }
-
-    /* Buttons on dark image cards -> White/Glass */
-    .has-image .btn-glass, .is-redbull .btn-glass {
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        color: white;
-    }
-    .has-image .btn-glass:hover, .is-redbull .btn-glass:hover {
-        background: rgba(255, 255, 255, 0.3);
-    }
-
-    .fs-xs { font-size: 0.75rem; }
-
-    #menu-scroll-area::-webkit-scrollbar { width: 6px; }
-    #menu-scroll-area::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.2); border-radius: 10px; }
-    
-    @media (max-width: 767.98px) {
-        #cart-sidebar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: auto !important;
-            max-height: 50vh;
-            border-top: 2px solid #ddd;
-        }
-        #menu-scroll-area {
-            padding-bottom: 300px !important;
-        }
-    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+    .shadow-up { box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
 </style>
 
 <script>
     (function() {
-        const modalEl = document.getElementById('orderModal');
-        if (!modalEl) return;
+        // --- 1. Cart Brain (Grouped Logic) ---
+        window.cartManager = {
+            items: {}, // key: id, value: { name, price, qty }
 
-        // Cleanup function to ensure no orphaned backdrops or stuck body classes
-        function cleanup() {
-            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }
+            add: function(id, name, price, el) {
+                // Animate Touch
+                if(el) {
+                    el.classList.remove('active');
+                    void el.offsetWidth; // Trigger reflow
+                    if(navigator.vibrate) navigator.vibrate(5);
+                }
 
-        // Run cleanup before showing new modal
-        cleanup();
+                // Logic
+                if (!this.items[id]) {
+                    this.items[id] = { id, name, price: parseFloat(price), qty: 0 };
+                }
+                this.items[id].qty++;
+                
+                this.updateUI();
+            },
 
-        const myModal = new bootstrap.Modal(modalEl);
-        myModal.show();
+            remove: function(id) {
+                if (this.items[id]) {
+                    this.items[id].qty--;
+                    if (this.items[id].qty <= 0) {
+                        delete this.items[id];
+                    }
+                }
+                this.updateUI();
+            },
 
-        modalEl.addEventListener('shown.bs.modal', function () {
-            const searchInput = document.getElementById('itemSearchDynamic');
-            if (searchInput) searchInput.focus();
-        });
+            clear: function() {
+                this.items = {};
+                this.updateUI();
+            },
 
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            myModal.dispose();
-            modalEl.remove();
-            cleanup();
-        });
-    })();
-    
-    window.localCart = [];
+            updateUI: function() {
+                const container = document.getElementById('local-cart-items');
+                const badge = document.getElementById('cart-count-badge');
+                const totalText = document.getElementById('cart-total-text');
+                const hiddenInputs = document.getElementById('cart-hidden-inputs');
+                const confirmBtn = document.getElementById('confirm-btn');
 
-    window.addToCartLocal = function(id, name, price, el) {
-        window.localCart.push({ id, name, price });
-        window.updateCartUI();
+                let total = 0;
+                let count = 0;
+                let html = '';
+                let hiddenHtml = '';
+
+                // Reset Badges
+                document.querySelectorAll('.card-qty-badge').forEach(b => {
+                    b.classList.add('d-none');
+                    b.innerText = '0';
+                    // Reset overlay color if needed
+                });
+
+                const sortedIds = Object.keys(this.items).sort(); // Keep order stable
+                
+                if (sortedIds.length === 0) {
+                    container.innerHTML = `
+                        <div class="h-100 d-flex flex-column align-items-center justify-content-center text-muted opacity-50">
+                            <i class="bi bi-basket3 fs-1 mb-2"></i>
+                            <div class="small">{% trans "Select items" %}</div>
+                        </div>`;
+                    if(confirmBtn) confirmBtn.disabled = true;
+                } else {
+                    html = '<ul class="list-group list-group-flush">';
+                    
+                    sortedIds.forEach(id => {
+                        const item = this.items[id];
+                        total += (item.qty * item.price);
+                        count += item.qty;
+
+                        // Update Card Badge
+                        const badgeEl = document.getElementById(`badge-${id}`);
+                        if(badgeEl) {
+                            badgeEl.classList.remove('d-none');
+                            badgeEl.innerText = item.qty;
+                        }
+
+                        // Cart Row
+                        html += `
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 bg-transparent">
+                            <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width: 0;">
+                                <div class="badge bg-dark rounded-circle d-flex align-items-center justify-content-center" 
+                                     style="width: 28px; height: 28px; font-size: 0.85rem;">${item.qty}</div>
+                                <div class="overflow-hidden">
+                                    <div class="fw-bold text-dark text-truncate">${item.name}</div>
+                                    <div class="small text-muted">${item.price.toFixed(0)} EGP</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 border rounded-pill p-1 ms-2">
+                                <button class="btn btn-xs btn-light rounded-circle border p-0 d-flex align-items-center justify-content-center" 
+                                        style="width: 24px; height: 24px;"
+                                        onclick="window.cartManager.remove('${id}')">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <button class="btn btn-xs btn-light rounded-circle border p-0 d-flex align-items-center justify-content-center" 
+                                        style="width: 24px; height: 24px;"
+                                        onclick="window.cartManager.add('${id}', '${item.name}', '${item.price}')">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </li>`;
+
+                        // Hidden Inputs (Repeated for backend compatibility or grouped if backend supports)
+                        // Current backend expects 'item_ids' list. We duplicate ID qty times.
+                        for(let i=0; i<item.qty; i++) {
+                            hiddenHtml += `<input type="hidden" name="item_ids" value="${id}">`;
+                        }
+                    });
+                    html += '</ul>';
+                    container.innerHTML = html;
+                    if(confirmBtn) confirmBtn.disabled = false;
+                }
+
+                if(totalText) totalText.innerText = total.toFixed(0);
+                if(badge) badge.innerText = count;
+                if(hiddenInputs) hiddenInputs.innerHTML = hiddenHtml;
+            }
+        };
+
+        // --- 2. Enhanced Search & UX ---
         
-        // Flash animation
-        const card = el.closest('.item-card-dynamic') || el;
-        card.classList.add('card-flash-add');
-        setTimeout(() => card.classList.remove('card-flash-add'), 300);
-        
-        if (navigator.vibrate) navigator.vibrate(20);
-    };
-
-    window.removeFromCartLocal = function(index) {
-        window.localCart.splice(index, 1);
-        window.updateCartUI();
-    };
-
-    window.updateCartUI = function() {
-        const container = document.getElementById('local-cart-items');
-        const badge = document.getElementById('cart-count-badge');
-        const totalText = document.getElementById('cart-total-text');
-        const hiddenInputs = document.getElementById('cart-hidden-inputs');
-        const confirmBtn = document.getElementById('confirm-btn');
-
-        if (!container) return; // Modal might be closed
-
-        if (window.localCart.length === 0) {
-            container.innerHTML = `
-                <div class="text-center text-muted py-5 opacity-50">
-                    <i class="bi bi-cart3 fs-1 d-block mb-2"></i>
-                    {% trans "Cart is empty" %}
-                </div>`;
-            if (badge) badge.innerText = '0';
-            if (totalText) totalText.innerText = '0';
-            if (hiddenInputs) hiddenInputs.innerHTML = '';
-            if (confirmBtn) confirmBtn.disabled = true;
-            return;
-        }
-
-        let html = '';
-        let hiddenHtml = '';
-        let total = 0;
-
-        window.localCart.forEach((item, index) => {
-            total += parseFloat(item.price);
-            html += `
-                <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded mb-2 border">
-                    <div class="overflow-hidden">
-                        <div class="fw-bold small text-truncate">${item.name}</div>
-                        <div class="small text-muted">${parseFloat(item.price).toFixed(0)} EGP</div>
-                    </div>
-                    <button class="btn btn-sm text-danger" onclick="window.removeFromCartLocal(${index})">
-                        <i class="bi bi-dash-circle fs-5"></i>
-                    </button>
-                </div>`;
-            hiddenHtml += `<input type="hidden" name="item_ids" value="${item.id}">`;
-        });
-
-        container.innerHTML = html;
-        if (badge) badge.innerText = window.localCart.length;
-        if (totalText) totalText.innerText = total.toFixed(0);
-        if (hiddenInputs) hiddenInputs.innerHTML = hiddenHtml;
-        if (confirmBtn) confirmBtn.disabled = false;
-    };
-
-    window.searchItemsDynamic = function() {
-        const query = document.getElementById('itemSearchDynamic').value.toLowerCase();
-        const itemCols = document.querySelectorAll('#menu-container-dynamic .col');
-        itemCols.forEach(col => {
-            col.style.display = col.innerText.toLowerCase().includes(query) ? 'block' : 'none';
-        });
-        document.querySelectorAll('.category-section').forEach(sec => {
-            let visible = Array.from(sec.querySelectorAll('.col')).some(c => c.style.display !== 'none');
-            sec.style.display = visible ? 'block' : 'none';
-        });
-    };
-
-    window.filterCategoryDynamic = function(slug, btn) {
-        document.getElementById('itemSearchDynamic').value = '';
-        document.querySelectorAll('.tab-btn-dynamic').forEach(b => {
-             b.classList.remove('btn-dark'); b.classList.add('btn-white'); 
-        });
-        btn.classList.remove('btn-white'); btn.classList.add('btn-dark');
-        document.querySelectorAll('.category-section').forEach(sec => {
-            if (slug === 'all' || sec.dataset.category === slug) {
-                sec.style.display = 'block';
-                sec.querySelectorAll('.col').forEach(c => c.style.display = 'block');
-            } else {
-                sec.style.display = 'none';
+        // Global focus on type
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('orderModal');
+            if (!modal || modal.classList.contains('show') === false) return;
+            
+            // If typing a-z or 0-9 and not focused on input
+            if (e.key.length === 1 && document.activeElement.tagName !== 'INPUT') {
+                const search = document.getElementById('itemSearchDynamic');
+                if(search) {
+                    search.focus();
+                    // Let the key press populate the input naturally? 
+                    // Usually better to prevent default if handling manual append, 
+                    // but focusing works for subsequent chars.
+                }
             }
         });
-    };
+
+        // Initialize Modal
+        const modalEl = document.getElementById('orderModal');
+        if (modalEl) {
+             const myModal = new bootstrap.Modal(modalEl);
+             myModal.show();
+             modalEl.addEventListener('shown.bs.modal', function () {
+                 const s = document.getElementById('itemSearchDynamic');
+                 if(s) s.focus();
+             });
+             modalEl.addEventListener('hidden.bs.modal', function () {
+                 myModal.dispose();
+                 modalEl.remove();
+                 document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                 document.body.classList.remove('modal-open');
+                 document.body.style.overflow = '';
+                 document.body.style.paddingRight = '';
+             });
+        }
+        
+        // --- 3. Filter/Search Logic ---
+         window.searchItemsDynamic = function() {
+            const query = document.getElementById('itemSearchDynamic').value.toLowerCase();
+            const itemCols = document.querySelectorAll('#menu-container-dynamic .col');
+            itemCols.forEach(col => {
+                col.style.display = col.innerText.toLowerCase().includes(query) ? 'block' : 'none';
+            });
+            document.querySelectorAll('.category-section').forEach(sec => {
+                let visible = Array.from(sec.querySelectorAll('.col')).some(c => c.style.display !== 'none');
+                sec.style.display = visible ? 'block' : 'none';
+            });
+        };
+
+        window.filterCategoryDynamic = function(slug, btn) {
+            document.getElementById('itemSearchDynamic').value = '';
+            document.querySelectorAll('.tab-btn-dynamic').forEach(b => {
+                 b.classList.remove('btn-dark'); b.classList.add('btn-white'); 
+            });
+            btn.classList.remove('btn-white'); btn.classList.add('btn-dark');
+            document.querySelectorAll('.category-section').forEach(sec => {
+                if (slug === 'all' || sec.dataset.category === slug) {
+                    sec.style.display = 'block';
+                    sec.querySelectorAll('.col').forEach(c => c.style.display = 'block');
+                } else {
+                    sec.style.display = 'none';
+                }
+            });
+        };
+
+    })();
 </script>

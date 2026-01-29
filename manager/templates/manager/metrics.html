@@ -6,66 +6,7 @@
 {% block extra_head %}
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<style>
-    .metrics-container {
-        padding: 1.5rem;
-        background-color: #f8fafc;
-    }
-
-    .stat-card {
-        border-radius: 1.25rem;
-        border: 1px solid rgba(0,0,0,0.05);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
-    }
-
-    .stat-icon-bg {
-        position: absolute;
-        right: -10px;
-        bottom: -10px;
-        font-size: 4rem;
-        opacity: 0.05;
-        transform: rotate(-15deg);
-    }
-
-    .bg-soft-blue { background-color: #eff6ff; color: #1e40af; border-left: 4px solid #3b82f6; }
-    .bg-soft-green { background-color: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
-    .bg-soft-purple { background-color: #f5f3ff; color: #5b21b6; border-left: 4px solid #8b5cf6; }
-    .bg-soft-orange { background-color: #fffbe7; color: #92400e; border-left: 4px solid #f59e0b; }
-    .bg-soft-red { background-color: #fff1f2; color: #9f1239; border-left: 4px solid #f43f5e; }
-
-    .progress-bar-custom {
-        height: 8px;
-        border-radius: 10px;
-    }
-
-    .heatmap-container {
-        min-height: 300px;
-    }
-
-    .top-item-row {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid #f1f5f9;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .top-item-row:last-child { border-bottom: none; }
-
-    .growth-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 50px;
-    }
-    .growth-up { background-color: #dcfce7; color: #166534; }
-    .growth-down { background-color: #fee2e2; color: #991b1b; }
-</style>
+    <!-- Styles moved to static/css/theme.css -->
 {% endblock %}
 
 {% block container_class %}container-fluid d-flex flex-column metrics-container{% endblock %}
@@ -75,7 +16,7 @@
     <div class="mb-4 d-flex justify-content-between align-items-center">
         <div>
             <div class="d-flex align-items-center mb-0">
-                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 320px; height: 320px; position: absolute; top: -140px; right: -80px; opacity: 0.05; pointer-events: none; transform: rotate(-15deg);" class="no-print">
+                <img src="{% static 'img/logo.png' %}" alt="Logo" class="bg-watermark no-print">
                 <img src="{% static 'img/logo.png' %}" alt="Logo" class="me-3" style="width: 48px; height: 48px;">
                 <h2 class="fw-bold text-dark mb-0">{% trans "Business Insights" %}</h2>
             </div>

@@ -39,6 +39,12 @@ urlpatterns = [
     path('add-custom/<int:table_id>/', manager_views.add_custom_item, name='add_custom_item'),
     path('checkout-preview/<int:table_id>/', manager_views.checkout_preview, name='checkout_preview'),
     path('service-modal-preview/<int:table_id>/<str:service_type>/', manager_views.service_modal_preview, name='service_modal_preview'),
+    path('item-popup/<int:table_id>/', manager_views.item_popup_preview, name='item_popup_preview'),
+    
+    # Sticky Notes
+    path('sticky-note/add/', manager_views.add_sticky_note, name='add_sticky_note'),
+    path('sticky-note/<int:note_id>/update/', manager_views.update_sticky_note, name='update_sticky_note'),
+    path('sticky-note/<int:note_id>/delete/', manager_views.delete_sticky_note, name='delete_sticky_note'),
     
     # History & Stats
     path('history/', manager_views.session_history, name='session_history'),

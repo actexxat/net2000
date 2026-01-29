@@ -10,7 +10,9 @@
             <h2 class="fw-bold">{% trans "Busy & Slow Times" %}</h2>
             <p class="text-muted mb-0">{% trans "Analysis of transaction volume by hour and day of week." %}</p>
         </div>
-        <a href="{% url 'session_history' %}" class="btn btn-outline-secondary">{% trans "Back" %}</a>
+        <a href="{% url 'session_history' %}" class="btn btn-white border rounded-pill px-4 shadow-sm">
+            <i class="bi bi-arrow-left me-2"></i>{% trans "Back" %}
+        </a>
     </div>
 
     <div class="row g-4">

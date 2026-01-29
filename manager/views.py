@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
 from django.utils import timezone
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.db import models
 from django.db.models import Sum, Q, Prefetch, Avg, Count, Max, Min, F, ExpressionWrapper, fields
 from django.db.models.functions import Coalesce, ExtractHour, ExtractWeekDay
-from .models import Table, Item, Order, TableSession, GlobalSettings
+from .models import Table, Item, Order, TableSession, GlobalSettings, StickyNote
 from decimal import Decimal
 import datetime, json
 from django.utils.translation import gettext_lazy as _, get_language
@@ -31,64 +32,18 @@ def unauthorized(request):
 def _get_table_context(table, settings=None):
     """
     Internal helper to calculate table totals and attach them to the object.
-    Optimized to use prefetched 'active_orders' if available.
+    Uses centralized model logic for consistency.
     """
-    if not settings:
-        settings, created = GlobalSettings.objects.get_or_create(id=1)
-    
     if table.is_occupied:
-        # Use prefetched orders if available, otherwise query DB
-        if hasattr(table, 'active_orders'):
-            unpaid_orders = table.active_orders
-            # Mock filtered queryset behavior for consistency if needed in templates, 
-            # though usually list is fine for iteration.
-            # But we need to support .filter() calls if templates use them?
-            # Templates usually just iterate {{ table.orders }}.
-        else:
-            unpaid_orders = list(table.order_set.filter(is_paid=False).select_related('item').order_by('timestamp'))
+        summary = table.get_bill_summary(settings)
         
-        # Calculate totals in Python to avoid DB hits
-        order_total = Decimal('0.00')
-        drinks = []
-        
-        for order in unpaid_orders:
-            real_price = order.transaction_price if order.transaction_price is not None else (order.item.price if order.item else Decimal('0.00'))
-            order_total += real_price or 0
-            
-            is_drink = order.item.is_drink if order.item else False
-            if is_drink:
-                drinks.append(real_price or Decimal('0.00'))
-        
-        # Sort drinks descending to give user the best coverage
-        drinks.sort(reverse=True)
-        
-        shortfall = Decimal('0.00')
-        if int(table.number) != 0:
-            min_charge = settings.min_charge_per_person
-            for i in range(table.current_people):
-                if i < len(drinks):
-                    shortfall += max(Decimal('0.00'), min_charge - drinks[i])
-                else:
-                    shortfall += min_charge
-        else:
-            shortfall = Decimal('0.00')
-        
-        # Attach variables
-        table.actual_orders = order_total
-        table.shortfall = shortfall
-        table.final_total = order_total + shortfall
-        table.orders = unpaid_orders
-        
-        # Calculate Progress
-        if int(table.number) != 0 and table.current_people > 0:
-            total_target = table.current_people * settings.min_charge_per_person
-            if total_target > 0:
-                covered = total_target - shortfall
-                table.min_charge_progress = int((covered / total_target) * 100)
-            else:
-                table.min_charge_progress = 100
-        else:
-            table.min_charge_progress = 100
+        # Attach variables for templates
+        table.orders = summary['orders']
+        table.actual_orders = summary['order_total']
+        table.shortfall = summary['shortfall']
+        table.final_total = summary['final_total']
+        table.total_price = summary['final_total'] # Alias for template compatibility
+        table.min_charge_progress = summary['progress']
     else:
         table.actual_orders = 0
         table.shortfall = 0
@@ -218,11 +173,15 @@ def dashboard(request):
     # Limit to reasonable number
     quick_items = quick_items[:12]
 
+    # Sticky Notes
+    notes = StickyNote.objects.all().select_related('author').order_by('-created_at')
+
     return render(request, 'manager/dashboard.html', {
         'tables': tables,
         'items': items,
         'grouped_items': grouped_items,
         'quick_items': quick_items,
+        'notes': notes,
         'global_min_charge': settings.min_charge_per_person,
         'server_now': timezone.now().isoformat()
     })
@@ -249,9 +208,16 @@ def dashboard_grid(request):
         people_sum=Sum('current_people')
     )
     
+    # Handle None values from Sum on empty sets
+    s_cnt = orders_agg['served_cnt'] or 0
+    p_sum = tables_agg['people_sum'] or 0
+    
+    notes_agg = StickyNote.objects.aggregate(cnt=Count('id'), last_upd=Max('updated_at'))
+    n_upd = notes_agg['last_upd'].isoformat() if notes_agg['last_upd'] else 'none'
+    
     # Create a unique state string
-    # We add a 'version' salt (v2) to ensure template changes invalidate the cache
-    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{orders_agg['served_cnt']}-{tables_agg['occupied_cnt']}-{tables_agg['people_sum']}-v2"
+    # We add a 'v14-ui-refine' salt to ensure template changes invalidate the cache immediately
+    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{notes_agg['cnt']}-{n_upd}-v14-ui-refine"
     
     # Explicitly check if 'last_updated' session variable (if we used one) matches? 
     # Or just hash this state.
@@ -268,7 +234,12 @@ def dashboard_grid(request):
 
     # 2. Fetch Data & Render (Only if changed)
     tables = _get_sorted_tables(sort_by_status=True)
-    content = render_to_string('manager/partials/table_grid.html', {'tables': tables}, request=request)
+    notes = StickyNote.objects.all().select_related('author').order_by('-created_at')
+    
+    content = render_to_string('manager/partials/table_grid_premium.html', {
+        'tables': tables,
+        'notes': notes
+    }, request=request)
     
     response = HttpResponse(content)
     response['ETag'] = f'"{et}"'
@@ -298,13 +269,20 @@ def check_in(request, table_id):
         except ValueError:
             table.current_people = 1
         table.save()
-        messages.success(request, _("Table %(number)s checked in.") % {'number': table.number})
+        messages.success(request, _("Table %(number)s opened successfully") % {'number': table.number})
         
         if request.headers.get('HX-Request'):
+            from django.template.loader import render_to_string
+            from django.http import HttpResponse
+            
             # Return full grid to re-sort
             tables = _get_sorted_tables()
-            # print(f"DEBUG: check_in returning {len(tables)} tables") 
-            return render(request, 'manager/partials/table_grid.html', {'tables': tables})
+            grid_html = render_to_string('manager/partials/table_grid_premium.html', {'tables': tables}, request=request)
+            
+            # Render messages popup for instant display
+            messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+            
+            return HttpResponse(grid_html + messages_html)
             
     return redirect('dashboard')
 
@@ -322,7 +300,7 @@ def update_people(request, table_id):
         table = get_object_or_404(Table, id=table_id)
         table.current_people = int(request.POST.get('people_count', 1))
         table.save()
-        messages.success(request, _("Updated people for Table %(number)s.") % {'number': table.number})
+        # Message removed to prevent popup queueing
         
         if request.headers.get('HX-Request'):
             _get_table_context(table)
@@ -415,8 +393,13 @@ def add_order(request, table_id):
             messages.error(request, _("Failed to add items to bill."))
             
         if request.headers.get('HX-Request'):
+            from django.template.loader import render_to_string
+            from django.http import HttpResponse
+            
             _get_table_context(table)
-            return render(request, 'manager/partials/table_card.html', {'table': table})
+            card_html = render_to_string('manager/partials/table_card.html', {'table': table}, request=request)
+            messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+            return HttpResponse(card_html + messages_html)
             
     return redirect('dashboard')
 
@@ -424,48 +407,18 @@ def add_order(request, table_id):
 def check_out(request, table_id):
     """Calculates final total, saves to history, and resets the table."""
     table = get_object_or_404(Table, id=table_id)
-    settings = GlobalSettings.objects.get(id=1)
+    summary = table.get_bill_summary()
     
-    unpaid_orders = table.order_set.filter(is_paid=False)
+    final_bill = summary['final_total']
     
-    order_total = Decimal('0.00')
-    drinks = []
     items_list = []
-    
-    for order in unpaid_orders:
-        price = order.transaction_price if order.transaction_price is not None else (order.item.price if order.item else Decimal('0.00'))
-        price = price or Decimal('0.00')
-        order_total += price
-        
+    for order in summary['orders']:
         name = order.item_name_display
         note = order.customer_note_display
-        if note:
-            items_list.append(f"{name} [{note}]")
-        else:
-            items_list.append(name)
-        
-        is_drink = order.item.is_drink if order.item else False
-        if is_drink:
-            drinks.append(price)
+        items_list.append(f"{name} [{note}]" if note else name)
 
     items_summary = ", ".join(items_list) if items_list else "No items ordered"
-    
-    # Sort drinks descending
-    drinks.sort(reverse=True)
-    
-    shortfall = Decimal('0.00')
-    if int(table.number) != 0:
-        min_charge = settings.min_charge_per_person
-        for i in range(table.current_people):
-            if i < len(drinks):
-                shortfall += max(Decimal('0.00'), min_charge - drinks[i])
-            else:
-                shortfall += min_charge
-    else:
-        shortfall = Decimal('0.00')
-            
-    final_bill = order_total + shortfall
-
+        
     # 1. Save record to history
     TableSession.objects.create(
         table_number=table.number,
@@ -477,7 +430,7 @@ def check_out(request, table_id):
     )
 
     # 2. Reset the table and mark orders as paid
-    unpaid_orders.update(is_paid=True)
+    table.order_set.filter(is_paid=False).update(is_paid=True)
     
     # Table 0 is a special permanent table (e.g. for takeaway)
     if int(table.number) != 0:
@@ -492,8 +445,16 @@ def check_out(request, table_id):
     messages.success(request, _("Checked out Table %(number)s. Recorded EGP %(bill).2f") % {'number': table.number, 'bill': final_bill})
     
     if request.headers.get('HX-Request'):
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+        
         _get_table_context(table)
-        return render(request, 'manager/partials/table_card.html', {'table': table})
+        card_html = render_to_string('manager/partials/table_card.html', {'table': table}, request=request)
+        
+        # Render messages popup for instant display
+        messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+        
+        return HttpResponse(card_html + messages_html)
         
     return redirect('dashboard')
 
@@ -739,8 +700,13 @@ def add_print(request, table_id):
             messages.error(request, _("Failed to add print to bill."))
             
         if request.headers.get('HX-Request'):
+            from django.template.loader import render_to_string
+            from django.http import HttpResponse
+            
             _get_table_context(table)
-            return render(request, 'manager/partials/table_card.html', {'table': table})
+            card_html = render_to_string('manager/partials/table_card.html', {'table': table}, request=request)
+            messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+            return HttpResponse(card_html + messages_html)
             
     return redirect('dashboard')
 
@@ -807,7 +773,8 @@ def monitor(request):
     """Monitoring screen: summary of currently occupied tables, people, orders and totals."""
     if not request.user.is_superuser:
         return redirect('unauthorized')
-    # Use Prefetch to avoid N+1 queries for orders and their items
+        
+    # Standardize data via Prefetch
     unpaid_orders_prefetch = Prefetch(
         'order_set',
         queryset=Order.objects.filter(is_paid=False).select_related('item').order_by('timestamp'),
@@ -815,61 +782,37 @@ def monitor(request):
     )
     tables = Table.objects.filter(is_occupied=True).prefetch_related(unpaid_orders_prefetch).order_by('number')
     all_tables = Table.objects.all().order_by('number')
-    settings, created = GlobalSettings.objects.get_or_create(id=1)
-
+    
     busy_tables = []
     total_people = 0
     total_due = Decimal('0.00')
 
     for table in tables:
-        order_total = Decimal('0.00')
-        drinks = []
-        orders = []
+        summary = table.get_bill_summary()
         
-        for o in table.active_orders:
+        # Format orders for template
+        orders_data = []
+        for o in summary['orders']:
             price = o.transaction_price if o.transaction_price is not None else (o.item.price if o.item else Decimal('0.00'))
-            price = price or Decimal('0.00')
-            order_total += price
-            
-            orders.append({
+            orders_data.append({
                 'name': o.item_name_display,
                 'category': o.item_category_display,
                 'note': o.customer_note_display,
-                'price': price
+                'price': price or Decimal('0.00')
             })
-            
-            is_drink = o.item.is_drink if o.item else False
-            if is_drink:
-                drinks.append(price)
-
-        # Sort drinks descending
-        drinks.sort(reverse=True)
-        
-        shortfall = Decimal('0.00')
-        if int(table.number) != 0:
-            min_charge = settings.min_charge_per_person
-            for i in range(table.current_people):
-                if i < len(drinks):
-                    shortfall += max(Decimal('0.00'), min_charge - drinks[i])
-                else:
-                    shortfall += min_charge
-        else:
-            shortfall = Decimal('0.00')
-        
-        final_total = order_total + shortfall
 
         busy_tables.append({
             'id': table.id,
             'number': table.number,
             'people': table.current_people,
-            'orders': orders,
-            'order_total': order_total,
-            'shortfall': shortfall,
-            'final_total': final_total,
+            'orders': orders_data,
+            'order_total': summary['order_total'],
+            'shortfall': summary['shortfall'],
+            'final_total': summary['final_total'],
         })
 
         total_people += table.current_people
-        total_due += final_total
+        total_due += summary['final_total']
 
     context = {
         'busy_count': len(busy_tables),
@@ -929,11 +872,10 @@ def add_order_direct(request, table_id):
         'suppress_messages': True
     }, request=request)
     
-    # Render the toast notification
-    toast_html = render_to_string('manager/partials/toast_notification.html', {
-        'message': _("Added %(item)s to Table %(number)s") % {'item': item.name, 'number': table.number},
-        'level': 'success'
-    }, request=request)
+    # 2. Add message 
+    messages.success(request, _("Added %(item)s to Table %(number)s") % {'item': item.name, 'number': table.number})
+    # Render messages popup for instant display
+    messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
     
     # Render the updated 'Live List' for the ongoing modal session
     # We neeed active orders for this specific table
@@ -948,7 +890,7 @@ def add_order_direct(request, table_id):
     count_loc = translate_numbers(active_orders.count())
     badge_html = f'<span class="badge bg-danger rounded-pill" id="live-order-badge" hx-swap-oob="true">{count_loc}</span>'
     
-    return HttpResponse(card_html + toast_html + live_list_html + badge_html)
+    return HttpResponse(card_html + messages_html + live_list_html + badge_html)
 
 
 @require_POST
@@ -984,8 +926,13 @@ def add_fax(request, table_id):
     })
     
     if request.headers.get('HX-Request'):
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+        
         _get_table_context(table)
-        return render(request, 'manager/partials/table_card.html', {'table': table})
+        card_html = render_to_string('manager/partials/table_card.html', {'table': table}, request=request)
+        messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+        return HttpResponse(card_html + messages_html)
         
     return redirect('dashboard')
 
@@ -1044,8 +991,13 @@ def add_copy(request, table_id):
         messages.error(request, _("Failed to add copy to bill."))
         
     if request.headers.get('HX-Request'):
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+        
         _get_table_context(table)
-        return render(request, 'manager/partials/table_card.html', {'table': table})
+        card_html = render_to_string('manager/partials/table_card.html', {'table': table}, request=request)
+        messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+        return HttpResponse(card_html + messages_html)
         
     return redirect('dashboard')
 
@@ -1156,8 +1108,13 @@ def add_custom_item(request, table_id):
         messages.error(request, _("Failed to add custom item to bill."))
         
     if request.headers.get('HX-Request'):
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+        
         _get_table_context(table)
-        return render(request, 'manager/partials/table_card.html', {'table': table})
+        card_html = render_to_string('manager/partials/table_card.html', {'table': table}, request=request)
+        messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+        return HttpResponse(card_html + messages_html)
         
     return redirect('dashboard')
 
@@ -1225,30 +1182,63 @@ def discard_order(request, order_id):
             _get_table_context(table)
             
             if request.headers.get('HX-Request'):
-                # 1. Update Table Card
+                target = request.headers.get('HX-Target')
+                
+                # Check target context
+                is_modal_update = target == 'items-modal-inner'
+                is_card_primary = target and target.startswith('table-card-')
+                
+                html_response = ""
+                
+                # 1. Table Card (OOB if modal is primary)
                 card_html = render_to_string('manager/partials/table_card.html', {
                     'table': table,
-                    'is_oob': True,
+                    'is_oob': is_modal_update or not is_card_primary, 
                     'suppress_messages': True
                 }, request=request)
                 
-                # 2. Update Live List
-                active_orders = table.order_set.filter(is_paid=False).select_related('item').order_by('-timestamp')
-                live_list_html = render_to_string('manager/partials/live_order_list.html', {
-                    'orders': active_orders,
-                    'table': table
-                }, request=request)
-                
-                # 3. Badge Update
+                if is_modal_update:
+                    # Return Modal Inner Content as primary
+                    modal_html = render_to_string('manager/partials/items_popup_inner.html', {'table': table}, request=request)
+                    html_response = modal_html + card_html # Card is OOB
+                elif is_card_primary:
+                    # Card is primary
+                    html_response = card_html
+                else:
+                    # Fallback (Live List logic - unlikely used but keeping safe)
+                    html_response = card_html # Default to card OOB and live list primary? 
+                    # Actually, if target is unknown, usually card update is safer.
+                    # But keeping original logic flow if possible:
+                    pass
+
+                # If we are NOT modal update, stick to original logic order?
+                if not is_modal_update:
+                     # Original Logic Reconstruction:
+                     # If target starts with table-card, card is primary.
+                     # Else... logic was slightly obscure in original.
+                     # Let's simplify: Always return Card OOB if we return something else.
+                     
+                     if not is_card_primary:
+                         # Assume Live List update (for Monitor page?)
+                         active_orders = table.order_set.filter(is_paid=False).select_related('item').order_by('-timestamp')
+                         live_list_html = render_to_string('manager/partials/live_order_list.html', {
+                            'orders': active_orders,
+                            'table': table,
+                            'is_oob': False # Primary
+                         }, request=request)
+                         html_response = live_list_html + card_html
+                     else:
+                         html_response = card_html
+
+                # 3. Badge Update (Always OOB)
+                # ... (Keeping existing badge logic but simpler)
+                active_orders = table.order_set.filter(is_paid=False)
                 from manager.templatetags.manager_extras import translate_numbers
                 count_loc = translate_numbers(active_orders.count())
                 badge_html = f'<span class="badge bg-danger rounded-pill" id="live-order-badge" hx-swap-oob="true">{count_loc}</span>'
                 
-                # 4. Toast Notification with UNDO
-                # We construct a toast message that includes a clickable Undo action
-                undo_url = request.build_absolute_uri('/restores-latest/') # Need to register this
+                # 4. Message with UNDO button
                 msg = _("Removed %(item)s") % {'item': item_name}
-                # Create a small interactive HTML button for the toast
                 action_html = f"""
                 <button class='btn btn-sm btn-light ms-2 py-0 fw-bold' 
                         hx-post='/restore-order/' 
@@ -1257,14 +1247,12 @@ def discard_order(request, order_id):
                     { _('UNDO') }
                 </button>
                 """
+                messages.success(request, f"{msg} {action_html}")
                 
-                toast_html = render_to_string('manager/partials/toast_notification.html', {
-                    'message': f"{msg} {action_html}",
-                    'level': 'dark', # Dark toast for contrast
-                    'safe_mode': True # Tell template to render HTML
-                }, request=request)
+                # Render messages popup
+                messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
                 
-                return HttpResponse(card_html + live_list_html + badge_html + toast_html)
+                return HttpResponse(html_response + badge_html + messages_html)
             
             # Fallback for non-HTMX
             messages.success(request, _("Item removed: %(item)s") % {'item': item_name})
@@ -1328,6 +1316,15 @@ def serve_all_orders(request, table_id):
         return render(request, 'manager/partials/table_card.html', {'table': table})
     return redirect('dashboard')
 
+@login_required
+def item_popup_preview(request, table_id):
+    """
+    Returns HTML for the items popup modal.
+    """
+    table = get_object_or_404(Table, id=table_id)
+    _get_table_context(table)
+    return render(request, 'manager/partials/items_popup.html', {'table': table})
+
 @superuser_required
 def daily_receipt(request, year, month, day):
     """Render a receipt-like page for a given date listing totals aggregated by table."""
@@ -1358,7 +1355,7 @@ def daily_receipt(request, year, month, day):
             table_aggregation[t_num] = {
                 'table': t_num,
                 'drink': 0, 'food': 0, 'print_bw': 0, 'print_color': 0,
-                'fax': 0, 'copy': 0, 'min_charge': 0, 'other': 0,
+                'fax': 0, 'copy_bw': 0, 'copy_color': 0, 'min_charge': 0, 'other': 0,
                 'total': 0,
                 'items_total_price': 0
             }
@@ -1385,7 +1382,10 @@ def daily_receipt(request, year, month, day):
         elif item_name == "Fax Service":
             row['fax'] += price
         elif item_name == "Copy Service":
-            row['copy'] += price
+            if "color" in desc:
+                row['copy_color'] += price
+            else:
+                row['copy_bw'] += price
         else:
             row['food'] += price
 
@@ -1395,7 +1395,7 @@ def daily_receipt(request, year, month, day):
             table_aggregation[t_num] = {
                 'table': t_num,
                 'drink': 0, 'food': 0, 'print_bw': 0, 'print_color': 0,
-                'fax': 0, 'copy': 0, 'min_charge': 0, 'other': 0,
+                'fax': 0, 'copy_bw': 0, 'copy_color': 0, 'min_charge': 0, 'other': 0,
                 'total': 0,
                 'items_total_price': 0
             }
@@ -1403,8 +1403,10 @@ def daily_receipt(request, year, month, day):
 
     categorized_sessions = []
     totals = {
-        'drink': 0, 'food': 0, 'print_bw': 0, 'print_color': 0,
-        'fax': 0, 'copy': 0, 'min_charge': 0, 'other': 0, 'final': 0
+        'drink': Decimal('0.00'), 'food': Decimal('0.00'), 'print_bw': Decimal('0.00'), 
+        'print_color': Decimal('0.00'), 'fax': Decimal('0.00'), 'copy_bw': Decimal('0.00'), 
+        'copy_color': Decimal('0.00'), 'min_charge': Decimal('0.00'), 'other': Decimal('0.00'), 
+        'final': Decimal('0.00')
     }
 
     sorted_keys = sorted(table_aggregation.keys(), key=lambda x: int(x) if str(x).isdigit() else 0)
@@ -1497,11 +1499,47 @@ def dismiss_table(request, table_id):
             table.opened_at = timezone.now()
             
         table.save()
-        messages.info(request, _("Table %(number)s has been dismissed.") % {'number': table.number})
+        messages.success(request, _("Table %(number)s dismissed") % {'number': table.number})
         
         if request.headers.get('HX-Request'):
+            from django.template.loader import render_to_string
+            from django.http import HttpResponse
+            
             # Return full grid to re-sort if necessary
             tables = _get_sorted_tables()
-            return render(request, 'manager/partials/table_grid.html', {'tables': tables})
+            grid_html = render_to_string('manager/partials/table_grid_premium.html', {'tables': tables}, request=request)
+            
+            # Render messages popup for instant display
+            messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+            
+            return HttpResponse(grid_html + messages_html)
             
     return redirect('dashboard')
+@login_required
+def add_sticky_note(request):
+    import random
+    colors = ['bg-soft-yellow', 'bg-soft-green', 'bg-soft-blue', 'bg-soft-purple', 'bg-soft-orange', 'bg-soft-red']
+    note = StickyNote.objects.create(
+        author=request.user,
+        content='',
+        color=random.choice(colors)
+    )
+    # Refresh the dashboard
+    return HttpResponse(status=204, headers={'HX-Trigger': 'refresh'})
+
+@login_required
+def update_sticky_note(request, note_id):
+    note = get_object_or_404(StickyNote, id=note_id)
+    if request.method == 'POST':
+        note.content = request.POST.get('content', '')
+        note.save()
+        return HttpResponse(status=204, headers={'HX-Trigger': 'refresh'})
+    return HttpResponse(status=400)
+
+@login_required
+def delete_sticky_note(request, note_id):
+    note = get_object_or_404(StickyNote, id=note_id)
+    if note.author == request.user or request.user.is_superuser:
+        note.delete()
+        return HttpResponse(status=204, headers={'HX-Trigger': 'refresh'})
+    return HttpResponse(status=403)

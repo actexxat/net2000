@@ -4,7 +4,7 @@
         <div class="modal-content bg-transparent border-0">
             
             <!-- Receipt Container -->
-            <div class="receipt-container position-relative bg-white shadow-lg mx-auto" style="width: 100%; max-width: 380px; font-family: 'Courier New', Courier, monospace;">
+            <div class="receipt-modal-container shadow-lg mx-auto">
                 
                 <!-- Receipt Header -->
                 <div class="text-center pt-4 pb-2 border-bottom border-2 border-dark border-opacity-10">
@@ -78,7 +78,10 @@
             </div>
             
             <div class="text-center mt-4">
-                 <form action="{% url 'check_out' table.id %}" method="POST">
+                 <form hx-post="{% url 'check_out' table.id %}" 
+                       hx-target="#table-card-{{ table.id }}"
+                       hx-swap="outerHTML"
+                       hx-on::after-request="if(event.detail.successful) { bootstrap.Modal.getInstance(document.getElementById('checkoutModal')).hide(); }">
                     {% csrf_token %}
                     <button type="submit" id="confirmCheckoutBtn" class="btn btn-danger btn-lg rounded-pill shadow-lg px-5 fw-bold animate-pulse text-uppercase border-2 border-white">
                         <i class="bi bi-check-lg me-2"></i> {% trans "Confirm Payment" %}
@@ -92,20 +95,7 @@
     </div>
 </div>
 
-<style>
-    .jagged-edge {
-        background: radial-gradient(circle, transparent 50%, white 50%);         
-        background-size: 20px 20px;
-        background-position: center bottom;
-        height: 10px;
-        position: absolute;
-        bottom: -10px;
-        left: 0; 
-        right: 0;
-        transform: rotate(180deg);
-    }
-    .border-top-dashed { border-top-style: dashed !important; }
-</style>
+<!-- Styles moved to static/css/theme.css -->
 
 <script>
     (function() {

@@ -1,34 +1,49 @@
-<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1060; pointer-events: none;" hx-swap-oob="beforeend">
-    <div class="toast show align-items-center text-white bg-{{ level|default:'success' }} border-0 shadow-lg mb-2 slide-up" role="alert" aria-live="assertive" aria-atomic="true" style="pointer-events: auto;">
-        <div class="d-flex">
-            <div class="toast-body fw-bold">
-                {% if level == 'error' %}
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+{% load i18n %}
+<div id="notification-stack" hx-swap-oob="beforeend">
+    <div class="order-notification show" role="alert">
+        <div class="notification-content">
+            <div class="notification-icon">
+                {% if level == 'error' or level == 'danger' %}
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
                 {% else %}
-                <i class="bi bi-check-circle-fill me-2"></i>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
                 {% endif %}
-                {% if safe_mode %}{{ message|safe }}{% else %}{{ message }}{% endif %}
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close" onclick="this.closest('.toast').remove()"></button>
+            <div class="notification-text">
+                <div class="notification-title">
+                    {% if level == 'error' or level == 'danger' %}
+                    ⚠️ {% trans "Error" %}
+                    {% else %}
+                    ✓ {% trans "Success" %}
+                    {% endif %}
+                </div>
+                <div class="notification-message">
+                    {% if safe_mode %}{{ message|safe }}{% else %}{{ message }}{% endif %}
+                </div>
+            </div>
+            <button type="button" class="notification-close" onclick="this.closest('.order-notification').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
         </div>
     </div>
-    <script>
-        // Auto-remove after 3 seconds
-        setTimeout(function() {
-            var toasts = document.querySelectorAll('.toast.show');
-            toasts.forEach(t => {
-                t.classList.remove('show');
-                setTimeout(() => t.remove(), 300);
-            });
-        }, 3000);
-    </script>
 </div>
-<style>
-    .slide-up {
-        animation: slideUp 0.3s ease-out;
-    }
-    @keyframes slideUp {
-        from { transform: translateY(100%); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-</style>
+<script>
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        var notifications = document.querySelectorAll('.order-notification.show');
+        notifications.forEach(n => {
+            n.classList.remove('show');
+            setTimeout(() => n.remove(), 500);
+        });
+    }, 5000);
+</script>

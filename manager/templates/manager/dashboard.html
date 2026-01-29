@@ -4,192 +4,164 @@
 {% block title %}{% trans "Dashboard" %}{% endblock %}
 
 {% block extra_head %}
-<style>
-    /* Compact item buttons for add-item modal */
-    .item-grid .row {
-        gap: .45rem;
-    }
-
-    .item-btn {
-        padding: .4rem .5rem;
-        font-size: .85rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .item-name {
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        white-space: nowrap;
-        font-weight: 600;
-        /* Fade out the end of the text if it's too long */
-        mask-image: linear-gradient(90deg, #000 90%, transparent 100%);
-        -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent 100%);
-    }
-
-    .item-name span {
-        display: inline-block;
-    }
-
-    .item-price {
-        margin-left: .5rem;
-        font-size: .8rem;
-        color: #6b7280;
-    }
-
-    .modal-body .form-label {
-        font-size: .85rem;
-    }
-
-    .card-footer-mini {
-        font-size: 0.8rem;
-        border-top: 1px solid rgba(0, 0, 0, 0.05);
-        padding-top: 10px;
-    }
-
-    /* Table Hover Effect (Simplified) */
-    .table-container {
-        position: relative;
-        /* Ensure consistent height to prevent layout thrashing */
-        min-height: 200px;
-    }
-
-    .table-card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        position: relative;
-        z-index: 10;
-        min-height: 200px;
-    }
-
-    .table-card:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
-        z-index: 100;
-    }
-
-    /* Refined Discard Button Animation */
-    .discard-btn {
-        opacity: 0.9;
-    }
-    
-    .discard-btn:hover {
-        opacity: 1 !important;
-        transform: scale(1.15);
-        background: rgba(220, 53, 69, 0.95) !important;
-        border-color: rgba(255,255,255,0.8) !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        transition: all 0.2s ease-in-out;
-    }
-
-    /* --- THEMES --- */
-
-    /* Red Table Theme (Occupied) */
-    .card-occupied {
-        background: linear-gradient(135deg, #dc3545 0%, #a51d2a 100%) !important;
-        color: white !important;
-        border: 2px solid #8d0801 !important;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
-        --leg-color: #dc3545;
-    }
-
-    .card-occupied .text-muted { color: rgba(255, 255, 255, 0.8) !important; }
-    .card-occupied .badge.bg-light {
-        background-color: rgba(255, 255, 255, 0.2) !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    }
-    .card-occupied .table-box { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
-    
-    .card-occupied .btn-outline-primary, .card-occupied .btn-outline-secondary, .card-occupied .btn-outline-info, .card-occupied .btn-outline-dark, .card-occupied .btn-outline-danger {
-        background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255, 255, 255, 0.3);
-    }
-    .card-occupied .btn-outline-primary:hover, .card-occupied .btn-outline-secondary:hover, .card-occupied .btn-outline-info:hover, .card-occupied .btn-outline-dark:hover, .card-occupied .btn-outline-danger:hover {
-        background: white; color: #a51d2a;
-    }
-    .card-occupied .form-control, .card-occupied .input-group-text {
-        background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255, 255, 255, 0.3);
-    }
-    .card-occupied .form-control::placeholder { color: rgba(255, 255, 255, 0.5); }
-    .card-occupied .input-group-text { color: white; }
-
-    /* available */
-    .card-available {
-        border: 2px dashed #dee2e6 !important;
-        background: white !important;
-        --leg-color: #198754;
-    }
-
-
-    /* special */
-    .card-special {
-        background: linear-gradient(135deg, #6610f2 0%, #4b0db8 100%) !important;
-        color: white !important;
-        border: 2px solid #3d0a91 !important;
-        box-shadow: 0 10px 20px rgba(102, 16, 242, 0.2) !important;
-        --leg-color: #6610f2;
-    }
-
-    .card-special .text-muted { color: rgba(255, 255, 255, 0.8) !important; }
-    .card-special .badge.bg-light {
-        background-color: rgba(255, 255, 255, 0.2) !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    }
-    .card-special .table-box { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
-    
-    .card-special .btn-outline-primary, .card-special .btn-outline-secondary, .card-special .btn-outline-dark, .card-special .btn-outline-danger {
-        background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255, 255, 255, 0.3);
-    }
-    .card-special .btn-outline-primary:hover, .card-special .btn-outline-secondary:hover, .card-special .btn-outline-dark:hover, .card-special .btn-outline-danger:hover {
-        background: white; color: #6610f2;
-    }
-    .card-special .form-control, .card-special .input-group-text {
-        background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255, 255, 255, 0.3);
-    }
-    .card-special .form-control::placeholder { color: rgba(255, 255, 255, 0.5); }
-
-    /* Highlight for the last interacted card */
-    .last-interacted {
-        box-shadow: 0 0 25px rgba(13, 110, 253, 0.4) !important;
-        transform: translateY(-5px) scale(1.02) !important;
-        border: 2px solid #0d6efd !important;
-        z-index: 50 !important;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    }
-
-</style>
+    <!-- Styles moved to static/css/theme.css -->
 {% endblock %}
 
 
+{% block container_class %}container{% endblock %}
+
 {% block content %}
 
-<div id="dashboard-root">
-    <div id="masonry-grid" class="row row-cols-1 row-cols-md-2 row-cols-lg-5 g-4"
-         hx-get="{% url 'dashboard_grid' %}"
-         hx-trigger="every 2s [!document.querySelector('.modal.show') && !document.querySelector('.dragging-active')]"
-         hx-swap="innerHTML transition:false"
-         style="min-height: 80vh;">
-        {% include 'manager/partials/table_grid.html' %}
-    </div>
+<!-- Control Bar -->
+<div class="container mb-5 sticky-top" style="top: 16px; z-index: 1030;">
+    <div class="glass-panel p-2 ps-3 pe-2 rounded-pill d-flex justify-content-between align-items-center backdrop-blur shadow-sm border border-white border-opacity-50">
+        <!-- Filters -->
+        <div class="d-flex gap-1" id="filter-group">
+            <button class="btn btn-sm rounded-pill px-4 fw-bold tracking-tight filter-btn active" 
+                    onclick="filterDash('all', this)"
+                    style="font-size: 0.75rem;">
+                {% trans "ALL" %}
+            </button>
+            <button class="btn btn-sm rounded-pill px-4 fw-bold tracking-tight filter-btn" 
+                    onclick="filterDash('occupied', this)"
+                    style="color: #ff7675; font-size: 0.75rem;">
+                {% trans "ACTIVE" %}
+            </button>
+            <button class="btn btn-sm rounded-pill px-4 fw-bold tracking-tight filter-btn text-muted" 
+                    onclick="filterDash('available', this)"
+                    style="font-size: 0.75rem;">
+                {% trans "IDLE" %}
+            </button>
+        </div>
 
-    <div id="speed-bar-container" class="fixed-bottom p-3 d-flex justify-content-center pointer-events-none" style="z-index: 1040; pointer-events: none;">
-        <div class="bg-white shadow-lg rounded-pill p-2 d-flex gap-3 align-items-center border border-2 border-dark border-opacity-10 pointer-events-auto" style="pointer-events: auto; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); max-width: 95vw; overflow-x: auto; white-space: nowrap;">
-             <div class="px-3 fw-bold text-uppercase small text-muted border-end sticky-start">{% trans "Quick Fire" %}</div>
+        <!-- Search -->
+        <div class="position-relative d-none d-md-block" style="width: 240px;">
+             <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary opacity-50"></i>
+             <input type="text" id="tableSearch" 
+                    class="form-control form-control-sm rounded-pill border-0 bg-secondary bg-opacity-10 ps-5 py-2 fw-bold" 
+                    placeholder="Search..." onkeyup="searchTables(this.value)" 
+                    style="font-size: 0.8rem;">
+        </div>
+    </div>
+</div>
+
+<style>
+.glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.filter-btn { background: transparent; border: 1px solid transparent; transition: all 0.2s; }
+.filter-btn:hover { background: rgba(0,0,0,0.05); }
+.filter-btn.active { background: #2d3436; color: white !important; box-shadow: 0 4px 10px rgba(45, 52, 54, 0.2); }
+</style>
+
+<div id="dashboard-root"
+     hx-get="{% url 'dashboard_grid' %}"
+     hx-trigger="every 5s [!document.querySelector('.modal.show') && !document.querySelector('.dragging-active') && !document.querySelector('.sticky-note-input:focus')], refresh"
+     hx-swap="innerHTML transition:false">
+    {% include 'manager/partials/table_grid_premium.html' %}
+</div>
+
+<script>
+    function filterDash(mode, btn) {
+        // Toggle Active State
+        document.querySelectorAll('.filter-btn').forEach(b => {
+             b.classList.remove('btn-dark', 'active', 'shadow-sm');
+             b.classList.add('btn-white', 'text-secondary');
+        });
+        
+        btn.classList.remove('btn-white', 'text-secondary');
+        btn.classList.add('btn-dark', 'active', 'shadow-sm');
+
+        const root = document.getElementById('dashboard-root');
+        root.classList.remove('filter-occupied', 'filter-available');
+        
+        if (mode === 'occupied') root.classList.add('filter-occupied');
+        if (mode === 'available') root.classList.add('filter-available');
+        
+        // Re-layout Masonry after filtering
+        setTimeout(window.runMasonryLayout, 100);
+    }
+
+    function searchTables(query) {
+        query = query.toLowerCase().trim();
+        document.querySelectorAll('.table-container').forEach(el => {
+            const card = el.querySelector('.table-card');
+            if (!card) return;
+            
+            let match = false;
+            // Exact Number Search
+            if (/^\d+$/.test(query)) {
+                // Assuming data-table-id might be the number? No, check inner text content for 'Table X'
+                // Better: Check a specific attribute. I will add data-table-number to the card in the next step.
+                // For now, look for "Table {query}" exact string or just robust includes
+                const tableNumText = card.querySelector('h4')?.innerText || "";
+                // If query is "1", match "Table 1" but not "Table 10"
+                const regex = new RegExp(`\\b${query}\\b`);
+                match = regex.test(tableNumText);
+            } else {
+                // Name/Text Search
+                match = el.innerText.toLowerCase().includes(query);
+            }
+            
+            el.style.display = match ? 'block' : 'none';
+        });
+        setTimeout(window.runMasonryLayout, 100);
+    }
+
+    // Sticky Note UI Controls
+    window.toggleEditNote = function(id) {
+        const content = document.getElementById(`note-content-${id}`);
+        const edit = document.getElementById(`note-edit-${id}`);
+        if (!content || !edit) return;
+
+        if (content.classList.contains('d-none')) {
+            content.classList.remove('d-none');
+            edit.classList.add('d-none');
+        } else {
+            content.classList.add('d-none');
+            edit.classList.remove('d-none');
+            edit.querySelector('textarea')?.focus();
+        }
+    };
+
+    window.saveNoteUI = function(id) {
+        // Optimistically hide the editor
+        const content = document.getElementById(`note-content-${id}`);
+        const edit = document.getElementById(`note-edit-${id}`);
+        if (content && edit) {
+            content.classList.remove('d-none');
+            edit.classList.add('d-none');
+            // Update preview text immediately
+            const text = edit.querySelector('textarea').value;
+            content.innerText = text || "...";
+        }
+    };
+</script>
+
+<style>
+    /* Filter Logic */
+    .filter-occupied #masonry-grid-available, 
+    .filter-occupied .table-group-separator { display: none !important; }
+    
+    .filter-available #masonry-grid, 
+    .filter-available .table-group-separator { display: none !important; }
+</style>
+
+    <div id="speed-bar-container" class="fixed-bottom d-flex justify-content-center pointer-events-none pb-4" style="z-index: 1040;">
+        <div class="speed-bar pointer-events-auto shadow-lg">
+             <div class="px-4 fw-800 text-uppercase small text-muted border-end sticky-start bg-transparent" style="letter-spacing: 1.5px; font-size: 0.65rem;">
+                <i class="bi bi-lightning-charge-fill text-warning me-1"></i> {% trans "Quick Fire" %}
+             </div>
              
              {% for item in quick_items %}
-             <div class="quick-item draggable-item d-inline-block" draggable="true" data-item-id="{{ item.id }}" style="cursor: grab;">
-                 <div class="d-flex flex-column align-items-center" style="width: 60px;">
-                    <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center shadow-sm position-relative overflow-hidden" 
-                         style="width: 48px; height: 48px; transition: transform 0.2s;">
+             <div class="quick-item draggable-item d-inline-block" draggable="true" data-item-id="{{ item.id }}">
+                 <div class="d-flex flex-column align-items-center" style="width: 70px;">
+                    <div class="item-icon shadow-sm">
                         {% if item.image %}
                         <img src="{{ item.image.url }}" class="w-100 h-100 object-fit-cover" alt="{{ item.name }}">
                         {% else %}
                         <span class="fw-bold text-dark fs-5">{{ item.name|slice:":1" }}</span>
                         {% endif %}
                     </div>
-                    <span class="small fw-bold text-truncate w-100 text-center mt-1" style="font-size: 0.7rem;">{{ item.short_name|default:item.name|translate_text }}</span>
+                    <span class="small fw-bold text-truncate w-100 text-center mt-1 text-dark" style="font-size: 0.65rem; opacity: 0.8;">{{ item.short_name|default:item.name|translate_text }}</span>
                  </div>
              </div>
              {% endfor %}
@@ -207,11 +179,16 @@
 <script src="{% static 'vendor/masonry.pkgd.min.js' %}"></script>
 <script>
     var msnry = null;
+    var msnryAvailable = null;
     var lastInteractedTableId = localStorage.getItem('lastInteractedTableId');
 
     document.addEventListener('DOMContentLoaded', function () {
         initMasonry();
         applyLastInteracted();
+
+        // Listen for Bootstrap collapse events to re-layout Masonry when cards expand/collapse
+        document.addEventListener('shown.bs.collapse', function () { window.runMasonryLayout(); });
+        document.addEventListener('hidden.bs.collapse', function () { window.runMasonryLayout(); });
 
         // Track clicks
         document.addEventListener('click', function (event) {
@@ -317,29 +294,27 @@
                              }
                         }
                         
-                        // 2. Handle Toast (usually appended to body)
-                        const toasts = doc.querySelectorAll('.toast');
-                        toasts.forEach(toast => {
-                             const container = document.getElementById('toast-container') || document.body;
-                             // Wrap in container if needed or just append
-                             // The response usually contains the container div if using OOB? 
-                             // Our view returns toast inside a wrapper? No, it returns toast HTML.
-                             // Step 325: View returns render 'toast_notification.html'.
-                             // 'toast_notification.html' contains <div id="toast-container" hx-swap-oob...>
-                             // So it should replace the existing container or append.
-                             
-                             // Let's rely on HTMX's oob swap mechanism manually? 
-                             // Or just append the inner toast div to our existing container.
-                             const existingContainer = document.getElementById('toast-container');
+                        // 2. Handle Messages / Toasts
+                        // Check for OOB global container
+                        const newMsgContainer = doc.getElementById('global-message-container');
+                        if (newMsgContainer) {
+                             const existingContainer = document.getElementById('global-message-container');
                              if (existingContainer) {
-                                 // Just grab the .toast element from within the response wrapper
-                                 const toastEl = toast.cloneNode(true);
-                                 existingContainer.appendChild(toastEl);
-                                 // Auto-show logic is inside the script tag in the response?
-                                 // The response is the whole file 'toast_notification.html' which includes script.
-                                 // We need to execute scripts.
+                                 // Replace content (OOB behavior)
+                                 existingContainer.innerHTML = newMsgContainer.innerHTML;
+                                 
+                                 // Re-execute scripts in the new content to trigger auto-dismiss
+                                 const scripts = existingContainer.querySelectorAll('script');
+                                 scripts.forEach(s => eval(s.textContent));
                              }
-                        });
+                        } else {
+                             // Fallback: search for individual popups
+                             const popups = doc.querySelectorAll('.message-popup, .toast');
+                             popups.forEach(popup => {
+                                  const container = document.getElementById('global-message-container') || document.body;
+                                  container.appendChild(popup.cloneNode(true));
+                             });
+                        }
                         
                         // 3. Update Badge (if open)
                         const badg = doc.getElementById('live-order-badge');
@@ -428,33 +403,83 @@
     });
 
     function initMasonry() {
+        // Grid 1: Open Tables
         var grid = document.querySelector('#masonry-grid');
-        if (!grid) return;
-
-        const isRtl = document.documentElement.getAttribute('dir') === 'rtl';
+        // Grid 2: Available Tables
+        var gridAvailable = document.querySelector('#masonry-grid-available');
         
-        if (!msnry) {
-            msnry = new Masonry(grid, {
-                itemSelector: '.col',
-                percentPosition: true,
-                horizontalOrder: true,
-                originLeft: !isRtl,
-                transitionDuration: '0s'
-            });
+        const isRtl = document.documentElement.getAttribute('dir') === 'rtl';
+
+        // Destroy old instances if elements changed
+        if (msnry && (!grid || msnry.element !== grid)) { msnry.destroy(); msnry = null; }
+        if (msnryAvailable && (!gridAvailable || msnryAvailable.element !== gridAvailable)) { msnryAvailable.destroy(); msnryAvailable = null; }
+
+        window.runMasonryLayout = () => {
+            // Apply to Open Tables
+            if (grid) {
+                if (!msnry) {
+                    msnry = new Masonry(grid, {
+                        itemSelector: '.table-container',
+                        columnWidth: '.grid-sizer',
+                        percentPosition: true,
+                        horizontalOrder: true,
+                        originLeft: !isRtl,
+                        transitionDuration: '0.3s' // Add a subtle transition for smoother snapping
+                    });
+                } else {
+                    msnry.reloadItems();
+                    msnry.layout();
+                }
+            }
+
+            // Apply to Available Tables
+            if (gridAvailable) {
+                if (!msnryAvailable) {
+                    msnryAvailable = new Masonry(gridAvailable, {
+                        itemSelector: '.table-container',
+                        columnWidth: '.grid-sizer',
+                        percentPosition: true,
+                        horizontalOrder: true,
+                        originLeft: !isRtl,
+                        transitionDuration: '0.3s'
+                    });
+                } else {
+                    msnryAvailable.reloadItems();
+                    msnryAvailable.layout();
+                }
+            }
+        };
+
+        // Run immediately and again after images/DOM fully settled
+        window.runMasonryLayout();
+        
+        if (window.imagesLoaded) {
+            if (grid) imagesLoaded(grid, window.runMasonryLayout);
+            if (gridAvailable) imagesLoaded(gridAvailable, window.runMasonryLayout);
         } else {
-            msnry.reloadItems();
-            msnry.layout();
+            // Fallback: run again after a tiny delay to ensure sizer has width
+            setTimeout(window.runMasonryLayout, 50);
         }
+        
         window.msnry = msnry;
+        window.msnryAvailable = msnryAvailable;
     }
 
-    // Bind Masonry re-init to HTMX swaps - use afterSettle to ensure DOM is fully ready
+    // HTMX Settle Handler replaced below with more global one
+    /*
     document.addEventListener('htmx:afterSettle', function (event) {
-        if (event.detail.target.id === 'masonry-grid' || event.detail.target.id.startsWith('table-card-')) {
-            initMasonry();
+        if (event.detail.target.id === 'masonry-grid') {
+            if (window.runMasonryLayout) window.runMasonryLayout();
+            applyLastInteracted();
+        } else if (event.detail.target.id.startsWith('table-card-')) {
+            // Check if card changed status (e.g. from mini to full)
+            if (event.detail.target.closest('.occupied-section') || event.detail.target.closest('.mini-grid')) {
+                 if (window.runMasonryLayout) window.runMasonryLayout();
+            }
             applyLastInteracted();
         }
     });
+    */
 
     function applyLastInteracted() {
         if (lastInteractedTableId) {
@@ -481,19 +506,23 @@
         }
     });
 
+    // Add a custom trigger for manual refresh
+    document.addEventListener('htmx:configRequest', (event) => {
+        if (event.detail.target.id === 'dashboard-root') {
+            // Context here
+        }
+    });
+
+    // Handle Masonry and Last Interacted on any dashboard update
+    document.addEventListener('htmx:afterSettle', function (event) {
+        if (event.detail.target.id === 'dashboard-root' || event.detail.target.id.startsWith('table-card-')) {
+            initMasonry();
+            applyLastInteracted();
+        }
+    });
+
+
+
 </script>
-<style>
-    .drag-over {
-        border-color: #0d6efd !important;
-        background-color: rgba(13, 110, 253, 0.1) !important;
-        transform: scale(1.02);
-    }
-    .draggable-item:active {
-        cursor: grabbing;
-    }
-    .dragging-active .table-card {
-        /* Hint that cards are drop zones */
-        border-style: dashed !important;
-    }
-</style>
+<!-- Styles moved to static/css/theme.css -->
 {% endblock %}

@@ -1,7 +1,0 @@
-{% for table in tables %}
-<div class="col table-container" id="table-col-{{ table.id }}">
-    {% include 'manager/partials/table_card.html' with suppress_messages=True %}
-</div>
-{% endfor %}
-{% include 'manager/partials/messages.html' %}
-<!-- DEBUG GRID: {{ tables|length }} tables rendered -->

@@ -1,0 +1,21 @@
+{% load i18n static manager_extras %}
+<div class="modal fade" id="itemsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        {% include 'manager/partials/items_popup_inner.html' %}
+    </div>
+</div>
+
+<script>
+    // Auto-show modal when loaded
+    (function() {
+        const modalEl = document.getElementById('itemsModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        
+        // Refresh dashboard when closed to reflect any deletions
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            htmx.trigger('#dashboard-root', 'refresh');
+            modalEl.remove();
+        });
+    })();
+</script>

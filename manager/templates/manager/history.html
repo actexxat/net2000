@@ -5,138 +5,7 @@
 {% block extra_head %}
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<style>
-    :root {
-        --glass-bg: rgba(255, 255, 255, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.4);
-    }
-
-    .history-container {
-        padding: 1.5rem;
-        background-color: #f8fafc;
-    }
-
-    /* Modern Card Styles */
-    .stat-card {
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        border-radius: 1.25rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        overflow: hidden;
-        position: relative;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
-    }
-
-    .stat-card .card-body {
-        padding: 1.5rem;
-        z-index: 1;
-        position: relative;
-    }
-
-    .stat-icon {
-        position: absolute;
-        right: -10px;
-        bottom: -10px;
-        font-size: 5rem;
-        opacity: 0.1;
-        transform: rotate(-15deg);
-        pointer-events: none;
-    }
-
-    /* Premium Color Accents */
-    .card-revenue { background-color: #eff6ff; color: #1e40af; border-left: 5px solid #3b82f6; }
-    .card-traffic { background-color: #ecfdf5; color: #065f46; border-left: 5px solid #10b981; }
-    .card-printing { background-color: #fff1f2; color: #9f1239; border-left: 5px solid #f43f5e; }
-    .card-top { background-color: #fffbe7; color: #92400e; border-left: 5px solid #f59e0b; }
-
-    /* Table Enhancements */
-    .history-card {
-        border-radius: 1.25rem;
-        border: none;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-
-    .history-table {
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .history-table thead th {
-        background-color: #f8fafc;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.05em;
-        color: #64748b;
-        padding: 1rem 1.5rem;
-        border-bottom: 2px solid #f1f5f9;
-    }
-
-    .history-table tbody td {
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid #f1f5f9;
-        vertical-align: middle;
-    }
-
-    .date-row {
-        background-color: #f1f5f9 !important;
-        font-weight: 700;
-        color: #334155;
-    }
-
-    .item-tag {
-        display: inline-block;
-        background: #f1f5f9;
-        color: #475569;
-        padding: 0.2rem 0.6rem;
-        border-radius: 50px;
-        font-size: 0.8rem;
-        margin-right: 0.3rem;
-        margin-bottom: 0.3rem;
-    }
-
-    .revenue-amount {
-        font-family: 'Monaco', 'Consolas', monospace;
-        font-weight: 800;
-        font-size: 1.3rem;
-    }
-
-    .badge-table {
-        background-color: #334155;
-        color: white;
-        font-weight: 800;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-size: 1.1rem;
-    }
-
-    .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        -webkit-box-orient: vertical;  
-        overflow: hidden;
-    }
-
-    /* Scrollbar Styling */
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f1f5f9;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
-</style>
+    <!-- Styles moved to static/css/theme.css -->
 <script>
     function confirmClearData() {
         return confirm("{% trans 'Are you absolutely sure? This will permanently delete records.'|escapejs %}");
@@ -158,7 +27,7 @@
                 </ol>
             </nav>
             <div class="d-flex align-items-center mb-0">
-                <img src="{% static 'img/logo.png' %}" alt="Logo" style="width: 320px; height: 320px; position: absolute; top: -140px; right: -80px; opacity: 0.05; pointer-events: none; transform: rotate(-15deg);" class="no-print">
+                <img src="{% static 'img/logo.png' %}" alt="Logo" class="bg-watermark no-print">
                 <img src="{% static 'img/logo.png' %}" alt="Logo" class="me-3" style="width: 48px; height: 48px;">
                 <h2 class="fw-bold text-dark mb-0">{% trans "Transaction History" %}</h2>
             </div>

@@ -1,5 +1,5 @@
 {% load i18n manager_extras %}
-<div id="live-order-list" class="d-flex flex-column gap-2" hx-swap-oob="true">
+<div id="live-order-list" class="d-flex flex-column gap-2" {% if is_oob %}hx-swap-oob="true"{% endif %}>
     {% if not orders %}
     <div class="text-center text-muted fst-italic py-3">{% trans "No active orders yet" %}</div>
     {% else %}
@@ -23,12 +23,4 @@
     {% endfor %}
     {% endif %}
 </div>
-<style>
-    .animate-slide-in {
-        animation: slideInLeft 0.3s ease-out;
-    }
-    @keyframes slideInLeft {
-        from { opacity: 0; transform: translateX(-10px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-</style>
+<!-- Styles moved to static/css/theme.css -->

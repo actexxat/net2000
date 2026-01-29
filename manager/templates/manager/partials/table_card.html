@@ -1,181 +1,215 @@
 {% load i18n static manager_extras %}
 <div id="table-card-{{ table.id }}"
-    class="card table-card shadow-sm border-0 {% if table.number == 0 %}card-special{% elif table.is_occupied %}card-occupied{% else %}card-available{% endif %}"
+    class="card table-card border-0 h-100 position-relative overflow-hidden {% if table.number == 0 %}card-special{% elif table.is_occupied %}card-occupied-modern{% else %}card-available-modern{% endif %}"
     data-table-id="{{ table.id }}"
+    data-table-number="{{ table.number }}"
     {% if is_oob %}hx-swap-oob="true"{% endif %}>
-    <div class="card-body p-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h4 class="mb-0 fw-bold">{% trans "Table" %} {{ table.number|translate_numbers }}</h4>
-            <div class="d-flex align-items-center">
-                {% if table.is_occupied %}
-                {% if table.number != 0 %}
-                <span class="badge bg-light text-dark shadow-sm me-2" style="font-size: 0.8rem; font-weight: 700;">
-                    {{ table.current_people|translate_numbers }} <img src="{% static 'img/person_icon.png' %}" alt="people" style="width: 16px; height: 16px; margin-left: 4px;">
-                </span>
-                {% endif %}
-                {% endif %}
-                <span class="status-dot shadow-sm {% if table.is_occupied %}bg-white{% else %}bg-success{% endif %}" 
-                      style="width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.1);"></span>
-            </div>
-        </div>
+    
+    <!-- Status Indicator Line -->
+    <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: {% if table.is_occupied %}linear-gradient(90deg, #ff6b6b, #ee5253){% else %}transparent{% endif %};"></div>
+
+    <div class="card-body p-3 d-flex flex-column h-100">
         
-        {% if table.is_occupied and table.number != 0 %}
-        <!-- Table Health Bar -->
-        <div class="progress mb-3 shadow-sm" style="height: 8px; background-color: rgba(0,0,0,0.05);">
-            <div class="progress-bar {% if table.min_charge_progress >= 100 %}bg-success{% elif table.min_charge_progress >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
-                 role="progressbar" 
-                 style="width: {{ table.min_charge_progress }}%; transition: width 0.5s ease; border-radius: 10px;" 
-                 aria-valuenow="{{ table.min_charge_progress }}" aria-valuemin="0" aria-valuemax="100">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h5 class="mb-0 fw-bold d-flex align-items-center gap-2" style="letter-spacing: -0.5px;">
+                    {% if table.number == 0 %}
+                    <i class="bi bi-display"></i> {% trans "Counter" %}
+                    {% else %}
+                    <span class="text-uppercase text-opacity-50 small" style="font-size: 0.65rem; letter-spacing: 1px;">{% trans "TABLE" %}</span>
+                    <span class="fs-4 lh-1">{{ table.number|translate_numbers }}</span>
+                    {% endif %}
+                </h5>
+                {% if table.is_occupied %}
+                <div class="mt-1 d-flex align-items-center gap-1">
+                    <span class="badge bg-white bg-opacity-10 text-white fw-normal px-2 py-1 rounded-pill" style="font-size: 0.65rem;">
+                        <i class="bi bi-clock me-1"></i> {{ table.opened_at|timesince }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if table.is_occupied %}
+            <div class="d-flex align-items-center gap-1 bg-white bg-opacity-10 rounded-pill p-1 ps-2">
+                <span class="fw-bold" style="font-size: 0.8rem;">{{ table.current_people|translate_numbers }}</span>
+                <i class="bi bi-person-fill opacity-50" style="font-size: 0.8rem;"></i>
+                <div class="vr bg-white bg-opacity-25 mx-1" style="height: 12px;"></div>
+                <div class="d-flex">
+                    <button class="btn btn-link text-white p-0" style="width: 20px; height: 20px; line-height: 0;"
+                        hx-post="{% url 'update_people' table.id %}" 
+                        hx-target="#table-card-{{ table.id }}" 
+                        hx-swap="outerHTML"
+                        hx-vals='{"people_count": {{ table.current_people|add:1 }}}'>
+                        <i class="bi bi-plus"></i>
+                    </button>
+                    <button class="btn btn-link text-white p-0" style="width: 20px; height: 20px; line-height: 0;"
+                        hx-post="{% url 'update_people' table.id %}" 
+                        hx-target="#table-card-{{ table.id }}" 
+                        hx-swap="outerHTML"
+                        hx-vals='{"people_count": {{ table.current_people|add:-1 }}}'
+                        {% if table.current_people <= 1 %}disabled style="opacity: 0.3; cursor: not-allowed;"{% endif %}>
+                        <i class="bi bi-dash"></i>
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="badge bg-light text-secondary rounded-pill fw-normal px-3 py-1">{% trans "Available" %}</div>
+            {% endif %}
+        </div>
+
+        {% if table.is_occupied %}
+        <!-- Occupied Content -->
+        <div class="flex-grow-1 d-flex flex-column justify-content-between">
+            
+            <!-- Money Hero -->
+            <div class="text-center py-3">
+                <div class="display-5 fw-normal mb-0 tracking-tight">{{ table.total_price|floatformat:0 }}<span class="fs-6 text-opacity-50 ms-1 align-top mt-2 d-inline-block">EGP</span></div>
+                
+                <!-- Items Modal Trigger -->
+                {% if table.orders %}
+                <button class="btn btn-sm btn-link text-white-50 text-decoration-none p-0 mt-2 hover-white transition-fast" 
+                        hx-get="{% url 'item_popup_preview' table.id %}"
+                        hx-target="#service-modal-container">
+                    <i class="bi bi-eye"></i> {{ table.orders|length|translate_numbers }} {% trans "Items" %}
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="mt-auto">
+                <!-- Primary Actions -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <button class="btn btn-modern-primary w-100 py-2"
+                            hx-get="{% url 'service_modal_preview' table.id 'order' %}"
+                            hx-target="#service-modal-container">
+                            <i class="bi bi-plus-lg me-1"></i> {% trans "Add" %}
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-modern-success w-100 py-2"
+                            hx-get="{% url 'checkout_preview' table.id %}" 
+                            hx-target="#checkout-modal-container">
+                            <i class="bi bi-check2 me-1"></i> {% trans "Pay" %}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Secondary Tools (The requested features) -->
+                <div class="d-flex justify-content-between gap-1">
+                    <button class="btn btn-tool flex-fill" title="{% trans 'Print' %}"
+                        hx-get="{% url 'service_modal_preview' table.id 'print' %}"
+                        hx-target="#service-modal-container">
+                        <div class="tool-icon"><i class="bi bi-printer"></i></div>
+                        <span class="tool-label">Print</span>
+                    </button>
+                    <button class="btn btn-tool flex-fill" title="{% trans 'Copy' %}"
+                        hx-get="{% url 'service_modal_preview' table.id 'copy' %}"
+                        hx-target="#service-modal-container">
+                        <div class="tool-icon"><i class="bi bi-files"></i></div>
+                        <span class="tool-label">Copy</span>
+                    </button>
+                    <button class="btn btn-tool flex-fill" title="{% trans 'Fax' %}"
+                        hx-get="{% url 'service_modal_preview' table.id 'custom' %}"
+                        hx-target="#service-modal-container">
+                        <div class="tool-icon"><i class="bi bi-telephone-forward"></i></div>
+                        <span class="tool-label">Fax</span>
+                    </button>
+                    <button class="btn btn-tool flex-fill text-danger-hover" title="{% trans 'Reset' %}"
+                        hx-post="{% url 'dismiss_table' table.id %}"
+                        hx-confirm="{% trans 'Reset table?' %}"
+                        hx-target="#dashboard-root"
+                        hx-swap="innerHTML">
+                        <div class="tool-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
+                        <span class="tool-label">Reset</span>
+                    </button>
+                </div>
             </div>
         </div>
         {% else %}
-        <div class="mb-3"></div>
-        {% endif %}
-        <div class="table-details-static">
-            {% if table.is_occupied %}
-            {% if table.number != 0 %}
-            <div class="table-box d-flex align-items-center justify-content-between">
-                <div class="small fw-bold opacity-75 text-uppercase" style="font-size: 0.7rem;">{% trans "People" %}</div>
-                <div class="d-flex align-items-center gap-2">
-                    <form hx-post="{% url 'update_people' table.id %}" hx-target="#table-card-{{ table.id }}" hx-swap="outerHTML">
-                        <input type="hidden" name="people_count" value="{{ table.current_people|add:-1 }}">
-                        <button type="submit" class="btn btn-sm btn-outline-light rounded-circle" style="width: 28px; height: 28px; padding: 0;" {% if table.current_people <= 1 %}disabled{% endif %}>-</button>
-                    </form>
-                    <span class="fw-bold fs-5 mx-1">{{ table.current_people|translate_numbers }}</span>
-                    <form hx-post="{% url 'update_people' table.id %}" hx-target="#table-card-{{ table.id }}" hx-swap="outerHTML">
-                        <input type="hidden" name="people_count" value="{{ table.current_people|add:1 }}">
-                        <button type="submit" class="btn btn-sm btn-outline-light rounded-circle" style="width: 28px; height: 28px; padding: 0;">+</button>
-                    </form>
-                </div>
+        <!-- Available Content -->
+        <div class="flex-grow-1 d-flex flex-column align-items-center justify-content-center text-center">
+            <div class="mb-3 text-secondary opacity-25">
+                <i class="bi bi-cup-hot display-4"></i>
             </div>
-            {% endif %}
-
-            {% if table.orders %}
-            <div class="table-box">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="small fw-bold opacity-75 text-uppercase" style="font-size: 0.7rem;">
-                            {% trans "Items Ordered" %}</span>
-                        {% if table.orders %}
-                        <button class="btn btn-xs btn-outline-light py-0 px-1 border-0" 
-                                style="font-size: 0.6rem; background: rgba(255,255,255,0.1);"
-                                hx-post="{% url 'serve_all_orders' table.id %}" 
-                                hx-target="#table-card-{{ table.id }}" 
-                                hx-swap="outerHTML">
-                            {% trans "SERVE ALL" %}
-                        </button>
-                        {% endif %}
-                    </div>
-                    <span class="badge bg-danger rounded-pill" style="font-size: 0.65rem;">{{ table.orders|length|translate_numbers }}</span>
-                </div>
-                <div style="max-height: 200px; overflow-y: auto; scrollbar-width: thin;" class="pe-0">
-                    {% for order in table.orders %}
-                    <div class="d-flex justify-content-between align-items-middle py-1 px-1 border-bottom border-light border-opacity-10 rounded-1 {% if order.order_source == 'QR' %}bg-warning bg-opacity-10{% endif %} {% if order.is_served %}opacity-50 text-decoration-line-through{% endif %}" style="min-height: 2rem;">
-                        <div class="d-flex align-items-center flex-grow-1 overflow-hidden">
-                            <span class="me-2 text-white-50 fw-bold" style="font-size: 0.85rem; min-width: 1.2rem;">{{ forloop.counter|translate_numbers }}.</span>
-                            <input type="checkbox" class="form-check-input me-2 shadow-none border-1 border-light m-0" 
-                                   {% if order.is_served %}checked{% endif %} 
-                                   hx-post="{% url 'serve_order_toggle' order.id %}" 
-                                   hx-target="#table-card-{{ table.id }}" 
-                                   hx-swap="outerHTML"
-                                   style="cursor: pointer; min-width: 1.2rem; min-height: 1.2rem; width: 1.2rem; height: 1.2rem; background-color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.6); margin-top: 0;">
-                            <div class="d-flex flex-column w-100 overflow-hidden justify-content-center">
-                                <div class="d-flex align-items-start flex-wrap">
-                                    {% if order.order_source == 'QR' %}
-                                    <i class="bi bi-qr-code text-warning me-1" title="{% trans 'Ordered via QR' %}" style="font-size: 0.75rem;"></i>
-                                    {% endif %}
-                                    
-                                    {% if order.item_category_display %}
-                                    <span class="small opacity-75 fw-normal me-1" style="font-size: 0.7rem; white-space: nowrap;">{{ order.item_category_display|translate_text }}</span>
-                                    {% endif %}
-                                    
-                                    <span class="fw-bold text-white" style="font-size: 0.9rem; letter-spacing: 0.2px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;">{{ order.item_name_display|translate_text }}</span>
-                                </div>
-                                
-                                {% if order.customer_note_display %}
-                                <div class="ps-1 border-start border-warning" style="border-width: 2px !important; margin-top: 1px;">
-                                     <small class="text-warning fw-bold fst-italic text-truncate d-block" style="font-size: 0.7rem; line-height: 1;">
-                                         "{{ order.customer_note_display }}"
-                                     </small>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <button class="btn btn-sm p-0 ms-2 d-flex align-items-center justify-content-center discard-btn" 
-                                style="background: rgba(0,0,0,0.8); border-radius: 50%; width: 24px; height: 24px; border: 1.5px solid rgba(255,255,255,0.4); color: #fff; font-size: 18px; font-weight: bold; line-height: 1; transition: all 0.2s ease;"
-                                hx-post="{% url 'discard_order' order.id %}" 
-                                hx-target="#table-card-{{ table.id }}" 
-                                hx-swap="outerHTML" 
-                                hx-swap="outerHTML">
-                            &times;
-                        </button>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-            <div class="table-box">
-                <div class="d-grid gap-2">
-                    <div class="d-flex gap-2">
-                        {% if table.number != 0 %}
-                        <button type="button" class="btn btn-outline-primary btn-sm flex-grow-1" style="min-height: 38px;"
-                            hx-get="{% url 'service_modal_preview' table.id 'order' %}"
-                            hx-target="#service-modal-container">
-                            <i class="bi bi-plus-circle me-1"></i> {% trans "Add Item" %}
-                        </button>
-                        {% endif %}
-                        <button type="button" class="btn btn-outline-secondary btn-sm flex-grow-1" style="min-height: 38px;"
-                            hx-get="{% url 'service_modal_preview' table.id 'custom' %}"
-                            hx-target="#service-modal-container">
-                            <i class="bi bi-plus-square me-1"></i> {% trans "Other" %}
-                        </button>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary btn-sm flex-grow-1 d-flex flex-column align-items-center justify-content-center" style="min-height: 30px; padding: 0.25rem;"
-                            hx-get="{% url 'service_modal_preview' table.id 'print' %}"
-                            hx-target="#service-modal-container">
-                            <img src="{% static 'img/print_icon.png' %}" alt="{% trans 'Print' %}" style="width: 24px; height: 24px;">
-                        </button>
-                        <button type="button" class="btn btn-outline-dark btn-sm flex-grow-1 d-flex flex-column align-items-center justify-content-center" style="min-height: 30px; padding: 0.25rem;"
-                            hx-get="{% url 'service_modal_preview' table.id 'copy' %}"
-                            hx-target="#service-modal-container">
-                            <img src="{% static 'img/copy_icon.png' %}" alt="{% trans 'Copy' %}" style="width: 24px; height: 24px;">
-                        </button>
-                    </div>
-                    <div class="d-flex gap-2 mt-1">
-                        <button type="button" class="btn btn-light btn-lg fw-bold text-danger animate-pulse shadow-sm flex-grow-1 d-flex align-items-center justify-content-center" 
-                            hx-get="{% url 'checkout_preview' table.id %}" 
-                            hx-target="#checkout-modal-container"
-                            style="font-size: 1rem;">
-                            <i class="bi bi-cash-stack me-2"></i> {% trans "CHECK OUT" %}
-                        </button>
-                        <button type="button" class="btn btn-outline-danger shadow-sm d-flex align-items-center justify-content-center p-0" 
-                            style="width: 42px; min-width: 42px;"
-                            hx-post="{% url 'dismiss_table' table.id %}"
-                            hx-confirm="{% trans 'Are you sure? This will remove all orders and reset the table without saving to history.' %}"
-                            hx-target="#masonry-grid"
-                            hx-swap="innerHTML"
-                            title="{% trans 'Dismiss Table (No History)' %}">
-                            <i class="bi bi-trash-fill" style="font-size: 1.1rem;"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {% else %}
-            <div class="mt-2 text-center">
-                <form hx-post="{% url 'check_in' table.id %}" hx-target="#masonry-grid" hx-swap="innerHTML">
-                    <input type="hidden" name="people_count" value="1">
-                    <button type="submit" class="btn btn-success w-100 fw-bold py-3 shadow-sm rounded-4" style="font-size: 1.1rem; border: 2px solid #198754;">
-                        <i class="bi bi-play-fill fs-4 d-block mb-1"></i>
-                        {% trans "OPEN TABLE" %}
-                    </button>
-                </form>
-            </div>
-            {% endif %}
+            <form hx-post="{% url 'check_in' table.id %}" hx-target="#dashboard-root" hx-swap="innerHTML" class="w-100 px-4">
+                <input type="hidden" name="people_count" value="1">
+                <button type="submit" class="btn btn-outline-dark w-100 rounded-pill py-2 fw-bold text-uppercase" style="border-width: 2px; font-size: 0.8rem; letter-spacing: 1px;">
+                    {% trans "Open" %}
+                </button>
+            </form>
         </div>
+        {% endif %}
     </div>
 </div>
-{% if not suppress_messages %}
-{% include 'manager/partials/messages.html' %}
-{% endif %}
+
+<style>
+/* Modern Card Styles */
+.card-occupied-modern {
+    background: linear-gradient(145deg, #2d3436, #1e272e);
+    color: #f5f6fa;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+}
+
+.card-available-modern {
+    background: #ffffff;
+    color: #2d3436;
+    border: 1px solid #f1f2f6 !important;
+    transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+}
+.card-available-modern:hover {
+    box-shadow: 0 14px 28px rgba(0,0,0,0.05), 0 10px 10px rgba(0,0,0,0.02);
+    transform: translateY(-5px);
+    border-color: #ff7675 !important;
+}
+
+/* Typography & Elements */
+.tracking-tight { letter-spacing: -0.5px; }
+.last-no-border:last-child { border-bottom: none !important; }
+
+/* Buttons */
+.btn-modern-primary {
+    background: #ff7675;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.btn-modern-primary:hover { background: #d63031; color: white; transform: translateY(-1px); }
+
+.btn-modern-success {
+    background: #55efc4;
+    color: #00b894;
+    background: rgba(85, 239, 196, 0.15);
+    border: 1px solid rgba(85, 239, 196, 0.3);
+    border-radius: 12px;
+    font-weight: 700;
+    transition: all 0.2s;
+}
+.btn-modern-success:hover { background: #55efc4; color: #2d3436; transform: translateY(-1px); }
+
+/* Tool Buttons */
+.btn-tool {
+    background: rgba(255,255,255,0.05);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 4px;
+    color: rgba(255,255,255,0.6);
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+.card-available-modern .btn-tool { background: #f1f2f6; color: #636e72; }
+
+.btn-tool:hover { background: rgba(255,255,255,0.15); color: white; }
+.card-available-modern .btn-tool:hover { background: #dfe6e9; color: #2d3436; }
+
+.tool-icon { font-size: 1.1rem; line-height: 1; }
+.tool-label { font-size: 0.55rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+
+.text-danger-hover:hover { color: #ff7675 !important; background: rgba(255, 118, 117, 0.1) !important; }
+</style>

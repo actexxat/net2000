@@ -1,23 +1,19 @@
 <div id="global-message-container" hx-swap-oob="true"
-    style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:1050;">
+    style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2000;">
     {% if messages %}
     {% for msg in messages %}
-    <div class="d-flex align-items-center px-3 py-2 mb-2 shadow-sm rounded message-popup"
-        style="background:#fff; min-width:260px; border-radius:28px; animation: slide-down 0.3s ease-out;">
+    <div class="message-popup shadow-lg mb-2">
         {% if msg.tags == 'success' %}
-        <div
-            style="width:36px;height:36px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;margin-right:12px;">
-            ✓
+        <div class="message-icon bg-success">
+            <i class="bi bi-check-lg"></i>
         </div>
         {% else %}
-        <div
-            style="width:36px;height:36px;border-radius:50%;background:#dc2626;color:#fff;display:flex;align-items:center;justify-content:center;margin-right:12px;">
-            ✕
+        <div class="message-icon bg-danger">
+            <i class="bi bi-x-lg"></i>
         </div>
         {% endif %}
-        <div style="flex:1;color:#111;font-weight:600;">{{ msg }}</div>
-        <button type="button" onclick="this.parentElement.style.display='none'"
-            style="background:transparent;border:none;color:#6b7280;font-size:16px;">✕</button>
+        <div class="fw-bold text-dark flex-grow-1">{{ msg|safe }}</div>
+        <button type="button" class="btn-close ms-2" onclick="this.parentElement.remove()"></button>
     </div>
     {% endfor %}
     <script>

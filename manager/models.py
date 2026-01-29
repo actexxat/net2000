@@ -10,6 +10,78 @@ class Table(models.Model):
     def __str__(self):
         return f"Table {self.number}"
 
+    def get_bill_summary(self, settings=None):
+        """
+        Calculates totals, shortfall, and active orders for the table.
+        Minimum Charge Policy: Only items marked as 'is_drink' count towards the minimum charge coverage.
+        Non-drink items (food, services, etc.) are added on top of the minimum charge/drink total.
+        """
+        from decimal import Decimal
+        from .models import GlobalSettings
+        
+        if not settings:
+            settings, _ = GlobalSettings.objects.get_or_create(id=1)
+        
+        # Get active orders
+        if hasattr(self, 'active_orders'):
+            unpaid_orders = self.active_orders
+        else:
+            unpaid_orders = list(self.order_set.filter(is_paid=False).select_related('item').order_by('timestamp'))
+        
+        order_total = Decimal('0.00')
+        eligible_total = Decimal('0.00')
+        
+        for order in unpaid_orders:
+            # Calculate effective price
+            price = order.transaction_price if order.transaction_price is not None else (order.item.price if order.item else Decimal('0.00'))
+            price = price or Decimal('0.00')
+            order_total += price
+            
+            # Check eligibility (Only drinks count towards min charge)
+            if order.item and order.item.is_drink:
+                eligible_total += price
+            
+        # Calculate totals and shortfall per person
+        min_charge = settings.min_charge_per_person
+        
+        shortfall = Decimal('0.00')
+        progress = 100  # Default
+
+        if self.number != 0 and min_charge > 0:
+            total_target = Decimal(self.current_people) * min_charge
+            
+            # New Logic: No-Pooling / Individual Allocation Approximation
+            # Each drink item covers at most 'min_charge' worth of liability.
+            # This prevents one expensive drink from covering multiple people.
+            # e.g. If Min=25, Drink=100. It covers 25. The remaining 75 is excess/ignored for min-charge purposes.
+            
+            covered_amount = Decimal('0.00')
+            for order in unpaid_orders:
+                if order.item and order.item.is_drink:
+                    price = order.transaction_price if order.transaction_price is not None else order.item.price
+                    # Each drink contributes at most min_charge to total coverage
+                    contribution = min(price, min_charge)
+                    covered_amount += contribution
+            
+            # Cap the total covered amount at the total target (cannot exceed 100% coverage overall)
+            covered_amount = min(covered_amount, total_target)
+            
+            shortfall = total_target - covered_amount
+            
+            if total_target > 0:
+                progress = int((covered_amount / total_target) * 100)
+            else:
+                progress = 100
+        
+        
+        return {
+            'orders': unpaid_orders,
+            'order_total': order_total,
+            'shortfall': shortfall,
+            'final_total': order_total + shortfall,
+            'progress': progress
+        }
+
 class Item(models.Model):
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=6, decimal_places=2)
@@ -103,3 +175,13 @@ class GlobalSettings(models.Model):
 
     class Meta:
         verbose_name_plural = "Global Settings"
+
+class StickyNote(models.Model):
+    author = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    content = models.TextField(blank=True)
+    color = models.CharField(max_length=50, default='bg-soft-yellow') # CSS class or hex
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Note by {self.author.username}"

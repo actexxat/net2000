@@ -6,26 +6,32 @@
 {% block content %}
 <div class="container mt-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-danger text-white d-flex align-items-center">
-                    <img src="{% static 'img/logo.png' %}" alt="Logo" class="me-3" style="width: 40px; height: 40px; filter: brightness(0) invert(1);">
-                    <h3 class="mb-0">{% trans "Add Order" %}</h3>
-                </div>
+        <div class="col-md-5">
+            <div class="card stat-card shadow-lg p-3">
                 <div class="card-body">
+                    <div class="text-center mb-4">
+                        <img src="{% static 'img/logo.png' %}" alt="Logo" class="mb-3" style="width: 64px; height: 64px;">
+                        <h3 class="fw-bold text-dark">{% trans "Quick Add Order" %}</h3>
+                        <p class="text-muted small">{% trans "Manually add an item to the menu." %}</p>
+                    </div>
+                    
                     <form method="POST">
                         {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label">{% trans "Select Item" %}</label>
-                            <select name="item_id" class="form-select form-select-lg">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-muted small text-uppercase">{% trans "Select Item" %}</label>
+                            <select name="item_id" class="form-select form-select-lg border-2" style="border-radius: var(--radius-md);">
                                 {% for item in items %}
-                                <option value="{{ item.id }}">{{ item.name }} - EGP {{ item.price|floatformat:2 }}
-                                </option>
+                                <option value="{{ item.id }}">{{ item.name }} - EGP {{ item.price|floatformat:0 }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-success btn-lg w-100">{% trans "Confirm Order" %}</button>
-                        <a href="{% url 'dashboard' %}" class="btn btn-link w-100 mt-2">{% trans "Cancel" %}</a>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold">
+                                <i class="bi bi-plus-circle me-2"></i> {% trans "Confirm Order" %}
+                            </button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-white border rounded-pill">{% trans "Cancel" %}</a>
+                        </div>
                     </form>
                 </div>
             </div>
