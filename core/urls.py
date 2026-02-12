@@ -49,6 +49,7 @@ urlpatterns = [
     # History & Stats
     path('history/', manager_views.session_history, name='session_history'),
     path('clear-data/', manager_views.clear_data, name='clear_data'),
+    path('switch-shift/', manager_views.switch_shift, name='switch_shift'),
     path('metrics/', manager_views.metrics_dashboard, name='metrics'),
     path('monitor/', manager_views.monitor, name='monitor'),
     path('unauthorized/', manager_views.unauthorized, name='unauthorized'),
@@ -56,6 +57,11 @@ urlpatterns = [
     path('history/revenue-30/', manager_views.revenue_30, name='revenue_30'),
     path('history/busy-times/', manager_views.busy_times, name='busy_times'),
     path('notification-history/', manager_views.notification_history, name='notification_history'), # Notification center endpoint
+    
+    # Pong Game
+    path('pong/', manager_views.pong_game, name='pong_game'),
+    path('pong/status/', manager_views.pong_status, name='pong_status'),
+    path('pong/ready/', manager_views.pong_toggle_ready, name='pong_ready'),
     
     # Menu
     path('menu/', include('manager.urls_menu')), 

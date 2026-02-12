@@ -27,7 +27,16 @@
                             <div class="text-muted small fst-italic">"{{ order.customer_note_display }}"</div>
                             {% endif %}
                         </td>
-                        <td class="text-end fw-bold text-dark">{{ order.item.price|floatformat:0 }}</td>
+                        <td class="text-end fw-bold text-dark">
+                            {% if order.transaction_price is not None %}
+                                {{ order.transaction_price|floatformat:0 }}
+                            {% elif order.item %}
+                                {{ order.item.price|floatformat:0 }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </td>
+
                         <td class="text-end pe-4">
                             <button class="btn btn-sm btn-link text-danger p-0"
                                     hx-post="{% url 'discard_order' order.id %}"

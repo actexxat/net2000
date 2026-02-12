@@ -12,40 +12,11 @@
 
 {% block content %}
 
-<!-- Control Bar -->
-<div class="container mb-5 sticky-top" style="top: 16px; z-index: 1030;">
-    <div class="glass-panel p-2 ps-3 pe-2 rounded-pill d-flex justify-content-between align-items-center backdrop-blur shadow-sm border border-white border-opacity-50">
-        <!-- Filters -->
-        <div class="d-flex gap-1" id="filter-group">
-            <button class="btn btn-sm rounded-pill px-4 fw-bold tracking-tight filter-btn active" 
-                    onclick="filterDash('all', this)"
-                    style="font-size: 0.75rem;">
-                {% trans "ALL" %}
-            </button>
-            <button class="btn btn-sm rounded-pill px-4 fw-bold tracking-tight filter-btn" 
-                    onclick="filterDash('occupied', this)"
-                    style="color: #ff7675; font-size: 0.75rem;">
-                {% trans "ACTIVE" %}
-            </button>
-            <button class="btn btn-sm rounded-pill px-4 fw-bold tracking-tight filter-btn text-muted" 
-                    onclick="filterDash('available', this)"
-                    style="font-size: 0.75rem;">
-                {% trans "IDLE" %}
-            </button>
-        </div>
+<!-- Filters and Search removed as requested -->
 
-        <!-- Search -->
-        <div class="position-relative d-none d-md-block" style="width: 240px;">
-             <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-secondary opacity-50"></i>
-             <input type="text" id="tableSearch" 
-                    class="form-control form-control-sm rounded-pill border-0 bg-secondary bg-opacity-10 ps-5 py-2 fw-bold" 
-                    placeholder="Search..." onkeyup="searchTables(this.value)" 
-                    style="font-size: 0.8rem;">
-        </div>
-    </div>
-</div>
 
 <style>
+html { scroll-behavior: auto !important; }
 .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .filter-btn { background: transparent; border: 1px solid transparent; transition: all 0.2s; }
 .filter-btn:hover { background: rgba(0,0,0,0.05); }
@@ -53,58 +24,14 @@
 </style>
 
 <div id="dashboard-root"
-     hx-get="{% url 'dashboard_grid' %}"
+     hx-get="{% url 'dashboard_grid' %}?lang={{ LANGUAGE_CODE }}"
      hx-trigger="every 5s [!document.querySelector('.modal.show') && !document.querySelector('.dragging-active') && !document.querySelector('.sticky-note-input:focus')], refresh"
-     hx-swap="innerHTML transition:false">
+     hx-swap="innerHTML transition:false show:none">
     {% include 'manager/partials/table_grid_premium.html' %}
 </div>
 
 <script>
-    function filterDash(mode, btn) {
-        // Toggle Active State
-        document.querySelectorAll('.filter-btn').forEach(b => {
-             b.classList.remove('btn-dark', 'active', 'shadow-sm');
-             b.classList.add('btn-white', 'text-secondary');
-        });
-        
-        btn.classList.remove('btn-white', 'text-secondary');
-        btn.classList.add('btn-dark', 'active', 'shadow-sm');
 
-        const root = document.getElementById('dashboard-root');
-        root.classList.remove('filter-occupied', 'filter-available');
-        
-        if (mode === 'occupied') root.classList.add('filter-occupied');
-        if (mode === 'available') root.classList.add('filter-available');
-        
-        // Re-layout Masonry after filtering
-        setTimeout(window.runMasonryLayout, 100);
-    }
-
-    function searchTables(query) {
-        query = query.toLowerCase().trim();
-        document.querySelectorAll('.table-container').forEach(el => {
-            const card = el.querySelector('.table-card');
-            if (!card) return;
-            
-            let match = false;
-            // Exact Number Search
-            if (/^\d+$/.test(query)) {
-                // Assuming data-table-id might be the number? No, check inner text content for 'Table X'
-                // Better: Check a specific attribute. I will add data-table-number to the card in the next step.
-                // For now, look for "Table {query}" exact string or just robust includes
-                const tableNumText = card.querySelector('h4')?.innerText || "";
-                // If query is "1", match "Table 1" but not "Table 10"
-                const regex = new RegExp(`\\b${query}\\b`);
-                match = regex.test(tableNumText);
-            } else {
-                // Name/Text Search
-                match = el.innerText.toLowerCase().includes(query);
-            }
-            
-            el.style.display = match ? 'block' : 'none';
-        });
-        setTimeout(window.runMasonryLayout, 100);
-    }
 
     // Sticky Note UI Controls
     window.toggleEditNote = function(id) {
@@ -136,19 +63,12 @@
     };
 </script>
 
-<style>
-    /* Filter Logic */
-    .filter-occupied #masonry-grid-available, 
-    .filter-occupied .table-group-separator { display: none !important; }
-    
-    .filter-available #masonry-grid, 
-    .filter-available .table-group-separator { display: none !important; }
-</style>
+
 
     <div id="speed-bar-container" class="fixed-bottom d-flex justify-content-center pointer-events-none pb-4" style="z-index: 1040;">
         <div class="speed-bar pointer-events-auto shadow-lg">
-             <div class="px-4 fw-800 text-uppercase small text-muted border-end sticky-start bg-transparent" style="letter-spacing: 1.5px; font-size: 0.65rem;">
-                <i class="bi bi-lightning-charge-fill text-warning me-1"></i> {% trans "Quick Fire" %}
+             <div class="px-3 fw-bold small text-muted border-end sticky-start bg-transparent">
+                <i class="bi bi-lightning-charge-fill text-warning fs-5"></i>
              </div>
              
              {% for item in quick_items %}
@@ -227,7 +147,7 @@
         document.addEventListener('dragover', function(e) {
             const card = e.target.closest('.table-card');
             // Only allow dropping on Occupied tables or Special Table 0
-            if (card && (card.classList.contains('card-occupied') || card.classList.contains('card-special'))) {
+            if (card && (card.classList.contains('card-occupied') || card.classList.contains('card-occupied-modern') || card.classList.contains('card-special'))) {
                 e.preventDefault(); // Allow drop
                 e.dataTransfer.dropEffect = 'copy';
                 card.classList.add('drag-over');
@@ -254,7 +174,7 @@
             document.querySelectorAll('.table-card.drag-over').forEach(c => c.classList.remove('drag-over'));
             document.body.classList.remove('dragging-active'); // Ensure we clear this state
             
-            if(card && (card.classList.contains('card-occupied') || card.classList.contains('card-special'))) {
+            if(card && (card.classList.contains('card-occupied') || card.classList.contains('card-occupied-modern') || card.classList.contains('card-special'))) {
                 e.preventDefault();
                 const tableId = card.dataset.tableId;
                 // Try dataTransfer first, fall back to variable if same session
@@ -494,14 +414,38 @@
     document.addEventListener('htmx:responseError', function (event) { console.error("HTMX Error:", event.detail.error); });
     document.addEventListener('htmx:sendError', function (event) { console.error("Network Error"); });
 
-    // CRITICAL: Prevent HTMX from swapping the grid if the user is currently dragging an item.
-    // This protects against "in-flight" requests that started before the drag began.
+    // --- Scroll & Layout Stabilization ---
+    let dashboardMinHeight = 0;
+    
     document.addEventListener('htmx:beforeSwap', function(event) {
-        if (event.detail.target.id === 'masonry-grid') {
+        if (event.detail.target.id === 'dashboard-root') {
+            const root = document.getElementById('dashboard-root');
+            if (root) {
+                dashboardMinHeight = root.offsetHeight;
+                root.style.minHeight = dashboardMinHeight + 'px';
+            }
+        }
+        
+        // Prevent HTMX from swapping the grid if the user is currently dragging an item.
+        if (event.detail.target.id === 'masonry-grid' || event.detail.target.id === 'dashboard-root') {
             if (document.body.classList.contains('dragging-active')) {
-                // User is dragging! Abort the update.
                 console.log("Blocking dashboard update due to active drag.");
                 event.detail.shouldSwap = false;
+            }
+        }
+    });
+
+    document.addEventListener('htmx:afterSettle', function (event) {
+        if (event.detail.target.id === 'dashboard-root' || event.detail.target.id.startsWith('table-card-')) {
+            initMasonry();
+            applyLastInteracted();
+            
+            // Release min-height after a brief delay to allow Masonry to finish layout
+            if (event.detail.target.id === 'dashboard-root') {
+                setTimeout(() => {
+                    const root = document.getElementById('dashboard-root');
+                    if (root) root.style.minHeight = '';
+                }, 1000);
             }
         }
     });
@@ -510,14 +454,6 @@
     document.addEventListener('htmx:configRequest', (event) => {
         if (event.detail.target.id === 'dashboard-root') {
             // Context here
-        }
-    });
-
-    // Handle Masonry and Last Interacted on any dashboard update
-    document.addEventListener('htmx:afterSettle', function (event) {
-        if (event.detail.target.id === 'dashboard-root' || event.detail.target.id.startsWith('table-card-')) {
-            initMasonry();
-            applyLastInteracted();
         }
     });
 

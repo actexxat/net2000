@@ -3,15 +3,33 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">{% trans "Custom Item" %} - {% trans "Table" %} {{ table.number|translate_numbers }}
+                <h5 class="modal-title">{% trans "Other Service" %} - {% trans "Table" %} {{ table.number|translate_numbers }}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form hx-post="{% url 'add_custom_item' table.id %}" hx-target="#table-card-{{ table.id }}" hx-swap="outerHTML">
                 <div class="modal-body">
                     <div class="mb-3">
+                        <label class="form-label d-block fw-bold">{% trans "Category" %}</label>
+                        <div class="d-flex gap-3 bg-light p-2 rounded-3 border">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="custom_category" id="catOther" value="other" checked>
+                                <label class="form-check-label" for="catOther">
+                                    {% trans "Other Service" %}
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="custom_category" id="catFood" value="food">
+                                <label class="form-check-label" for="catFood" class="text-danger fw-bold">
+                                    {% trans "Food" %}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="itemNameGroup">
                         <label class="form-label">{% trans "Item Name / Description" %}</label>
-                        <input type="text" name="item_name" class="form-control" placeholder="e.g. Scanning" required>
+                        <input type="text" name="item_name" id="customItemName" class="form-control" placeholder="e.g. Scanning" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">{% trans "Price (EGP)" %}</label>
@@ -20,7 +38,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
-                    <button type="submit" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <button type="submit" class="btn btn-dark" data-bs-dismiss="modal">
                         {% trans "Add to Bill" %}
                     </button>
                 </div>
@@ -50,5 +68,28 @@
             modalEl.remove();
             cleanup();
         });
+
+        // Toggle description based on category
+        var otherRadio = document.getElementById('catOther');
+        var foodRadio = document.getElementById('catFood');
+        var nameInput = document.getElementById('customItemName');
+        var nameGroup = document.getElementById('itemNameGroup');
+
+        function toggleInputs() {
+            if (foodRadio.checked) {
+                nameInput.value = "Food";
+                nameInput.disabled = true;
+                nameInput.required = false;
+                nameGroup.style.opacity = '0.5';
+            } else {
+                nameInput.disabled = false;
+                nameInput.required = true;
+                if(nameInput.value === "Food") nameInput.value = "";
+                nameGroup.style.opacity = '1';
+            }
+        }
+
+        otherRadio.addEventListener('change', toggleInputs);
+        foodRadio.addEventListener('change', toggleInputs);
     })();
 </script>

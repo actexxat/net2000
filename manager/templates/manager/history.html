@@ -34,17 +34,30 @@
             <p class="text-muted mb-0">{% trans "Review past check-outs and items sold." %}</p>
         </div>
         <div>
-            <form action="." method="get" class="d-inline-block me-2">
-                <div class="input-group shadow-sm rounded-pill overflow-hidden">
-                    <span class="input-group-text bg-white border-0 ps-3">
-                        <i class="bi bi-calendar-event text-secondary"></i>
-                    </span>
-                    <input type="date" name="date" class="form-control border-0 ps-2" 
-                           value="{{ selected_date|date:'Y-m-d' }}" 
-                           onchange="this.form.submit()" 
-                           style="outline: none; box-shadow: none; min-width: 150px;">
-                </div>
-            </form>
+            <div class="d-inline-flex align-items-center gap-2 me-2">
+                <a href="?date={{ prev_date }}" class="btn btn-white border shadow-sm rounded-circle d-flex align-items-center justify-content-center transition-all hover-scale" 
+                   style="width: 38px; height: 38px;" title="{% trans 'Previous Day' %}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                
+                <form action="." method="get" class="d-inline-block">
+                    <div class="input-group shadow-sm rounded-pill overflow-hidden border">
+                        <span class="input-group-text bg-white border-0 ps-3">
+                            <i class="bi bi-calendar-event text-danger"></i>
+                        </span>
+                        <input type="date" name="date" class="form-control border-0 ps-2 fw-bold" 
+                               value="{{ selected_date|date:'Y-m-d' }}" 
+                               onchange="this.form.submit()" 
+                               style="outline: none; box-shadow: none; min-width: 150px; font-size: 0.9rem;">
+                    </div>
+                </form>
+
+                <a href="?date={{ next_date }}" class="btn btn-white border shadow-sm rounded-circle d-flex align-items-center justify-content-center transition-all hover-scale" 
+                   style="width: 38px; height: 38px;" title="{% trans 'Next Day' %}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+
             <button type="button" class="btn btn-outline-danger border shadow-sm rounded-pill px-4 me-2" data-bs-toggle="modal" data-bs-target="#clearDataModal">
                 <i class="bi bi-trash me-2"></i> {% trans "Clear Data" %}
             </button>
@@ -57,6 +70,24 @@
         </div>
     </div>
 
+    <!-- Shift Tabs -->
+    <div class="mb-3">
+        <ul class="nav nav-pills bg-light p-1 rounded-pill d-inline-flex border shadow-sm">
+            <li class="nav-item">
+                <a class="nav-link rounded-pill px-4 fw-bold {% if active_shift_tab == 'MORNING' %}active bg-primary text-white{% else %}text-dark{% endif %}" 
+                   href="?date={{ selected_date|date:'Y-m-d' }}&shift=MORNING">
+                   <i class="bi bi-sun-fill me-2"></i> {% trans "Morning Shift" %}
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded-pill px-4 fw-bold {% if active_shift_tab == 'NIGHT' %}active bg-dark text-white{% else %}text-dark{% endif %}" 
+                   href="?date={{ selected_date|date:'Y-m-d' }}&shift=NIGHT">
+                   <i class="bi bi-moon-stars-fill me-2"></i> {% trans "Night Shift" %}
+                </a>
+            </li>
+        </ul>
+    </div>
+    
     <!-- Clear Data Modal -->
     <div class="modal fade" id="clearDataModal" tabindex="-1" aria-labelledby="clearDataModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -109,11 +140,15 @@
                         <tr class="date-row">
                             <td colspan="4" class="py-3 ps-4">
                                 <i class="bi bi-calendar3 me-2"></i>
-                                {{selected_date|date:"d/m/Y"}}
+                                {{selected_date|date:"d/m/Y"}} 
+                                <span class="badge bg-white text-primary border ms-2">
+                                    {% if active_shift_tab == 'MORNING' %}{% trans "Morning" %}{% else %}{% trans "Night" %}{% endif %}
+                                </span>
                             </td>
                             <td class="pe-4 text-end py-3">
-                                <a href="{% url 'daily_receipt' selected_date.year selected_date.month selected_date.day %}" class="btn btn-sm btn-light border rounded-pill px-3">
-                                    <i class="bi bi-receipt me-1"></i> {% trans "Daily Receipt" %}
+                                <span class="fw-bold text-dark me-3">{% trans "Shift Total:" %} {{ total_revenue }} <small>{% trans "EGP" %}</small></span>
+                                <a href="{% url 'daily_receipt' selected_date.year selected_date.month selected_date.day %}?shift={{ active_shift_tab }}" class="btn btn-sm btn-light border rounded-pill px-3">
+                                    <i class="bi bi-receipt me-1"></i> {% trans "Shift Receipt" %}
                                 </a>
                             </td>
                         </tr>
@@ -126,7 +161,8 @@
                                     </div>
                                     <div>
                                         <div class="fw-bold text-dark">{{s.time_loc}}</div>
-                                        <small class="text-muted">{{s.obj.check_out_time|date:"M d"}}</small>
+                                        <small class="text-muted">{{s.obj.check_out_time|date:"d/m/Y"}}</small>
+
                                     </div>
                                 </div>
                             </td>

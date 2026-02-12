@@ -1,0 +1,383 @@
+{% extends 'manager/base.html' %}
+{% load static i18n manager_extras %}
+
+{% block title %}{% trans "Pong Multiplayer" %} - Internet 2000{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background: #0f172a !important;
+        overflow: hidden;
+    }
+    .game-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: calc(100vh - 120px);
+        gap: 20px;
+        position: relative;
+    }
+    canvas {
+        background: #000;
+        border: 4px solid #334155;
+        border-radius: 12px;
+        box-shadow: 0 0 50px rgba(0,0,0,0.5), 0 0 20px rgba(220, 38, 38, 0.2);
+        max-width: 100%;
+        height: auto;
+    }
+    .lobby-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.9);
+        backdrop-filter: blur(8px);
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        transition: opacity 0.5s ease;
+    }
+    .lobby-card {
+        background: #1e293b;
+        padding: 40px;
+        border-radius: 24px;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        max-width: 400px;
+        width: 100%;
+    }
+    .countdown-number {
+        font-size: 120px;
+        font-weight: 800;
+        color: #ef4444;
+        text-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .stats-bar {
+        background: rgba(30, 41, 59, 0.8);
+        padding: 10px 20px;
+        border-radius: 50px;
+        display: flex;
+        gap: 20px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border: 1px solid rgba(255,255,255,0.05);
+        margin-bottom: 10px;
+    }
+    .ready-btn {
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        padding: 15px 40px;
+        border-radius: 15px;
+        font-weight: 800;
+        font-size: 1.1rem;
+        transition: all 0.3s;
+        box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.3);
+    }
+    .ready-btn.active {
+        background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+        box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.3);
+    }
+    .ready-btn:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+    }
+    .ready-btn:active {
+        transform: translateY(1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="game-container">
+    <div class="stats-bar">
+        <span><i class="bi bi-people-fill me-2"></i> <span id="connected-count">0</span> {% trans "Connected" %}</span>
+        <span><i class="bi bi-check-circle-fill me-2"></i> <span id="ready-status">{% trans "Not Ready" %}</span></span>
+        <span><i class="bi bi-controller me-2"></i> {% trans "Role:" %} <span id="player-role">{% trans "Spectator" %}</span></span>
+    </div>
+
+    <div style="position: relative;">
+        <canvas width="750" height="585" id="game"></canvas>
+        
+        <div id="lobby-overlay" class="lobby-overlay">
+            <div id="lobby-welcome" class="lobby-card">
+                <div class="mb-4">
+                    <div class="bg-danger bg-opacity-10 p-4 rounded-circle d-inline-block mb-3">
+                        <i class="bi bi-controller text-danger fs-1"></i>
+                    </div>
+                    <h2 class="text-white fw-bold mb-2">{% trans "PONG ARENA" %}</h2>
+                    <p class="text-slate-400">{% trans "Wait for another player to join and click ready to start." %}</p>
+                </div>
+                
+                <button id="ready-btn" class="ready-btn w-100" onclick="toggleReady()">
+                    {% trans "CLICK TO READY" %}
+                </button>
+                
+                <div class="mt-4 pt-3 border-top border-white border-opacity-5">
+                    <small class="text-white text-opacity-40">{% trans "Match will start when 2 players are ready" %}</small>
+                </div>
+            </div>
+
+            <div id="countdown-view" class="d-none text-center">
+                <div class="text-white text-opacity-50 text-uppercase fw-bold mb-2" style="letter-spacing: 4px;">{% trans "Starting Match" %}</div>
+                <div id="countdown-num" class="countdown-number">5</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('game');
+    const context = canvas.getContext('2d');
+    const grid = 15;
+    const paddleHeight = grid * 5; 
+    const maxPaddleY = canvas.height - grid - paddleHeight;
+
+    let paddleSpeed = 450; 
+    let ballBaseSpeed = 342; 
+    let side = "spectator";
+    let gameStarted = false;
+    let cooldownStart = false;
+
+    // --- State & Smoothing ---
+    let lastTime = performance.now();
+    let targetOpponentY = canvas.height / 2 - paddleHeight / 2;
+    let lastLocalHit = 0; // Timestamp of last local paddle collision
+    let avgLatency = 0.05; // Estimated one-way latency in seconds
+    
+    const leftPaddle = { x: grid * 2, y: canvas.height / 2 - paddleHeight / 2, width: grid, height: paddleHeight, dy: 0 };
+    const rightPaddle = { x: canvas.width - grid * 3, y: canvas.height / 2 - paddleHeight / 2, width: grid, height: paddleHeight, dy: 0 };
+    const ball = { x: canvas.width / 2, y: canvas.height / 2, width: grid, height: grid, resetting: false, dx: ballBaseSpeed, dy: -ballBaseSpeed };
+
+    function collides(obj1, obj2) {
+        return obj1.x < obj2.x + obj2.width && obj1.x + obj1.width > obj2.x && obj1.y < obj2.y + obj2.height && obj1.y + obj1.height > obj2.y;
+    }
+
+    function loop(time) {
+        if (!gameStarted) return;
+        requestAnimationFrame(loop);
+        
+        const dt = (time - lastTime) / 1000;
+        lastTime = time;
+        if (dt > 0.1) return; 
+
+        context.clearRect(0,0,canvas.width,canvas.height);
+
+        // --- PADDLE MOVEMENT ---
+        // Move local paddle instantly
+        if (side === "left") leftPaddle.y += leftPaddle.dy * dt;
+        else if (side === "right") rightPaddle.y += rightPaddle.dy * dt;
+
+        // Smoothly interpolate opponent paddle
+        const interpSpeed = 20; 
+        if (side === "left") rightPaddle.y += (targetOpponentY - rightPaddle.y) * interpSpeed * dt;
+        else if (side === "right") leftPaddle.y += (targetOpponentY - leftPaddle.y) * interpSpeed * dt;
+        else { // Spectator
+             leftPaddle.y += (leftPaddle.targetY - leftPaddle.y) * interpSpeed * dt;
+             rightPaddle.y += (rightPaddle.targetY - rightPaddle.y) * interpSpeed * dt;
+        }
+
+        // Boundaries
+        if (leftPaddle.y < grid) leftPaddle.y = grid; else if (leftPaddle.y > maxPaddleY) leftPaddle.y = maxPaddleY;
+        if (rightPaddle.y < grid) rightPaddle.y = grid; else if (rightPaddle.y > maxPaddleY) rightPaddle.y = maxPaddleY;
+
+        // --- BALL MOVEMENT (Simulated on both screens for zero-latency feel) ---
+        if (!ball.resetting) {
+            ball.x += ball.dx * dt;
+            ball.y += ball.dy * dt;
+        }
+
+        // Wall Bounces (Immediate & Local)
+        if (ball.y < grid) { ball.y = grid; ball.dy = Math.abs(ball.dy); }
+        else if (ball.y + grid > canvas.height - grid) { ball.y = canvas.height - grid * 2; ball.dy = -Math.abs(ball.dy); }
+
+        // Paddle Collisions (Immediate & Local)
+        // If we hit it locally, we trust our physics for 200ms to allow sync to catch up
+        if (collides(ball, leftPaddle) && ball.dx < 0) { 
+            ball.dx = Math.abs(ball.dx); 
+            ball.x = leftPaddle.x + leftPaddle.width;
+            if (side === "left") lastLocalHit = performance.now();
+        } else if (collides(ball, rightPaddle) && ball.dx > 0) { 
+            ball.dx = -Math.abs(ball.dx); 
+            ball.x = rightPaddle.x - ball.width;
+            if (side === "right") lastLocalHit = performance.now();
+        }
+
+        // Reset Authority (Master only)
+        if (side === "left") {
+            if ((ball.x < -30 || ball.x > canvas.width + 30) && !ball.resetting) {
+                ball.resetting = true;
+                setTimeout(() => {
+                    ball.resetting = false;
+                    ball.x = canvas.width / 2;
+                    ball.y = canvas.height / 2;
+                    ball.dx = (Math.random() > 0.5 ? 1 : -1) * ballBaseSpeed;
+                    ball.dy = (Math.random() > 0.5 ? 1 : -1) * ballBaseSpeed;
+                }, 600);
+            }
+        }
+
+        // --- DRAWING ---
+        context.fillStyle = 'white';
+        context.fillRect(leftPaddle.x, leftPaddle.y, leftPaddle.width, leftPaddle.height);
+        context.fillRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height);
+        context.fillRect(ball.x, ball.y, ball.width, ball.height);
+
+        // Decor
+        context.fillStyle = 'rgba(255,255,255,0.15)';
+        context.fillRect(0, 0, canvas.width, grid);
+        context.fillRect(0, canvas.height - grid, canvas.width, canvas.height);
+        for (let i = grid; i < canvas.height - grid; i += grid * 2) {
+            context.fillRect(canvas.width / 2 - grid / 2, i, grid, grid);
+        }
+    }
+
+    // Lobby & Sync
+    let pendingPoll = false;
+    async function pollStatus() {
+        if (pendingPoll) return;
+        pendingPoll = true;
+
+        const pStart = performance.now();
+        const myY = side === "left" ? leftPaddle.y : (side === "right" ? rightPaddle.y : null);
+        let url = `/pong/status/?y=${Math.round(myY || 0)}`;
+        
+        if (side === "left" && gameStarted) {
+            url += `&bx=${Math.round(ball.x)}&by=${Math.round(ball.y)}&bdx=${Math.round(ball.dx)}&bdy=${Math.round(ball.dy)}`;
+        }
+        
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            // Calculate one-way latency
+            const rtt = performance.now() - pStart;
+            avgLatency = (avgLatency * 0.8) + ((rtt / 2000) * 0.2);
+
+            document.getElementById('connected-count').innerText = data.connected_count;
+            document.getElementById('ready-status').innerText = data.is_ready ? "{% trans 'READY' %}" : "{% trans 'NOT READY' %}";
+            
+            const sideLabels = {
+                'left': "{% trans 'LEFT' %}",
+                'right': "{% trans 'RIGHT' %}",
+                'spectator': "{% trans 'SPECTATOR' %}"
+            };
+            document.getElementById('player-role').innerText = sideLabels[data.side] || data.side.toUpperCase();
+            
+            side = data.side;
+            const btn = document.getElementById('ready-btn');
+            if (data.is_ready) {
+                btn.classList.add('active');
+                btn.innerText = "{% trans 'READY ✅' %}";
+            } else {
+                btn.classList.remove('active');
+                btn.innerText = "{% trans 'CLICK TO READY' %}";
+            }
+
+            // Sync Opponent Paddle
+            targetOpponentY = data.opponent_y;
+
+            // --- Robust Ball Reconcilliation ---
+            if (data.ball && side !== "left") {
+                const now = performance.now();
+                const isRecentHit = (now - lastLocalHit) < 400;
+
+                // Sync ball physics only if we aren't in a local "protected" hit window
+                // or if the master says the ball is resetting
+                if (!isRecentHit || Math.abs(data.ball.dx + ball.dx) < 1) {
+                    // Compensation: master data is from 'avgLatency' seconds ago
+                    const compensatedX = data.ball.x + (data.ball.dx * avgLatency);
+                    const compensatedY = data.ball.y + (data.ball.dy * avgLatency);
+                    
+                    const distDiff = Math.sqrt(Math.pow(ball.x - compensatedX, 2) + Math.pow(ball.y - compensatedY, 2));
+
+                    if (distDiff > 80 || ball.resetting || (Math.sign(ball.dx) !== Math.sign(data.ball.dx) && !isRecentHit)) {
+                        // Snap if too far or direction mismatch without local hit
+                        ball.x = compensatedX;
+                        ball.y = compensatedY;
+                        ball.dx = data.ball.dx;
+                        ball.dy = data.ball.dy;
+                    } else {
+                        // Smoothly merge position and velocity
+                        ball.x += (compensatedX - ball.x) * 0.15;
+                        ball.y += (compensatedY - ball.y) * 0.15;
+                        // Velocity only changes if Master says so (and we aren't resetting)
+                        if (!ball.resetting) {
+                             ball.dx = data.ball.dx;
+                             ball.dy = data.ball.dy;
+                        }
+                    }
+                }
+            }
+
+            if (data.start_game && !gameStarted && !cooldownStart) startCountdown();
+        } catch(e) {} finally {
+            pendingPoll = false;
+        }
+    }
+
+    function toggleReady() {
+        fetch('/pong/ready/', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } });
+    }
+
+    function startCountdown() {
+        cooldownStart = true;
+        document.getElementById('lobby-welcome').classList.add('d-none');
+        document.getElementById('countdown-view').classList.remove('d-none');
+        let count = 5;
+        const numEl = document.getElementById('countdown-num');
+        const interval = setInterval(() => {
+            count--;
+            numEl.innerText = count;
+            if (count <= 0) {
+                clearInterval(interval);
+                startGame();
+            }
+        }, 1000);
+    }
+
+    function startGame() {
+        document.getElementById('lobby-overlay').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('lobby-overlay').classList.add('d-none');
+            gameStarted = true;
+            lastTime = performance.now();
+            requestAnimationFrame(loop);
+        }, 500);
+    }
+
+    // Controls (Multi-Mapping)
+    const keys = {};
+    document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+    document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+
+    function updateInputs() {
+        if (side === "left") {
+            if (keys['w'] || keys['arrowup']) leftPaddle.dy = -paddleSpeed;
+            else if (keys['s'] || keys['arrowdown']) leftPaddle.dy = paddleSpeed;
+            else leftPaddle.dy = 0;
+        } else if (side === "right") {
+            if (keys['arrowup'] || keys['w']) rightPaddle.dy = -paddleSpeed;
+            else if (keys['arrowdown'] || keys['s']) rightPaddle.dy = paddleSpeed;
+            else rightPaddle.dy = 0;
+        }
+        requestAnimationFrame(updateInputs);
+    }
+    requestAnimationFrame(updateInputs);
+
+    setInterval(pollStatus, 50); 
+</script>
+{% endblock %}

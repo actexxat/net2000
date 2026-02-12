@@ -1,21 +1,21 @@
 {% load i18n manager_extras %}
 
-<!-- Header Zone (Table 0 + Notes Area Placeholder) -->
-<div class="header-zone w-100 position-relative mb-5" style="height: auto; min-height: 400px;">
-    <div class="row g-4">
-        <!-- Area 1: Table 0 (Counters) -->
-        <div class="col-12 col-md-4 col-lg-3 d-flex flex-column">
+<!-- Hero Section: Table 0 + Notice Board (Full Viewport Height) -->
+<div class="hero-section w-100 position-relative mb-5" style="min-height: 30vh !important; height: 40vh !important; display: flex; align-items: center; flex-shrink: 0;">
+    <div class="row g-4 w-100" style="height: 100%;">
+        <!-- Area 1: Table 0 (Vertically Centered) -->
+        <div class="col-12 col-md-4 col-lg-3 d-flex align-items-center justify-content-center" style="height: 100%;">
             {% for table in tables %}
                 {% if table.number == 0 %}
-                <div id="table-col-{{ table.id }}">
+                <div id="table-col-{{ table.id }}" class="w-100">
                     {% include 'manager/partials/table_card.html' with suppress_messages=True %}
                 </div>
                 {% endif %}
             {% endfor %}
         </div>
 
-        <!-- Area 2: Sticky Notes Deck (Controlled independently to prevent edit disruption) -->
-        <div class="col-12 col-md-8 col-lg-9 h-100" id="notes-zone-anchor">
+        <!-- Area 2: Sticky Notes Deck (Full Height with Internal Scroll) -->
+        <div class="col-12 col-md-8 col-lg-9" style="height: 100%;" id="notes-zone-anchor">
             {% include 'manager/partials/notes_deck.html' %}
         </div>
     </div>

@@ -1,17 +1,21 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
+
 from django.utils import timezone
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.db import models
 from django.db.models import Sum, Q, Prefetch, Avg, Count, Max, Min, F, ExpressionWrapper, fields
 from django.db.models.functions import Coalesce, ExtractHour, ExtractWeekDay
-from .models import Table, Item, Order, TableSession, GlobalSettings, StickyNote
-from decimal import Decimal
+from .models import Table, Item, Order, TableSession, GlobalSettings, StickyNote, PongLobby, QuickFireItem
+from decimal import Decimal, InvalidOperation
+
 import datetime, json
 from django.utils.translation import gettext_lazy as _, get_language
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
+from django.urls import reverse
+
 
 def superuser_required(view_func):
     """Decorator for views that checks that the user is a superuser, redirecting to unauthorized if not."""
@@ -23,6 +27,19 @@ def superuser_required(view_func):
             return redirect('unauthorized')
         return view_func(request, *args, **kwargs)
     return _wrapped_view
+
+def _activate_language(request):
+    """
+    Centralized helper to activate language for a request.
+    Prioritizes explicit 'lang' parameter, then cookie/session detection.
+    """
+    from django.utils import translation
+    lang = request.GET.get('lang') or request.POST.get('lang')
+    if not lang:
+        lang = translation.get_language_from_request(request)
+    translation.activate(lang)
+    request.LANGUAGE_CODE = translation.get_language()
+    return lang
 
 @login_required
 def unauthorized(request):
@@ -81,7 +98,7 @@ def _get_sorted_tables(sort_by_status=True):
         others_sorted = sorted(others, key=lambda x: x.number)
         tables = table_0 + others_sorted
 
-    settings, _ = GlobalSettings.objects.get_or_create(id=1)
+    settings, created = GlobalSettings.objects.get_or_create(id=1)
     for table in tables:
         _get_table_context(table, settings)
         
@@ -94,7 +111,7 @@ def dashboard(request):
     
     tables = _get_sorted_tables()
     
-    settings, _ = GlobalSettings.objects.get_or_create(id=1)
+    settings, created = GlobalSettings.objects.get_or_create(id=1)
     
     # Items grouping logic...
     
@@ -148,19 +165,26 @@ def dashboard(request):
     
     # Get the global minimum charge (creates a default of 25 if none exists)
     # Quick Fire Items (Top 5 selling)
-    # Quick Fire Items (Specific User Request)
-    target_names = ["turkish coffee", "tea", "water", "latte", "redbull", "twist", "v cola", "sun top", "volt"]
-    quick_items = []
+    # Manually curated list for Quick Fire bar (priority items)
+    # Now fetched from the database (QuickFireItem model)
+    db_items = list(QuickFireItem.objects.all().order_by('order').select_related('item'))
     
-    # 1. Fetch prefered items in order
-    for name_query in target_names:
-        # fuzzy match or exact match logic
-        found = next((i for i in items if name_query in i.name.lower()), None)
-        if found and found not in quick_items:
-            quick_items.append(found)
+    if db_items:
+        quick_items = [q.item for q in db_items]
+    else:
+        # Fallback to hardcoded list if DB is empty (legacy support)
+        target_names = ["turkish coffee", "tea", "water", "latte", "redbull", "twist", "v cola", "sun top", "volt", "nescafe"]
+        
+        # 1. Fetch prefered items in order
+        for name_query in target_names:
+            # fuzzy match or exact match logic
+            found = next((i for i in items if name_query in i.name.lower()), None)
+            if found and found not in quick_items:
+                quick_items.append(found)
 
     # 2. Fill remainder with top sellers if needed (up to 12 items for bar)
-    if len(quick_items) < 12:
+    # Only run this if we are in fallback mode (no admin items specified)
+    if not db_items and len(quick_items) < 12:
         top_ids = Order.objects.filter(item__isnull=False).values('item').annotate(c=Count('id')).order_by('-c')[:12]
         for t in top_ids:
             try:
@@ -212,12 +236,17 @@ def dashboard_grid(request):
     s_cnt = orders_agg['served_cnt'] or 0
     p_sum = tables_agg['people_sum'] or 0
     
+    # v16-localization: Force activate language using centralized helper
+    user_language = _activate_language(request)
+    # print(f"DEBUG: polling grid. Lang detected: {user_language}")
+
     notes_agg = StickyNote.objects.aggregate(cnt=Count('id'), last_upd=Max('updated_at'))
     n_upd = notes_agg['last_upd'].isoformat() if notes_agg['last_upd'] else 'none'
     
     # Create a unique state string
-    # We add a 'v14-ui-refine' salt to ensure template changes invalidate the cache immediately
-    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{notes_agg['cnt']}-{n_upd}-v14-ui-refine"
+    # v17-layout: Force refresh after layout changes (hero height)
+    lang = user_language
+    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{notes_agg['cnt']}-{n_upd}-{lang}-v17-layout"
     
     # Explicitly check if 'last_updated' session variable (if we used one) matches? 
     # Or just hash this state.
@@ -248,6 +277,7 @@ def dashboard_grid(request):
 @login_required
 def notification_history(request):
     """Returns a partial list of recent QR orders."""
+    _activate_language(request)
     # filtering for QR orders
     qr_orders = Order.objects.filter(order_source='QR').order_by('-timestamp')[:20].select_related('table', 'item')
     return render(request, 'manager/partials/notification_history.html', {'orders': qr_orders})
@@ -255,6 +285,8 @@ def notification_history(request):
 @login_required
 def check_in(request, table_id):
     """Marks a table as occupied. Accepts people_count from POST if provided."""
+    _activate_language(request)
+    
     if request.method == "POST":
         table = get_object_or_404(Table, id=table_id)
         
@@ -289,6 +321,7 @@ def check_in(request, table_id):
 @login_required
 def refresh_table(request, table_id):
     """Returns a single table card for targeted UI updates."""
+    _activate_language(request)
     table = get_object_or_404(Table, id=table_id)
     _get_table_context(table)
     return render(request, 'manager/partials/table_card.html', {'table': table})
@@ -296,6 +329,8 @@ def refresh_table(request, table_id):
 @login_required
 def update_people(request, table_id):
     """Updates the number of people at a table from the card input."""
+    _activate_language(request)
+    
     if request.method == "POST":
         table = get_object_or_404(Table, id=table_id)
         table.current_people = int(request.POST.get('people_count', 1))
@@ -314,6 +349,8 @@ def add_order(request, table_id):
     GET: Returns the Add Order modal with the menu.
     POST: Adds selected items to the table's bill (Legacy cart support).
     """
+    _activate_language(request)
+    
     table = get_object_or_404(Table, id=table_id)
 
     if request.method == "GET":
@@ -357,6 +394,8 @@ def add_order(request, table_id):
         
         grouped_items = {k: sorted(v, key=lambda x: x.name) for k, v in sorted(grouped.items())}
          
+        _get_table_context(table)
+        
         return render(request, 'manager/partials/modals/order_modal.html', {
             'table': table,
             'grouped_items': grouped_items
@@ -420,17 +459,19 @@ def check_out(request, table_id):
     items_summary = ", ".join(items_list) if items_list else "No items ordered"
         
     # 1. Save record to history
+    settings, created = GlobalSettings.objects.get_or_create(id=1)
     TableSession.objects.create(
         table_number=table.number,
         people_count=table.current_people,
         items_summary=items_summary,
         total_amount=final_bill,
         check_in_time=table.opened_at or timezone.now(),
+        shift=settings.active_shift,
         user=request.user
     )
 
     # 2. Reset the table and mark orders as paid
-    table.order_set.filter(is_paid=False).update(is_paid=True)
+    table.order_set.filter(is_paid=False).update(is_paid=True, shift=settings.active_shift, paid_at=timezone.now())
     
     # Table 0 is a special permanent table (e.g. for takeaway)
     if int(table.number) != 0:
@@ -448,21 +489,23 @@ def check_out(request, table_id):
         from django.template.loader import render_to_string
         from django.http import HttpResponse
         
-        _get_table_context(table)
+        _get_table_context(table, settings)
         card_html = render_to_string('manager/partials/table_card.html', {'table': table}, request=request)
         
         # Render messages popup for instant display
         messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
         
-        return HttpResponse(card_html + messages_html)
+        response = HttpResponse(card_html + messages_html)
+        response['HX-Trigger'] = 'close-modal, refresh'
+        return response
         
     return redirect('dashboard')
 
+@login_required
 @superuser_required
 def metrics_dashboard(request):
-    """Business Intelligence dashboard with advanced metrics and insights."""
-    if not request.user.is_superuser:
-        return redirect('unauthorized')
+    """Business metrics and analytics view."""
+    _activate_language(request)
     from django.db.models import Sum, Count, Avg, Min, Max, F, ExpressionWrapper, fields
     from django.db.models.functions import ExtractHour, ExtractWeekDay, Coalesce
     import datetime
@@ -532,8 +575,13 @@ def metrics_dashboard(request):
     opening_time = today_sessions.aggregate(m=Min('check_in_time'))['m']
     closing_time = today_sessions.aggregate(m=Max('check_out_time'))['m']
 
-    # 5. Existing Metrics
-    total_count = all_sessions.count()
+    # 5. Month-to-Date Revenue (Replaces Total Transactions)
+    this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_revenue = TableSession.objects.filter(check_out_time__gte=this_month_start).aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
+
+    # 6. Highest Bill Today (Replaces Occupancy Rate)
+    highest_bill = today_sessions.aggregate(Max('total_amount'))['total_amount__max'] or Decimal('0.00')
+
     import re
     regex_bw = re.compile(r'B/W.*?\((\d+)\s*pages\)', re.IGNORECASE)
     regex_color = re.compile(r'Color.*?\((\d+)\s*pages\)', re.IGNORECASE)
@@ -553,52 +601,52 @@ def metrics_dashboard(request):
     for h in hourly_traffic:
         hours_data_rev[h['h']] = float(h['r'] or 0)
 
-    # Traffic Prediction
-    django_day_map = {1: 2, 2: 3, 4: 5, 5: 6, 6: 7, 7: 1, 3: 4} # Corrected dict
-    current_django_day = django_day_map[now.isoweekday()]
-    limit_date = today - datetime.timedelta(days=90)
-    h_history = all_sessions.filter(check_out_time__date__gte=limit_date).annotate(wd=ExtractWeekDay('check_out_time'), h=ExtractHour('check_out_time')).filter(wd=current_django_day)
-    h_map = {x['h']: x['c'] for x in h_history.values('h').annotate(c=Count('id'))}
-    peak_count = max(h_map.values()) if h_map else 1
+    # 7. Busiest Hour Today (Replaces Traffic Prediction)
+    peak_hour_data = today_sessions.annotate(h=ExtractHour('check_out_time')).values('h').annotate(r=Sum('total_amount')).order_by('-r').first()
     
-    def get_pred_score(hr_range):
-        avg = sum(h_map.get((now.hour + i) % 24, 0) for i in range(1, hr_range + 1)) / hr_range
-        return max(1, min(10, round((avg / peak_count) * 10)))
+    if peak_hour_data:
+        ph = peak_hour_data['h']
+        ampm = _('AM') if ph < 12 else _('PM')
+        display_h = (ph % 12) or 12
+        busiest_hour = f"{display_h} {ampm}"
+        busiest_rev = peak_hour_data['r']
+    else:
+        busiest_hour = "--"
+        busiest_rev = 0
 
-    pred_3h = get_pred_score(3)
-    future_h = sorted([ (h, c) for h, c in h_map.items() if h > now.hour ], key=lambda x: x[1], reverse=True)[:3]
-    future_h.sort(key=lambda x: x[0])
-    rush_str = ", ".join([f"{(x[0] % 12) or 12} {_('AM') if x[0] < 12 else _('PM')}" for x in future_h]) if future_h else _("No more for today")
 
     return render(request, 'manager/metrics.html', {
-        'total_count': _loc(total_count),
-        'today_rev': _loc(f"{today_rev:.2f}"),
+        'month_revenue': _loc(f"{month_revenue:.2f}"),
+        'month_name': now.strftime('%B'),
         'growth': round(growth, 1),
         'top_items': top_selling_items,
         'category_data': category_data,
         'avg_duration': avg_dur_str,
         'avg_bill': _loc(f"{avg_bill:.2f}"),
         'avg_per_person': _loc(f"{avg_per_person:.2f}"),
-        'occupancy': round(occupancy_rate, 1),
+        'highest_bill_today': _loc(f"{highest_bill:.2f}"),
         'opening_time': timezone.localtime(opening_time).strftime('%H:%M') if opening_time else "--:--",
         'closing_time': timezone.localtime(closing_time).strftime('%H:%M') if closing_time else "--:--",
         'today_bw': _loc(today_bw),
         'today_color': _loc(today_color),
         'top_tables': top_tables,
-        'pred_3h': _loc(pred_3h),
-        'rush_hours': _loc(rush_str),
+        'busiest_hour': _loc(busiest_hour),
+        'busiest_rev': _loc(f"{busiest_rev:.0f}"),
         'hours_labels': json.dumps(hours_labels),
         'hours_data_rev': json.dumps(hours_data_rev),
         'is_ar': is_ar,
     })
 
+@login_required
 @superuser_required
 def session_history(request):
-    """Displays past transactions filtered by a specific date."""
-    if not request.user.is_superuser:
-        return redirect('unauthorized')
-        
+    """View list of past paid sessions."""
+    _activate_language(request)
+    import datetime
+         
     date_str = request.GET.get('date')
+    shift_filter = request.GET.get('shift', 'MORNING') # Default to morning tab
+
     if date_str:
         try:
             selected_date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -608,8 +656,6 @@ def session_history(request):
         selected_date = timezone.localtime(timezone.now()).date()
 
     # Robust Range Filtering: 
-    # specific __date lookups can sometimes be flaky depending on DB driver/OS timezones.
-    # explicit range is safer.
     start_local = datetime.datetime.combine(selected_date, datetime.time.min)
     end_local = datetime.datetime.combine(selected_date, datetime.time.max)
     
@@ -618,7 +664,10 @@ def session_history(request):
     start_aware = timezone.make_aware(start_local, current_tz)
     end_aware = timezone.make_aware(end_local, current_tz)
 
-    sessions = TableSession.objects.filter(check_out_time__range=(start_aware, end_aware)).order_by('-check_out_time')
+    sessions = TableSession.objects.filter(
+        check_out_time__range=(start_aware, end_aware),
+        shift=shift_filter
+    ).order_by('-check_out_time')
     
     is_ar = get_language() == 'ar'
     def _loc(val):
@@ -626,7 +675,9 @@ def session_history(request):
         return str(val).translate(str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩"))
         
     loc_sessions = []
+    total_revenue = Decimal('0.00')
     for s in sessions:
+        total_revenue += s.total_amount
         loc_sessions.append({
             'obj': s,
             'table_number_loc': _loc(s.table_number),
@@ -638,7 +689,11 @@ def session_history(request):
     return render(request, 'manager/history.html', {
         'sessions': loc_sessions,
         'selected_date': selected_date,
+        'prev_date': (selected_date - datetime.timedelta(days=1)).strftime('%Y-%m-%d'),
+        'next_date': (selected_date + datetime.timedelta(days=1)).strftime('%Y-%m-%d'),
         'total_count': _loc(sessions.count()),
+        'total_revenue': _loc(f"{total_revenue:.2f}"),
+        'active_shift_tab': shift_filter,
     })
 
 def create_table(request):
@@ -657,6 +712,8 @@ def create_table(request):
 @login_required
 def add_print(request, table_id):
     """Handle manual print orders (B/W or Color). Uses generic 'Printing Service' item."""
+    _activate_language(request)
+
     if request.method == "POST":
         table = get_object_or_404(Table, id=table_id)
         try:
@@ -822,17 +879,118 @@ def monitor(request):
         'all_tables': all_tables,
     }
     return render(request, 'manager/monitor.html', context)
+def pong_game(request):
+    """View to render the Pong game page."""
+    if not request.session.session_key:
+        request.session.save()
+    
+    # Initial cleanup of very old entries
+    PongLobby.objects.filter(last_seen__lt=timezone.now() - datetime.timedelta(seconds=30)).delete()
+    
+    return render(request, 'manager/pong.html')
+
+def pong_status(request):
+    """API endpoint to get lobby status with high-performance optimizations."""
+    if not request.session.session_key:
+        return HttpResponse(json.dumps({'error': 'No session'}), content_type="application/json")
+    
+    session_key = request.session.session_key
+    now = timezone.now()
+    
+    # Update current player with minimal writes
+    player, _ = PongLobby.objects.get_or_create(session_key=session_key)
+    update_fields = ['last_seen']
+    player.last_seen = now
+    
+    # Only update position if it moved significantly to reduce DB pressure
+    y = request.GET.get('y')
+    bx = request.GET.get('bx')
+    by = request.GET.get('by')
+    bdx = request.GET.get('bdx')
+    bdy = request.GET.get('bdy')
+
+    if y is not None:
+        try:
+            ny = int(float(y))
+            if abs(player.y_pos - ny) > 1:
+                player.y_pos = ny
+                update_fields.append('y_pos')
+            
+            if bx: # Master updates ball state
+                player.bx = int(float(bx))
+                player.by = int(float(by))
+                player.bdx = int(float(bdx))
+                player.bdy = int(float(bdy))
+                update_fields.extend(['bx', 'by', 'bdx', 'bdy'])
+        except (ValueError, TypeError):
+            pass
+            
+    player.save(update_fields=update_fields)
+    
+    # Periodic cleanup (every 5 seconds) instead of every request
+    # Use a simple random trigger to amortize cost
+    import random
+    if random.random() < 0.05:
+        PongLobby.objects.filter(last_seen__lt=now - datetime.timedelta(seconds=10)).delete()
+    
+    all_players = PongLobby.objects.all().order_by('id')
+    ready_players = all_players.filter(is_ready=True)
+    
+    side = "spectator"
+    opponent_y = 250
+    ball_sync = None
+    
+    player_ids = list(all_players.values_list('session_key', flat=True))
+    
+    if session_key in player_ids[:2]:
+        is_p1 = player_ids[0] == session_key
+        side = "left" if is_p1 else "right"
+        
+        # Find opponent efficiently
+        opponent = all_players.exclude(session_key=session_key).first()
+        if opponent:
+            opponent_y = opponent.y_pos
+            if not is_p1: # P2 (Client) syncs from P1 (Master)
+                ball_sync = {
+                    'x': opponent.bx,
+                    'y': opponent.by,
+                    'dx': opponent.bdx,
+                    'dy': opponent.bdy,
+                    'ts': opponent.last_seen.timestamp() # Include timestamp for latency compensation
+                }
+
+    data = {
+        'connected_count': all_players.count(),
+        'ready_count': ready_players.count(),
+        'is_ready': player.is_ready,
+        'start_game': ready_players.count() >= 2,
+        'side': side,
+        'opponent_y': opponent_y,
+        'ball': ball_sync,
+        'server_time': now.timestamp()
+    }
+    return HttpResponse(json.dumps(data), content_type="application/json")
+
+@require_POST
+def pong_toggle_ready(request):
+    """Endpoint to toggle ready status."""
+    if not request.session.session_key:
+        return HttpResponse("Unauthorized", status=401)
+    
+    session_key = request.session.session_key
+    player, created = PongLobby.objects.get_or_create(session_key=session_key)
+    player.is_ready = not player.is_ready
+    player.save()
+    return HttpResponse("OK")
 
 @require_POST
 @login_required
 def add_order_direct(request, table_id):
     """
     Instantly adds a single item to the table order via HTMX.
-    Returns:
-       1. The updated table card (OOB swap)
-       2. A toast notification (OOB swap)
-       3. The updated 'Live' order list for the modal (OOB swap)
     """
+    _activate_language(request)
+    
     from django.utils.translation import gettext as _
     from django.template.loader import render_to_string
     from django.http import HttpResponse
@@ -896,6 +1054,8 @@ def add_order_direct(request, table_id):
 @require_POST
 @login_required
 def add_fax(request, table_id):
+    _activate_language(request)
+    
     table = get_object_or_404(Table, id=table_id)
     pages = int(request.POST.get('pages', 1))
     
@@ -937,10 +1097,15 @@ def add_fax(request, table_id):
     return redirect('dashboard')
 
 
+    return redirect('dashboard')
+
+
 @require_POST
 @login_required
 def add_copy(request, table_id):
     """Handle manual copy orders with user-defined cost."""
+    _activate_language(request)
+    
     table = get_object_or_404(Table, id=table_id)
     
     try:
@@ -948,9 +1113,8 @@ def add_copy(request, table_id):
     except (ValueError, TypeError):
         pages = 0
         
-    ctype = request.POST.get('copy_type', 'bw')
-
-    if ctype == 'bw':
+    # Cafe only supports B/W copying
+    if True:
         # Tiered pricing: <=100 pages -> 1.00 EGP, >100 pages -> 0.75 EGP
         if pages <= 100:
             ppp = Decimal('1.00')
@@ -958,13 +1122,6 @@ def add_copy(request, table_id):
             ppp = Decimal('0.75')
         total = (Decimal(pages) * ppp).quantize(Decimal('0.01'))
         type_str = _("B/W")
-    else:
-        # Color: manual cost input
-        try:
-            total = Decimal(request.POST.get('color_cost', 0))
-        except (ValueError, TypeError, InvalidOperation):
-            total = Decimal('0.00')
-        type_str = _("Color")
     
     name = _("Copy (%(type)s) (%(pages)s pages)") % {'type': type_str, 'pages': pages}
 
@@ -1004,6 +1161,7 @@ def add_copy(request, table_id):
 @login_required
 def service_modal_preview(request, table_id, service_type):
     """Returns the dynamic content for a specific service modal."""
+    _activate_language(request)
     table = get_object_or_404(Table, id=table_id)
     
     # Common categories for order modal
@@ -1077,11 +1235,14 @@ def service_modal_preview(request, table_id, service_type):
 @login_required
 def add_custom_item(request, table_id):
     """Handle custom manual items with user-defined name and price."""
+    _activate_language(request)
     table = get_object_or_404(Table, id=table_id)
     
-    item_name = request.POST.get('item_name', '').strip()
-    if not item_name:
-        item_name = _("Custom Service")
+    cat = request.POST.get('custom_category', 'other')
+    if cat == 'food':
+        item_name = "Food"
+    else:
+        item_name = request.POST.get('item_name', '').strip() or _("Custom Service")
         
     try:
         price = Decimal(request.POST.get('price', 0))
@@ -1124,6 +1285,7 @@ def checkout_preview(request, table_id):
     """
     Returns the partial HTML for the checkout modal with dynamic totals.
     """
+    _activate_language(request)
     table = get_object_or_404(Table, id=table_id)
     global_settings = GlobalSettings.objects.first()
     
@@ -1144,6 +1306,7 @@ def checkout_preview(request, table_id):
 @login_required
 def toggle_served(request, order_id):
     """Toggles the is_served status of an order via HTMX."""
+    _activate_language(request)
     if request.method == "POST":
         order = get_object_or_404(Order, id=order_id)
         order.is_served = not order.is_served
@@ -1159,6 +1322,8 @@ def toggle_served(request, order_id):
 @login_required
 def discard_order(request, order_id):
     """Deletes an order from a table."""
+    _activate_language(request)
+    
     if request.method == "POST":
         from django.template.loader import render_to_string
         from django.http import HttpResponse
@@ -1263,6 +1428,7 @@ def discard_order(request, order_id):
 @login_required
 def restore_order(request):
     """Restores the last deleted order from session."""
+    _activate_language(request)
     if request.method == "POST":
         data = request.session.get('deleted_order')
         if not data:
@@ -1309,6 +1475,7 @@ def restore_order(request):
 @login_required
 def serve_all_orders(request, table_id):
     """Marks all current active orders for a table as served."""
+    _activate_language(request)
     if request.method == "POST":
         table = get_object_or_404(Table, id=table_id)
         Order.objects.filter(table=table, is_paid=False).update(is_served=True)
@@ -1321,6 +1488,7 @@ def item_popup_preview(request, table_id):
     """
     Returns HTML for the items popup modal.
     """
+    _activate_language(request)
     table = get_object_or_404(Table, id=table_id)
     _get_table_context(table)
     return render(request, 'manager/partials/items_popup.html', {'table': table})
@@ -1328,6 +1496,7 @@ def item_popup_preview(request, table_id):
 @superuser_required
 def daily_receipt(request, year, month, day):
     """Render a receipt-like page for a given date listing totals aggregated by table."""
+    _activate_language(request)
     if not request.user.is_superuser:
         return redirect('unauthorized')
     import datetime
@@ -1338,14 +1507,26 @@ def daily_receipt(request, year, month, day):
     except ValueError:
         return redirect('session_history')
 
+    # Shift Filter
+    shift_filter = request.GET.get('shift')
+
     # Get all paid orders for this date
-    all_paid_orders = list(Order.objects.filter(
-        is_paid=True, 
-        timestamp__date=target_date
-    ).select_related('item', 'table').order_by('table__number'))
+    # Use paid_at if available (correct for crossovers), fallback to timestamp for old data
+    order_filter = Q(is_paid=True) & (Q(paid_at__date=target_date) | Q(paid_at__isnull=True, timestamp__date=target_date))
+    session_filter = Q(check_out_time__date=target_date)
+    
+    # User asked for "reports separately for each shift".
+    # Only show itemized orders if NO shift filter is applied, 
+    # OR if we want to add a shift field to Order (more complex).
+    # For now, we filter sessions by shift.
+    if shift_filter in ['MORNING', 'NIGHT']:
+        session_filter &= Q(shift=shift_filter)
+        order_filter &= Q(shift=shift_filter)
+
+    all_paid_orders = list(Order.objects.filter(order_filter).select_related('item', 'table').order_by('table__number'))
     
     # Get all sessions in one query
-    sessions = list(TableSession.objects.filter(check_out_time__date=target_date))
+    sessions = list(TableSession.objects.filter(session_filter))
     
     table_aggregation = {}
 
@@ -1355,7 +1536,8 @@ def daily_receipt(request, year, month, day):
             table_aggregation[t_num] = {
                 'table': t_num,
                 'drink': 0, 'food': 0, 'print_bw': 0, 'print_color': 0,
-                'fax': 0, 'copy_bw': 0, 'copy_color': 0, 'min_charge': 0, 'other': 0,
+                'copy_bw': 0, 'min_charge': 0, 'other': 0,
+
                 'total': 0,
                 'items_total_price': 0
             }
@@ -1370,22 +1552,24 @@ def daily_receipt(request, year, month, day):
         
         is_drink = o.item.is_drink if o.item else False
 
+        is_color = "color" in desc or "ألوان" in desc
+        
         if o.item is None:
-            row['other'] += price
+            if o.description == "Food":
+                row['food'] += price
+            else:
+                row['other'] += price
         elif is_drink:
             row['drink'] += price
         elif item_name == "Printing Service":
-            if "color" in desc:
+            if is_color:
                 row['print_color'] += price
             else:
                 row['print_bw'] += price
-        elif item_name == "Fax Service":
-            row['fax'] += price
+        elif item_name == "Fax Service" or item_name == "Fax":
+            row['other'] += price
         elif item_name == "Copy Service":
-            if "color" in desc:
-                row['copy_color'] += price
-            else:
-                row['copy_bw'] += price
+            row['copy_bw'] += price
         else:
             row['food'] += price
 
@@ -1395,7 +1579,7 @@ def daily_receipt(request, year, month, day):
             table_aggregation[t_num] = {
                 'table': t_num,
                 'drink': 0, 'food': 0, 'print_bw': 0, 'print_color': 0,
-                'fax': 0, 'copy_bw': 0, 'copy_color': 0, 'min_charge': 0, 'other': 0,
+                'fax': 0, 'copy_bw': 0, 'min_charge': 0, 'other': 0,
                 'total': 0,
                 'items_total_price': 0
             }
@@ -1404,8 +1588,8 @@ def daily_receipt(request, year, month, day):
     categorized_sessions = []
     totals = {
         'drink': Decimal('0.00'), 'food': Decimal('0.00'), 'print_bw': Decimal('0.00'), 
-        'print_color': Decimal('0.00'), 'fax': Decimal('0.00'), 'copy_bw': Decimal('0.00'), 
-        'copy_color': Decimal('0.00'), 'min_charge': Decimal('0.00'), 'other': Decimal('0.00'), 
+        'print_color': Decimal('0.00'), 'copy_bw': Decimal('0.00'), 
+        'min_charge': Decimal('0.00'), 'other': Decimal('0.00'), 
         'final': Decimal('0.00')
     }
 
@@ -1429,7 +1613,7 @@ def daily_receipt(request, year, month, day):
                 totals[key] += row[key]
 
     return render(request, 'manager/receipt.html', {
-        'target_date': target_date,
+        'categorization_date': target_date,
         'categorized_orders': categorized_sessions,
         'category_totals': totals,
         'sessions': sessions,
@@ -1439,49 +1623,58 @@ def daily_receipt(request, year, month, day):
 @superuser_required
 def clear_data(request):
     """View to clear old order and session data up to a selected date."""
+    _activate_language(request)
     if request.method == "POST":
         until_date_str = request.POST.get('until_date')
-        clear_all = request.POST.get('clear_all') == 'on' 
+        clear_all = request.POST.get('clear_all') == 'on'
         
         if not until_date_str:
             messages.error(request, _("Please select a date."))
             return redirect('session_history')
         
         try:
-            # More robust parsing to avoid 500 errors on some Windows 7 locales
+            # 1. Parse date and create a localized end-of-day boundary
             y, m, d = map(int, until_date_str.split('-'))
             until_date = datetime.date(y, m, d)
-            # Create end-of-day datetime
-            naive_dt = datetime.datetime.combine(until_date, datetime.time.max)
-            until_dt = timezone.make_aware(naive_dt)
             
-            # print(f"[CLEANUP] Executing delete up to {until_dt} (Clear All: {clear_all})")
+            # Combine with end of day time
+            until_dt_naive = datetime.datetime.combine(until_date, datetime.time.max)
+            # Make it timezone aware using the application's current timezone
+            # (Africa/Cairo in settings.py)
+            until_dt = timezone.make_aware(until_dt_naive, timezone.get_current_timezone())
             
-            # 1. Delete Orders
+            # 2. Delete Orders
+            # We use the datetime boundary for precise inclusion
             if clear_all:
                 orders_count, deleted_info = Order.objects.filter(timestamp__lte=until_dt).delete()
             else:
+                # Normal cleanup: only delete orders that are finalized and paid
                 orders_count, deleted_info = Order.objects.filter(is_paid=True, timestamp__lte=until_dt).delete()
             
-            # 2. Delete TableSessions
+            # 3. Delete TableSessions (History records)
             sessions_count, deleted_info = TableSession.objects.filter(check_out_time__lte=until_dt).delete()
+            
+            # 4. Optional: Full Reset
+            if clear_all and until_date >= datetime.date.today():
+                 # Wipe current active table states if deleting everything including today
+                 Table.objects.all().update(is_occupied=False, current_people=1, opened_at=None)
             
             messages.success(request, _("Cleanup Complete: Deleted %(orders)d orders and %(sessions)d sessions up to %(date)s.") % {
                 'orders': orders_count,
                 'sessions': sessions_count,
-                'date': until_date_str
+                'date': until_date.strftime('%d/%m/%Y')
             })
             
         except Exception as e:
-            # print(f"[CLEANUP ERROR] {str(e)}")
             messages.error(request, _("An error occurred during cleanup: %(error)s") % {'error': str(e)})
             
-    # Redirect back to the referrer (history page) or fallback to today's history
     return redirect(request.META.get('HTTP_REFERER', 'session_history'))
 
 @login_required
 def dismiss_table(request, table_id):
     """Resets the table and deletes all its unpaid orders without saving to history."""
+    _activate_language(request)
+    
     if request.method == "POST":
         table = get_object_or_404(Table, id=table_id)
         
@@ -1515,6 +1708,26 @@ def dismiss_table(request, table_id):
             return HttpResponse(grid_html + messages_html)
             
     return redirect('dashboard')
+
+@login_required
+@superuser_required
+def switch_shift(request):
+    """Toggles the current active shift. Tables remain open for manual handover."""
+    _activate_language(request)
+    if request.method == "POST":
+        settings, created = GlobalSettings.objects.get_or_create(id=1)
+        old_shift = settings.active_shift
+        new_shift = 'NIGHT' if old_shift == 'MORNING' else 'MORNING'
+        
+        # Toggle the shift
+        settings.active_shift = new_shift
+        settings.save()
+        
+        msg = _("Shift started: Night Shift") if new_shift == 'NIGHT' else _("Shift started: Morning Shift")
+        messages.success(request, msg)
+        
+    return redirect('dashboard')
+
 @login_required
 def add_sticky_note(request):
     import random

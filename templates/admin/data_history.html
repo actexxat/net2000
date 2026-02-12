@@ -1,0 +1,238 @@
+{% extends "unfold/layouts/base.html" %}
+{% load static i18n manager_extras %}
+
+{% block title %}{% trans "Data Archives" %} - {{ site_title }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/dist/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="p-4 md:p-8 font-sans antialiased text-base-content bg-base-200 min-h-screen rounded-3xl" data-theme="net2000-light" id="history-wrapper">
+    <div class="flex flex-col gap-8">
+        <!-- Tactical Header -->
+        <div class="flex flex-col xl:flex-row justify-between items-end gap-6">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <a href="/admin/" class="badge badge-primary badge-outline font-black text-[0.6rem] tracking-[2px] hover:bg-primary hover:text-primary-content transition-colors px-3 py-2 uppercase">
+                        <i class="bi bi-arrow-left mr-1"></i> {% trans "Return to Admin" %}
+                    </a>
+                </div>
+                <div class="flex items-center gap-5">
+                    <div class="w-14 h-14 rounded-2xl bg-neutral text-neutral-content flex items-center justify-center shadow-2xl">
+                        <i class="bi bi-archive-fill text-3xl"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <h1 class="text-4xl font-black uppercase tracking-tighter leading-none mb-1">{% trans "Data Vault" %}</h1>
+                        <span class="text-[0.65rem] font-bold uppercase tracking-[4px] opacity-40">{% trans "Historical Transaction Logs" %}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="flex flex-wrap gap-3 items-center w-full xl:w-auto">
+                <form action="." method="get" class="flex-grow md:flex-grow-0">
+                    <div class="join shadow-2xl rounded-2xl overflow-hidden border border-base-content/5">
+                        <div class="join-item bg-base-100 flex items-center px-4 opacity-50">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+                        <input type="date" name="date" 
+                               class="input input-bordered join-item font-black text-sm uppercase focus:input-primary border-none bg-base-100" 
+                               value="{{ selected_date|date:'Y-m-d' }}" 
+                               onchange="this.form.submit()">
+                    </div>
+                </form>
+
+                <button onclick="clear_data_modal.showModal()" class="btn btn-error btn-outline rounded-2xl font-black uppercase tracking-widest gap-3 px-6 shadow-lg shadow-error/10">
+                    <i class="bi bi-trash-fill"></i>
+                    {% trans "Data Purge" %}
+                </button>
+
+                <a href="{% url 'analytics' %}" class="btn btn-neutral rounded-2xl font-black uppercase tracking-widest gap-3 px-6 shadow-xl">
+                    <i class="bi bi-cpu-fill text-primary"></i>
+                    {% trans "AI Insight" %}
+                </a>
+            </div>
+        </div>
+
+        <!-- Data Table Container -->
+        <div class="card bg-base-100 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.2)] border border-base-content/5 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="table table-lg w-full">
+                    <!-- Head -->
+                    <thead class="bg-neutral text-neutral-content uppercase">
+                        <tr>
+                            <th class="ps-8 font-black tracking-widest text-[0.65rem]">{% trans "Timestamp" %}</th>
+                            <th class="font-black tracking-widest text-[0.65rem]">{% trans "Deployment" %}</th>
+                            <th class="font-black tracking-widest text-[0.65rem]">{% trans "Manifest Summary" %}</th>
+                            <th class="pe-8 text-end font-black tracking-widest text-[0.65rem]">{% trans "Contribution" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-base-content/5">
+                        {% if sessions %}
+                            <!-- Daily Header Group -->
+                            <tr class="bg-primary/5">
+                                <td colspan="3" class="ps-8 py-4">
+                                    <div class="flex items-center gap-4">
+                                        <div class="badge badge-primary font-black uppercase p-3">{{ selected_date|date:"l, d F Y" }}</div>
+                                        <span class="text-[0.6rem] font-black opacity-30 uppercase tracking-[4px]">{% trans "Sector Batch Active" %}</span>
+                                    </div>
+                                </td>
+                                <td class="pe-8 text-end">
+                                    <a href="{% url 'daily_receipt' selected_date.year selected_date.month selected_date.day %}" class="btn btn-ghost btn-xs rounded-lg font-black uppercase hover:bg-primary/10 hover:text-primary tracking-widest">
+                                        <i class="bi bi-receipt mr-2"></i> {% trans "Full Receipt" %}
+                                    </a>
+                                </td>
+                            </tr>
+
+                            {% for s in sessions %}
+                            <tr class="hover:bg-base-200/50 transition-colors group">
+                                <td class="ps-8">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-xl bg-base-300 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                            <i class="bi bi-clock-fill"></i>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="font-black text-lg tracking-tighter">{{ s.time_loc }}</span>
+                                            <span class="text-[0.6rem] font-bold opacity-30 uppercase tracking-widest">{{ s.obj.check_out_time|date:"M d" }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="flex flex-col gap-1">
+                                        <span class="font-black text-sm uppercase tracking-tight">{% trans "Table" %} <span class="text-primary italic">{{ s.table_number_loc }}</span></span>
+                                        <div class="flex items-center gap-1.5 opacity-50">
+                                            <i class="bi bi-people-fill text-[0.6rem]"></i>
+                                            <span class="text-[0.65rem] font-bold">{{ s.p_count_loc }} Personnel</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="max-w-md">
+                                        <p class="text-[0.7rem] font-bold text-base-content/60 leading-relaxed italic line-clamp-2">
+                                            {{ s.obj.items_summary|translate_text }}
+                                        </p>
+                                        {% if s.obj.user %}
+                                        <div class="badge badge-ghost badge-xs font-black uppercase opacity-40 mt-2 px-2 border-0">
+                                            <i class="bi bi-person-badge mr-1"></i> {{ s.obj.user.username }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="pe-8 text-end">
+                                    <div class="flex flex-col items-end">
+                                        <span class="text-xl font-black tracking-tighter text-success">{{ s.total_loc }}</span>
+                                        <span class="text-[0.55rem] font-black opacity-30 uppercase tracking-[2px]">EGP TOTAL</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="py-32 text-center overflow-hidden relative">
+                                    <div class="absolute inset-0 flex items-center justify-center opacity-[0.02] pointer-events-none">
+                                        <i class="bi bi-search text-[20rem]"></i>
+                                    </div>
+                                    <div class="relative z-10 flex flex-col items-center gap-6">
+                                        <div class="w-20 h-20 rounded-full bg-base-200 flex items-center justify-center text-base-content/20">
+                                            <i class="bi bi-inbox text-5xl"></i>
+                                        </div>
+                                        <div class="flex flex-col items-center">
+                                            <h3 class="text-2xl font-black uppercase tracking-[8px]">{% trans "Zero Records" %}</h3>
+                                            <p class="font-bold opacity-40">{% trans "No data detected for the specified temporal window." %}</p>
+                                        </div>
+                                        <button onclick="document.querySelector('input[name=date]').focus()" class="btn btn-primary btn-sm rounded-xl font-black uppercase tracking-widest mt-4">
+                                            {% trans "Adjust Filter" %}
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear Data Modal (DaisyUI Hero Style) -->
+    <dialog id="clear_data_modal" class="modal modal-bottom sm:modal-middle">
+        <div class="modal-box rounded-[2rem] border-4 border-error/20 p-10 bg-base-100 shadow-[0_0_100px_rgba(239,68,68,0.1)]">
+            <div class="flex items-center gap-6 mb-8">
+                <div class="w-16 h-16 rounded-[2rem] bg-error/10 text-error flex items-center justify-center shadow-inner">
+                    <i class="bi bi-exclamation-triangle-fill text-3xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black uppercase tracking-tighter">{% trans "Dangerous Operation" %}</h3>
+                    <p class="text-[0.65rem] font-black uppercase tracking-[2px] opacity-40">{% trans "SYSTEM DATA PURGE INITIALIZATION" %}</p>
+                </div>
+            </div>
+
+            <p class="font-bold text-sm text-base-content/70 leading-relaxed mb-8 border-l-4 border-error/30 pl-6 italic">
+                {% trans "You are about to permanently erase historical records. This action cannot be reversed and may impact analytics data for the specified period." %}
+            </p>
+
+            <form id="clearDataForm" method="post" class="space-y-6">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cleanup">
+                <div class="flex flex-col gap-2">
+                    <label class="text-[0.65rem] font-black uppercase tracking-[4px] opacity-40 px-2">{% trans "Temporal Boundary" %}</label>
+                    <input type="date" name="until_date" class="input input-bordered w-full rounded-2xl font-black text-sm uppercase focus:input-error" required>
+                </div>
+                
+                <div class="flex items-center gap-4 bg-error/5 p-4 rounded-2xl border border-error/10">
+                    <input type="checkbox" name="clear_all" id="clear_all_v2" class="checkbox checkbox-error">
+                    <label for="clear_all_v2" class="text-xs font-black uppercase tracking-widest text-error opacity-60 cursor-pointer">
+                        {% trans "FORCE DELETE ALL (INCL. UNFINALIZED)" %}
+                    </label>
+                </div>
+
+                <div class="modal-action mt-10">
+                    <button type="button" class="btn btn-ghost rounded-2xl font-black uppercase px-8" onclick="clear_data_modal.close()">{% trans "Abort" %}</button>
+                    <button type="submit" class="btn btn-error rounded-2xl font-black uppercase px-10 shadow-xl shadow-error/20" onclick="return confirmArchiveDelete()">
+                        {% trans "Execute Purge" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop bg-black/80 backdrop-blur-sm">
+            <button>{% trans "close" %}</button>
+        </form>
+    </dialog>
+</div>
+
+<script>
+    function confirmArchiveDelete() {
+        return confirm("{% trans 'AUTHENTICATION REQUIRED: ARE YOU ABSOLUTELY SURE YOU WANT TO PURGE THESE RECORDS?'|escapejs %}");
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Theme Auto-Detection for Admin
+        const wrapper = document.getElementById('history-wrapper');
+        const updateTheme = () => {
+            if (document.documentElement.classList.contains('dark')) {
+                wrapper.setAttribute('data-theme', 'net2000-dark');
+            } else {
+                wrapper.setAttribute('data-theme', 'net2000-light');
+            }
+        };
+        
+        updateTheme();
+        
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === "class") {
+                    updateTheme();
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+    });
+</script>
+
+<style>
+    /* Admin specific fixes for daisyUI conflicts */
+    .collapse { visibility: visible; } 
+    .modal-box { max-height: 100vh; }
+</style>
+{% endblock %}

@@ -6,7 +6,7 @@
     {% if is_oob %}hx-swap-oob="true"{% endif %}>
     
     <!-- Status Indicator Line -->
-    <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: {% if table.is_occupied %}linear-gradient(90deg, #ff6b6b, #ee5253){% else %}transparent{% endif %};"></div>
+    <div class="position-absolute top-0 start-0 w-100 {% if table.is_occupied %}status-line-occupied{% else %}status-line-available{% endif %}" style="height: 4px;"></div>
 
     <div class="card-body p-3 d-flex flex-column h-100">
         
@@ -64,7 +64,7 @@
             
             <!-- Money Hero -->
             <div class="text-center py-3">
-                <div class="display-5 fw-normal mb-0 tracking-tight">{{ table.total_price|floatformat:0 }}<span class="fs-6 text-opacity-50 ms-1 align-top mt-2 d-inline-block">EGP</span></div>
+                <div class="display-5 fw-normal mb-0 tracking-tight">{{ table.total_price|floatformat:0|translate_numbers }}<span class="fs-6 text-opacity-50 ms-1 align-top mt-2 d-inline-block">{% trans "EGP" %}</span></div>
                 
                 <!-- Items Modal Trigger -->
                 {% if table.orders %}
@@ -101,27 +101,28 @@
                         hx-get="{% url 'service_modal_preview' table.id 'print' %}"
                         hx-target="#service-modal-container">
                         <div class="tool-icon"><i class="bi bi-printer"></i></div>
-                        <span class="tool-label">Print</span>
+                        <span class="tool-label">{% trans "Print" %}</span>
                     </button>
                     <button class="btn btn-tool flex-fill" title="{% trans 'Copy' %}"
                         hx-get="{% url 'service_modal_preview' table.id 'copy' %}"
                         hx-target="#service-modal-container">
                         <div class="tool-icon"><i class="bi bi-files"></i></div>
-                        <span class="tool-label">Copy</span>
+                        <span class="tool-label">{% trans "Copy" %}</span>
                     </button>
-                    <button class="btn btn-tool flex-fill" title="{% trans 'Fax' %}"
+                    <button class="btn btn-tool flex-fill" title="{% trans 'Other' %}"
                         hx-get="{% url 'service_modal_preview' table.id 'custom' %}"
                         hx-target="#service-modal-container">
-                        <div class="tool-icon"><i class="bi bi-telephone-forward"></i></div>
-                        <span class="tool-label">Fax</span>
+                        <div class="tool-icon"><i class="bi bi-plus-circle"></i></div>
+                        <span class="tool-label">{% trans "Other" %}</span>
                     </button>
+
                     <button class="btn btn-tool flex-fill text-danger-hover" title="{% trans 'Reset' %}"
                         hx-post="{% url 'dismiss_table' table.id %}"
                         hx-confirm="{% trans 'Reset table?' %}"
                         hx-target="#dashboard-root"
                         hx-swap="innerHTML">
                         <div class="tool-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
-                        <span class="tool-label">Reset</span>
+                        <span class="tool-label">{% trans "Reset" %}</span>
                     </button>
                 </div>
             </div>
@@ -143,73 +144,4 @@
     </div>
 </div>
 
-<style>
-/* Modern Card Styles */
-.card-occupied-modern {
-    background: linear-gradient(145deg, #2d3436, #1e272e);
-    color: #f5f6fa;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
-}
 
-.card-available-modern {
-    background: #ffffff;
-    color: #2d3436;
-    border: 1px solid #f1f2f6 !important;
-    transition: all 0.3s cubic-bezier(.25,.8,.25,1);
-}
-.card-available-modern:hover {
-    box-shadow: 0 14px 28px rgba(0,0,0,0.05), 0 10px 10px rgba(0,0,0,0.02);
-    transform: translateY(-5px);
-    border-color: #ff7675 !important;
-}
-
-/* Typography & Elements */
-.tracking-tight { letter-spacing: -0.5px; }
-.last-no-border:last-child { border-bottom: none !important; }
-
-/* Buttons */
-.btn-modern-primary {
-    background: #ff7675;
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-weight: 600;
-    transition: all 0.2s;
-}
-.btn-modern-primary:hover { background: #d63031; color: white; transform: translateY(-1px); }
-
-.btn-modern-success {
-    background: #55efc4;
-    color: #00b894;
-    background: rgba(85, 239, 196, 0.15);
-    border: 1px solid rgba(85, 239, 196, 0.3);
-    border-radius: 12px;
-    font-weight: 700;
-    transition: all 0.2s;
-}
-.btn-modern-success:hover { background: #55efc4; color: #2d3436; transform: translateY(-1px); }
-
-/* Tool Buttons */
-.btn-tool {
-    background: rgba(255,255,255,0.05);
-    border: none;
-    border-radius: 8px;
-    padding: 8px 4px;
-    color: rgba(255,255,255,0.6);
-    transition: all 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-}
-.card-available-modern .btn-tool { background: #f1f2f6; color: #636e72; }
-
-.btn-tool:hover { background: rgba(255,255,255,0.15); color: white; }
-.card-available-modern .btn-tool:hover { background: #dfe6e9; color: #2d3436; }
-
-.tool-icon { font-size: 1.1rem; line-height: 1; }
-.tool-label { font-size: 0.55rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
-
-.text-danger-hover:hover { color: #ff7675 !important; background: rgba(255, 118, 117, 0.1) !important; }
-</style>

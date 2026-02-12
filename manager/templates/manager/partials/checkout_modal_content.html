@@ -10,7 +10,8 @@
                 <div class="text-center pt-4 pb-2 border-bottom border-2 border-dark border-opacity-10">
                     <div class="fw-bold fs-4 text-uppercase">{% trans "Receipt" %}</div>
                     <div class="text-muted small">{% trans "Table" %} #{{ table.number|translate_numbers }}</div>
-                    <div class="text-muted small">{{ table.opened_at|date:"Y-m-d H:i" }}</div>
+                    <div class="text-muted small">{{ table.opened_at|date:"d/m/Y H:i" }}</div>
+
                 </div>
 
                 <!-- Items List -->
@@ -51,8 +52,15 @@
                             <span>{{ shortfall|floatformat:2|translate_numbers }} {% trans "Added" %}</span>
                         </div>
                         <div class="progress" style="height: 10px; background-color: rgba(0,0,0,0.1);">
-                             <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ table.min_charge_progress }}%" aria-valuenow="{{ table.min_charge_progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                             <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" data-progress="{{ table.min_charge_progress }}" aria-valuenow="{{ table.min_charge_progress }}" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
+                        <script>
+                            (function() {
+                                var bar = document.querySelector('#checkoutModal [data-progress]');
+                                if (bar) bar.style.width = bar.dataset.progress + '%';
+                            })();
+                        </script>
+
                         <div class="small text-muted text-center mt-1" style="font-size: 0.7rem;">
                             {% trans "Order more to use this credit!" %}
                         </div>
@@ -81,7 +89,7 @@
                  <form hx-post="{% url 'check_out' table.id %}" 
                        hx-target="#table-card-{{ table.id }}"
                        hx-swap="outerHTML"
-                       hx-on::after-request="if(event.detail.successful) { bootstrap.Modal.getInstance(document.getElementById('checkoutModal')).hide(); }">
+                       hx-on::after-request="if(event.detail.successful) { var mEl = document.getElementById('checkoutModal'); if(mEl) { (bootstrap.Modal.getInstance(mEl) || new bootstrap.Modal(mEl)).hide(); } }">
                     {% csrf_token %}
                     <button type="submit" id="confirmCheckoutBtn" class="btn btn-danger btn-lg rounded-pill shadow-lg px-5 fw-bold animate-pulse text-uppercase border-2 border-white">
                         <i class="bi bi-check-lg me-2"></i> {% trans "Confirm Payment" %}

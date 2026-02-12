@@ -259,6 +259,10 @@ translations = {
     "Discard": "إزالة",
     "Confirm": "تأكيد",
     "10": "١٠",
+    "Reset": "إعادة تعيين",
+    "Open": "فتح",
+    "Pay": "دفع",
+    "Add": "إضافة",
 }
 
 # Read the new django.po file

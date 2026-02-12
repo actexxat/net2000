@@ -47,6 +47,11 @@
     --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Status Lines for Table Cards */
+.status-line-occupied { background: linear-gradient(90deg, #ff6b6b, #ee5253); }
+.status-line-available { background: transparent; }
+
+
 /* Typography Enhancements */
 body {
     -webkit-font-smoothing: antialiased;
@@ -133,6 +138,15 @@ a { text-decoration: none; }
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important; /* Premium dark gradient */
     border-bottom: 1px solid rgba(255,255,255,0.05);
 }
+.btn-white { background-color: #ffffff; color: #1f2937; }
+.btn-white:hover { background-color: #f9fafb; color: #111827; }
+
+.hover-scale { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.hover-scale:hover { transform: scale(1.08); }
+.hover-scale:active { transform: scale(0.95); }
+
+.transition-all { transition: all 0.2s ease; }
+
 
 .comic-brand {
     font-family: var(--font-brand) !important;
@@ -247,6 +261,30 @@ a { text-decoration: none; }
 /* Adjust Main Grid */
 #dashboard-root {
     padding-bottom: 120px; /* Space for Speed Bar */
+}
+
+/* Hero Section: Table 0 + Notice Board - Fixed Height */
+.hero-section {
+    height: calc(100vh - 80px) !important;
+    min-height: calc(100vh - 80px) !important;
+    max-height: calc(100vh - 80px) !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+    margin-bottom: 3rem !important;
+    position: relative;
+    will-change: auto; /* Prevent layout shift */
+    contain: layout; /* Optimize rendering */
+}
+
+.hero-section .row {
+    height: 100% !important;
+    width: 100%;
+}
+
+.hero-section .col-12,
+.hero-section [class*="col-"] {
+    height: 100% !important;
 }
 
 /* Group Separator Line */
@@ -760,6 +798,108 @@ a { text-decoration: none; }
     justify-content: center;
     gap: 0.5rem;
 }
+
+/* === PREMIUM RED THEME TABLE CARD STYLES === */
+/* Force override any previous styles with !important */
+
+.card-occupied-modern {
+    background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 12px 28px rgba(220, 53, 69, 0.25), 0 8px 12px rgba(0,0,0,0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.card-available-modern {
+    background: #ffffff !important;
+    color: #2d3436 !important;
+    border: 1px solid #f1f2f6 !important;
+    transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+}
+
+.card-available-modern:hover {
+    box-shadow: 0 14px 28px rgba(0,0,0,0.05), 0 10px 10px rgba(0,0,0,0.02) !important;
+    transform: translateY(-5px);
+    border-color: #ff7675 !important;
+}
+
+/* Updated Button Styles for Red Background */
+.btn-modern-primary {
+    /* White button for high contrast against red background */
+    background: #ffffff !important;
+    color: #c0392b !important;
+    border: none !important;
+    border-radius: 12px;
+    font-weight: 700;
+    transition: all 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+}
+
+.btn-modern-primary:hover { 
+    background: #f8f9fa !important; 
+    color: #a71d2a !important; 
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15) !important;
+}
+
+.btn-modern-success {
+    /* Solid Green for visibility */
+    background: #00b894 !important;
+    color: #ffffff !important;
+    /* Remove any opacity or glass effect */
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    border-radius: 12px;
+    font-weight: 700;
+    transition: all 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+}
+
+.btn-modern-success:hover { 
+    background: #00a884 !important; 
+    color: #ffffff !important; 
+    transform: translateY(-1px); 
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15) !important;
+}
+
+/* Tool Buttons on Red Card */
+.btn-tool {
+    background: rgba(255,255,255,0.15) !important; /* Increased opacity for visibility */
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 8px;
+    padding: 8px 4px;
+    color: rgba(255,255,255,0.95) !important; /* Whiter text */
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.card-available-modern .btn-tool { 
+    background: #f1f2f6 !important; 
+    color: #636e72 !important; 
+    border-color: transparent !important; 
+}
+
+.btn-tool:hover { 
+    background: #ffffff !important; 
+    color: #a71d2a !important; 
+}
+
+.card-available-modern .btn-tool:hover { 
+    background: #dfe6e9 !important; 
+    color: #2d3436 !important; 
+}
+
+.tool-icon { font-size: 1.1rem; line-height: 1; }
+.tool-label { font-size: 0.55rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+
+.text-danger-hover:hover { 
+    color: #ffffff !important; 
+    background: #e17055 !important; 
+    border-color: #e17055 !important; 
+}
+
 
 .btn-premium-checkout:hover {
     transform: scale(1.02);

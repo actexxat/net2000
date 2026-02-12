@@ -30,31 +30,14 @@
                         </div>
                     </div>
 
-            <div class="mb-3">
-                        <label class="form-label d-block">{% trans "Copy Type" %}</label>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="copy_type" id="copyTypeBW"
-                                value="bw" checked>
-                            <label class="form-check-label" for="copyTypeBW">{% trans "B/W" %}</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="copy_type"
-                                id="copyTypeColor" value="color">
-                            <label class="form-check-label" for="copyTypeColor">
-                                {% trans "Color" %}
-                            </label>
-                        </div>
+                    <div class="mb-3">
+                        <input type="hidden" name="copy_type" value="bw">
                         <div class="form-text mt-2" id="bwPricingInfo">
                             <small class="text-muted">
                                 <i class="bi bi-info-circle me-1"></i>
                                 {% trans "B/W Pricing: 1.00 EGP/page (≤100 pages), 0.75 EGP/page (>100 pages)" %}
                             </small>
                         </div>
-                    </div>
-                    <div class="mb-3" id="copyColorCostGroup" style="display:none;">
-                        <label class="form-label">{% trans "Total Cost (EGP)" %}</label>
-                        <input type="number" name="color_cost" step="0.5" class="form-control" placeholder="e.g. 10.00">
-                        <div class="form-text">{% trans "Enter the total cost for color copies." %}</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -90,21 +73,7 @@
             cleanup();
         });
 
-        var bwInfo = document.getElementById('bwPricingInfo');
-        var colorGroup = document.getElementById('copyColorCostGroup');
         var pagesInput = document.getElementById('pagesInput');
-
-        document.querySelectorAll('input[type=radio][name="copy_type"]').forEach(function (radio) {
-            radio.addEventListener('change', function () {
-                if (this.value === 'color') {
-                    if (colorGroup) colorGroup.style.display = 'block';
-                    if (bwInfo) bwInfo.style.display = 'none';
-                } else {
-                    if (colorGroup) colorGroup.style.display = 'none';
-                    if (bwInfo) bwInfo.style.display = 'block';
-                }
-            });
-        });
 
         window.updatePages = function(amount, isAdd = false) {
             let current = parseInt(pagesInput.value) || 0;

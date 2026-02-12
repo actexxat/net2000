@@ -62,6 +62,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'unfold',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -92,16 +93,12 @@ TEMPLATES = [
             BUNDLE_DIR / 'templates',
             BUNDLE_DIR / 'manager' / 'templates',
         ],
+        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-            ],
-            'loaders': [
-                'manager.template_loaders.FixedTemplateLoader',
-                'django.template.loaders.filesystem.Loader',
-                'django.template.loaders.app_directories.Loader',
             ],
         },
     },
@@ -144,6 +141,14 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
+
+# Global Date Format: DD/MM/YYYY
+USE_L10N = False
+DATE_FORMAT = 'd/m/Y'
+SHORT_DATE_FORMAT = 'd/m/Y'
+DATETIME_FORMAT = 'd/m/Y H:i'
+SHORT_DATETIME_FORMAT = 'd/m/Y H:i'
+
 
 TIME_ZONE = 'Africa/Cairo'
 
@@ -199,5 +204,94 @@ MEDIA_ROOT = BASE_DIR / 'media'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
+
+from django.utils.translation import gettext_lazy as _
+from django.urls import reverse_lazy
+from django.templatetags.static import static
+
+UNFOLD = {
+    "SITE_TITLE": "Internet 2000",
+    "SITE_HEADER": "Internet 2000 Admin",
+    "SITE_URL": "/",
+    "COLORS": {
+        "primary": {
+            "50": "255 241 242",
+            "100": "255 228 230",
+            "200": "254 205 211",
+            "300": "253 164 175",
+            "400": "251 113 133",
+            "500": "244 63 94",
+            "600": "225 29 72",
+            "700": "190 18 60",
+            "800": "159 18 57",
+            "900": "136 19 55",
+            "950": "76 5 25",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": _("Operations"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                    {
+                        "title": _("Tables"),
+                        "icon": "table_restaurant",
+                        "link": reverse_lazy("admin:manager_table_changelist"),
+                    },
+                    {
+                        "title": _("Orders"),
+                        "icon": "shopping_cart",
+                        "link": reverse_lazy("admin:manager_order_changelist"),
+                    },
+                    {
+                        "title": _("History"),
+                        "icon": "receipt_long",
+                        "link": reverse_lazy("admin:manager_tablesession_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Catalog"),
+                "separator": True,
+                "items": [
+                     {
+                        "title": _("Menu Items"),
+                        "icon": "restaurant_menu",
+                        "link": reverse_lazy("admin:manager_item_changelist"),
+                    },
+                    {
+                        "title": _("System Settings"),
+                        "icon": "settings",
+                        "link": reverse_lazy("admin:manager_globalsettings_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Users & Access"),
+                "separator": True,
+                "items": [
+                     {
+                        "title": _("Users"),
+                        "icon": "people",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                    {
+                        "title": _("Groups"),
+                        "icon": "groups",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
+}
 
 

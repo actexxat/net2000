@@ -32,8 +32,9 @@
                     <button class="btn btn-outline-dark rounded-pill ms-auto px-3 d-flex align-items-center gap-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#liveOrderDrawer">
                         <span class="small fw-bold text-uppercase opacity-75">{% trans "Current" %}</span>
                         <span class="badge bg-danger rounded-pill" id="live-order-badge">
-                           {{ table.order_set.count|translate_numbers }}
+                           {{ table.orders|length|translate_numbers }}
                         </span>
+
                     </button>
                 </div>
             </div>
@@ -67,8 +68,10 @@
                                              style="border-radius: 16px; background-color: #f8f9fa;">
                                             <!-- Shared Background Image -->
                                             <div class="position-absolute tab-content w-100 h-100 top-0 start-0" 
-                                                 style="{% if it.image %}background-image: url('{{ it.image.url }}');{% else %}background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);{% endif %} background-size: cover; background-position: center;">
+                                                 {% if it.image %}style="background-image: url('{{ it.image.url }}'); background-size: cover; background-position: center;"
+                                                 {% else %}style="background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%); background-size: cover; background-position: center;"{% endif %}>
                                             </div>
+
                                             
                                             <!-- Top Label (Shared) -->
                                             <div class="position-absolute top-0 w-100 p-2 text-center" style="z-index: 10;">
@@ -83,11 +86,15 @@
                                             <div class="d-flex h-100 position-relative" style="z-index: 5;">
                                                 <!-- Single Zone -->
                                                 <div class="flex-fill d-flex flex-column justify-content-end align-items-center pb-3 ripple-area cursor-pointer"
-                                                     onclick="window.cartManager.add('{{ it.id }}', '{{ it.short_name|default:it.name|escapejs }}', {{ it.price|stringformat:'.2f' }}, this)">
+                                                     data-id="{{ it.id }}" 
+                                                     data-name="{{ it.short_name|default:it.name|escapejs }}" 
+                                                     data-price="{{ it.price|stringformat:'.2f' }}"
+                                                     onclick="window.cartManager.add(this.dataset.id, this.dataset.name, this.dataset.price, this)">
+
                                                      
                                                      <div class="text-center w-100 pt-5 mt-auto" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0) 100%);">
-                                                         <div class="text-white-50 small fw-bold mb-0" style="font-size: 0.6rem;">SINGLE</div>
-                                                         <div class="text-white fw-bold fs-4 lh-1 text-shadow">{{ it.price|floatformat:0 }}</div>
+                                                         <div class="text-white-50 small fw-bold mb-0" style="font-size: 0.6rem;">{% trans "SINGLE" %}</div>
+                                                         <div class="text-white fw-bold fs-4 lh-1 text-shadow">{{ it.price|floatformat:0|translate_numbers }}</div>
                                                      </div>
                                                      
                                                      <!-- Badge -->
@@ -97,11 +104,15 @@
                                                 
                                                 <!-- Double Zone -->
                                                 <div class="flex-fill d-flex flex-column justify-content-end align-items-center pb-3 ripple-area cursor-pointer"
-                                                     onclick="window.cartManager.add('{{ it.double_variant.id }}', '{{ it.double_variant.name|escapejs }}', {{ it.double_variant.price|stringformat:'.2f' }}, this)">
+                                                     data-id="{{ it.double_variant.id }}" 
+                                                     data-name="{{ it.double_variant.name|escapejs }}" 
+                                                     data-price="{{ it.double_variant.price|stringformat:'.2f' }}"
+                                                     onclick="window.cartManager.add(this.dataset.id, this.dataset.name, this.dataset.price, this)">
+
                                                      
                                                      <div class="text-center w-100 pt-5 mt-auto" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0) 100%);">
-                                                         <div class="text-white-50 small fw-bold mb-0" style="font-size: 0.6rem;">DOUBLE</div>
-                                                         <div class="text-warning fw-bold fs-4 lh-1 text-shadow">{{ it.double_variant.price|floatformat:0 }}</div>
+                                                         <div class="text-white-50 small fw-bold mb-0" style="font-size: 0.6rem;">{% trans "DOUBLE" %}</div>
+                                                         <div class="text-warning fw-bold fs-4 lh-1 text-shadow">{{ it.double_variant.price|floatformat:0|translate_numbers }}</div>
                                                      </div>
 
                                                       <!-- Badge -->
@@ -114,12 +125,18 @@
                                         <!-- Standard Interactive Card: "Cinema" Layout -->
                                         <div class="card h-100 border-0 shadow-sm overflow-hidden cursor-pointer item-card-dynamic position-relative"
                                              style="border-radius: 16px; background-color: #2c3e50; min-height: 160px;"
-                                             onclick="window.cartManager.add('{{ it.id }}', '{{ it.name|escapejs }}', {{ it.price|stringformat:'.2f' }}, this)">
+                                             data-id="{{ it.id }}" 
+                                             data-name="{{ it.name|escapejs }}" 
+                                             data-price="{{ it.price|stringformat:'.2f' }}"
+                                             onclick="window.cartManager.add(this.dataset.id, this.dataset.name, this.dataset.price, this)">
+
                                             
                                             <!-- Full Background Image -->
                                             <div class="position-absolute w-100 h-100 top-0 start-0 transition-transform" 
-                                                 style="{% if it.image %}background-image: url('{{ it.image.url }}');{% else %}background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);{% endif %} background-size: cover; background-position: center;">
+                                                 {% if it.image %}style="background-image: url('{{ it.image.url }}'); background-size: cover; background-position: center;"
+                                                 {% else %}style="background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); background-size: cover; background-position: center;"{% endif %}>
                                             </div>
+
 
                                             <!-- Qty Badge -->
                                             <span class="card-qty-badge position-absolute top-0 end-0 m-2 badge rounded-pill bg-danger border border-white shadow scale-in d-none" 
@@ -134,8 +151,8 @@
                                                         {{ it.name|translate_text }}
                                                     </div>
                                                     <div class="text-warning fw-bold fs-5 lh-1 text-shadow">
-                                                        {{ it.price|floatformat:0 }}
-                                                        <span class="text-white-50 fs-xs d-block text-end" style="font-size: 0.6rem;">EGP</span>
+                                                        {{ it.price|floatformat:0|translate_numbers }}
+                                                        <span class="text-white-50 fs-xs d-block text-end" style="font-size: 0.6rem;">{% trans "EGP" %}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -172,11 +189,11 @@
                                 <div class="text-muted small fw-bold text-uppercase">{% trans "Total Amount" %}</div>
                                 <div class="fw-bold text-dark lh-1">
                                     <span id="cart-total-text" class="fs-2">0</span>
-                                    <span class="fs-6 text-muted">EGP</span>
+                                    <span class="fs-6 text-muted">{% trans "EGP" %}</span>
                                 </div>
                             </div>
                             
-                            <form id="submit-cart-form" hx-post="{% url 'add_order' table.id %}" hx-target="#table-card-{{ table.id }}" hx-swap="outerHTML" hx-on::after-request="if(event.detail.successful) { bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide(); }">
+                            <form id="submit-cart-form" hx-post="{% url 'add_order' table.id %}" hx-target="#table-card-{{ table.id }}" hx-swap="outerHTML" hx-on::after-request="if(event.detail.successful) { var mEl = document.getElementById('orderModal'); if(mEl) { (bootstrap.Modal.getInstance(mEl) || new bootstrap.Modal(mEl)).hide(); } }">
                                 <div id="cart-hidden-inputs"></div>
                                 <button type="submit" id="confirm-btn" class="btn btn-danger w-100 py-3 fw-bold rounded-3 shadow-sm d-flex justify-content-between align-items-center px-4 transition-transform" disabled>
                                     <span>{% trans "CONFIRM ITEMS" %}</span>
@@ -195,21 +212,21 @@
                     </div>
                     <div class="offcanvas-body bg-light p-3">
                         <div id="live-order-list" class="d-flex flex-column gap-2">
-                             {% for order in table.order_set.all|dictsortreversed:"timestamp" %}
-                             {% if not order.is_paid %}
+                             {% for order in table.orders %}
                              <div class="d-flex justify-content-between align-items-center bg-white p-2 rounded shadow-sm border-start border-4 border-danger">
                                  <div>
-                                     <div class="fw-bold text-dark">{{ order.item_name_display }}</div>
+                                     <div class="fw-bold text-dark">{{ order.item_name_display|translate_text }}</div>
                                      <div class="small text-muted">{{ order.timestamp|time:"H:i:s" }}</div>
                                  </div>
                                  <button class="btn btn-sm text-danger p-0" 
                                          hx-post="{% url 'discard_order' order.id %}"
-                                         hx-confirm="{% trans 'Remove this item?' %}">
+                                         hx-confirm="{% trans 'Remove this item?' %}"
+                                         hx-target="#live-order-list">
                                      <i class="bi bi-x-circle-fill fs-5"></i>
                                  </button>
                              </div>
-                             {% endif %}
                              {% endfor %}
+
                         </div>
                     </div>
                 </div>
@@ -326,7 +343,7 @@
                                      style="width: 28px; height: 28px; font-size: 0.85rem;">${item.qty}</div>
                                 <div class="overflow-hidden">
                                     <div class="fw-bold text-dark text-truncate">${item.name}</div>
-                                    <div class="small text-muted">${item.price.toFixed(0)} EGP</div>
+                                    <div class="small text-muted">${item.price.toFixed(0)} {% trans "EGP" %}</div>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2 border rounded-pill p-1 ms-2">

@@ -40,12 +40,18 @@ def translate_text(value):
     # Handle suffixes like (Single) and (Double)
     suffix = ""
     if " (Single)" in text:
-        suffix = " (سينجل)" if is_ar else " (Single)"
+        suffix = " (عادي)" if is_ar else " (Single)"
         text = text.replace(" (Single)", "")
     elif " (Double)" in text:
-        suffix = " (دابل)" if is_ar else " (Double)"
+        suffix = " (دوبل)" if is_ar else " (Double)"
         text = text.replace(" (Double)", "")
         
     translated = _(text)
     
     return f"{translated}{suffix}{bracket_note}"
+    
+@register.simple_tag
+def get_shift_status():
+    from manager.models import GlobalSettings
+    settings, _ = GlobalSettings.objects.get_or_create(id=1)
+    return settings.active_shift

@@ -336,8 +336,13 @@
             <h5 class="mb-0 fw-bold">{% trans "Welcome" %} 👋</h5>
             <small class="text-muted">{% trans "Table" %} {{ table.number|translate_numbers }}</small>
         </div>
-        <div class="badge bg-light text-dark border p-2 rounded-circle">
-            <img src="{% static 'img/logo.png' %}" width="24" height="24" alt="Logo">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'pong_game' %}" class="btn btn-light border p-2 rounded-circle" title="{% trans 'Play Pong' %}">
+                <i class="bi bi-controller text-primary"></i>
+            </a>
+            <div class="badge bg-light text-dark border p-2 rounded-circle">
+                <img src="{% static 'img/logo.png' %}" width="24" height="24" alt="Logo">
+            </div>
         </div>
     </div>
 
@@ -436,7 +441,7 @@
         <button onclick="toggleCartPanel()" class="cart-btn-confirm">
             <span><span id="cartCount">0</span> {% trans "Items" %}</span>
             <span class="fw-bold fs-5">{% trans "View Cart" %}</span>
-            <span id="cartTotal">0</span> <small class="ms-1">EGP</small>
+            <span id="cartTotal">0</span> <small class="ms-1">{% trans "EGP" %}</small>
         </button>
     </div>
 
@@ -454,7 +459,7 @@
 
         <div class="d-flex justify-content-between align-items-center mb-4 pt-3 border-top">
             <h5 class="fw-bold">{% trans "Total" %}</h5>
-            <h4 class="fw-bold text-danger"><span id="cartPanelTotal">0</span> <small class="fs-6">EGP</small></h4>
+            <h4 class="fw-bold text-danger"><span id="cartPanelTotal">0</span> <small class="fs-6">{% trans "EGP" %}</small></h4>
         </div>
 
         <button id="btnConfirmOrder" onclick="submitOrder()" class="btn btn-danger w-100 py-3 fw-bold fs-5 rounded-4 shadow-sm">
@@ -511,7 +516,7 @@
                 cart.push({ id, name, price, quantity: 1, note: note });
             }
             saveCart();
-            showToast(`Added ${name} to cart`);
+            showToast('{% trans "Added to cart" %}' + `: ${name}`);
             updateUI();
             
             // Subtle animation on the footer
@@ -552,7 +557,7 @@
                 <div class="cart-item">
                     <div class="cart-item-info">
                         <div class="cart-item-name">${item.name}</div>
-                        <div class="small text-muted">${item.price} EGP</div>
+                        <div class="small text-muted">${item.price} {% trans "EGP" %}</div>
                         ${item.note ? `<span class="cart-item-note">📝 ${item.note}</span>` : ''}
                     </div>
                     <div class="cart-item-qty">
@@ -626,7 +631,7 @@
                     alert('Error: ' + result.error);
                 }
             } catch (err) {
-                alert('Connection error. Please try again.');
+                alert('{% trans "Connection error. Please try again." %}');
             } finally {
                 // Ensure button is restored for future use if needed, and spinner is hidden
                 btn.classList.remove('d-none');

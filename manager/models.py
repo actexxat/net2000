@@ -109,6 +109,8 @@ class Order(models.Model):
     description = models.CharField(max_length=200, null=True, blank=True)
     order_source = models.CharField(max_length=10, choices=ORDER_SOURCES, default='DIRECT')
     is_served = models.BooleanField(default=False)
+    shift = models.CharField(max_length=10, choices=[('MORNING', 'Morning'), ('NIGHT', 'Night')], default='MORNING')
+    paid_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         indexes = [
@@ -149,12 +151,14 @@ class Order(models.Model):
         return ""
 
 class TableSession(models.Model):
+    SHIFT_CHOICES = [('MORNING', 'Morning'), ('NIGHT', 'Night')]
     table_number = models.IntegerField()
     people_count = models.IntegerField()
     items_summary = models.TextField(default="")
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     check_in_time = models.DateTimeField(auto_now_add=True)
     check_out_time = models.DateTimeField(auto_now=True)
+    shift = models.CharField(max_length=10, choices=SHIFT_CHOICES, default='MORNING')
     user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
@@ -164,11 +168,14 @@ class TableSession(models.Model):
 
     def __str__(self):
         # ADD 'self.' before table_number
-        return f"Table {self.table_number} - {self.check_out_time.strftime('%Y-%m-%d')}"
+        return f"Table {self.table_number} - {self.check_out_time.strftime('%d/%m/%Y')}"
+
     
 
 class GlobalSettings(models.Model):
+    SHIFT_CHOICES = [('MORNING', 'Morning'), ('NIGHT', 'Night')]
     min_charge_per_person = models.DecimalField(max_digits=10, decimal_places=2, default=25.00)
+    active_shift = models.CharField(max_length=10, choices=SHIFT_CHOICES, default='MORNING')
 
     def __str__(self):
         return "Global Space Settings"
@@ -185,3 +192,28 @@ class StickyNote(models.Model):
 
     def __str__(self):
         return f"Note by {self.author.username}"
+
+class PongLobby(models.Model):
+    session_key = models.CharField(max_length=40, unique=True)
+    is_ready = models.BooleanField(default=False)
+    y_pos = models.IntegerField(default=250)
+    bx = models.IntegerField(default=375)
+    by = models.IntegerField(default=292)
+    bdx = models.IntegerField(default=5)
+    bdy = models.IntegerField(default=-5)
+    last_seen = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Pong Player {self.session_key[:8]}"
+
+class QuickFireItem(models.Model):
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='quickfire_items')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = "Quick Fire Item"
+        verbose_name_plural = "Quick Fire Items"
+
+    def __str__(self):
+        return f"{self.item.name} (Order {self.order})"
