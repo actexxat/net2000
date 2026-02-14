@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusDiv.classList.add('d-none');
                 infoDiv.classList.remove('d-none');
                 
-                document.getElementById('current-version').textContent = data.current_version || '--';
+                document.getElementById('current-version').textContent = data.current_version || data.version || '--';
                 
                 if (data.error) {
                     errorDiv.classList.remove('d-none');
