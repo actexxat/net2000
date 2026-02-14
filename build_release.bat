@@ -71,12 +71,12 @@ REM Post-Build Setup
 echo Setting up production environment...
 set TARGET_DIR=dist\Internet2000_Server
 
-REM 1. Copy Database
+REM 1. Copy Database (Safe Update Strategy)
 if exist "db.sqlite3" (
-    echo Copying database...
-    copy "db.sqlite3" "%TARGET_DIR%\" >nul
+    echo Copying database safely...
+    copy "db.sqlite3" "%TARGET_DIR%\db_initial.sqlite3" >nul
 ) else (
-    echo WARNING: db.sqlite3 not found! A new database will be created on first run.
+    echo WARNING: db.sqlite3 not found! No initial database will be included.
 )
 
 REM 2. Setup Media Directory
