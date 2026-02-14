@@ -181,3 +181,9 @@ Icon
 
 # Project specific logs
 server_log.txt
+
+# Auto-update system
+releases/
+_update_temp/
+_backup/
+*.zip

@@ -57,6 +57,15 @@ urlpatterns = [
     path('history/revenue-30/', manager_views.revenue_30, name='revenue_30'),
     path('history/busy-times/', manager_views.busy_times, name='busy_times'),
     path('notification-history/', manager_views.notification_history, name='notification_history'), # Notification center endpoint
+    path('log-modal/', manager_views.log_modal, name='log_modal'),
+    path('clear-log/', manager_views.clear_log, name='clear_log'),
+    
+    # Auto-Update System
+    path('system-update/', manager_views.system_update_view, name='system_update'),
+    path('update/check/', manager_views.update_check_view, name='update_check'),
+    path('update/download/', manager_views.update_download_view, name='update_download'),
+    path('update/progress/', manager_views.update_progress_view, name='update_progress'),
+    path('update/apply/', manager_views.update_apply_view, name='update_apply'),
     
     # Pong Game
     path('pong/', manager_views.pong_game, name='pong_game'),

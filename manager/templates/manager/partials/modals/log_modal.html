@@ -1,0 +1,75 @@
+{% load i18n manager_extras %}
+<div class="modal fade" id="logModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white border-bottom border-secondary">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-clock-history me-2"></i>{% trans "System Action Log" %}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 custom-scrollbar bg-light">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0 small">
+                        <thead class="table-dark sticky-top">
+                            <tr>
+                                <th scope="col" style="width: 15%">{% trans "Time" %}</th>
+                                <th scope="col" style="width: 15%">{% trans "User" %}</th>
+                                <th scope="col" style="width: 15%">{% trans "Action" %}</th>
+                                <th scope="col" style="width: 10%">{% trans "Table" %}</th>
+                                <th scope="col">{% trans "Details" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td class="text-nowrap text-muted">{{ log.timestamp|date:"H:i:s" }}</td>
+                                <td class="fw-bold">{{ log.user.username|default:"System" }}</td>
+                                <td>
+                                    {% if log.action_type == 'ORDER' %}<span class="badge bg-primary">ORDER</span>
+                                    {% elif log.action_type == 'PRINT' %}<span class="badge bg-secondary">PRINT</span>
+                                    {% elif log.action_type == 'COPY' %}<span class="badge bg-dark">COPY</span>
+                                    {% elif log.action_type == 'FAX' %}<span class="badge bg-info text-dark">FAX</span>
+                                    {% elif log.action_type == 'CUSTOM' %}<span class="badge bg-warning text-dark">CUSTOM</span>
+                                    {% else %}<span class="badge bg-secondary">{{ log.action_type }}</span>{% endif %}
+                                </td>
+                                <td>{% if log.table %}{{ log.table.number }}{% else %}-{% endif %}</td>
+                                <td class="text-break">{{ log.details }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+                                    {% trans "No actions recorded yet." %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-white border-top">
+                {% if user.is_superuser %}
+                <button type="button" class="btn btn-outline-danger btn-sm me-auto" 
+                        hx-post="{% url 'clear_log' %}" 
+                        hx-target="#log-modal-container" 
+                        hx-swap="innerHTML"
+                        hx-confirm="{% trans 'Are you sure you want to clear the entire log?' %}">
+                        <i class="bi bi-trash me-1"></i>{% trans "Clear Log" %}
+                </button>
+                {% endif %}
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">{% trans "Close" %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // Auto-show modal when content is swapped in
+    (function() {
+        const modalEl = document.getElementById('logModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+    })();
+</script>

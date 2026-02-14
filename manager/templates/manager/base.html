@@ -57,6 +57,16 @@
 
             <!-- Right Actions -->
             <div class="d-flex align-items-center gap-2 gap-md-3">
+                
+                {% if user.is_superuser %}
+                <a href="#" class="text-white text-opacity-75 text-decoration-none small fw-bold me-2 hover-scale" 
+                   hx-get="{% url 'log_modal' %}" 
+                   hx-target="#log-modal-container" 
+                   hx-swap="innerHTML">
+                   {% trans "LOGS" %}
+                </a>
+                {% endif %}
+
                 <!-- Shift Indicator -->
                 {% get_shift_status as current_shift %}
                 <div class="d-flex align-items-center justify-content-center hover-scale" 
@@ -141,10 +151,6 @@
                         <span class="fw-600">{% trans "QR Management" %}</span>
                     </a>
                     
-                    <a href="{% url 'pong_game' %}" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red {% if request.resolver_match.url_name == 'pong_game' %}active-nav-item{% endif %}">
-                        <i class="bi bi-controller fs-5"></i>
-                        <span class="fw-600">{% trans "Pong Arena" %}</span>
-                    </a>
 
                     {% if user.is_superuser %}
                     <div class="mt-4 mb-2">
@@ -167,6 +173,20 @@
                     <div class="mt-4 mb-2">
                         <small class="text-white text-opacity-50 fw-bold text-uppercase small" style="letter-spacing: 2px;">{% trans "Control Center" %}</small>
                     </div>
+                    
+                    <a href="/admin/" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red">
+                        <i class="bi bi-gear fs-5"></i>
+                        <span class="fw-600">{% trans "Admin Panel" %}</span>
+                    </a>
+                    
+                    <button type="button" 
+                            class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red text-start w-100"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#updateModal">
+                        <i class="bi bi-cloud-download fs-5"></i>
+                        <span class="fw-600">{% trans "System Updates" %}</span>
+                    </button>
+                    
                     <form action="{% url 'switch_shift' %}" method="post" 
                           data-confirm-msg="{% trans "Start new shift? Open tables will be handed over to the new shift." %}"
                           onsubmit="return confirm(this.dataset.confirmMsg)">
@@ -240,6 +260,7 @@
          style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2000;">
     </div>
     <div id="notification-stack"></div>
+    <div id="log-modal-container"></div>
 
     <!-- Styled Confirmation Modal -->
     <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
@@ -250,6 +271,9 @@
                         <i class="bi bi-exclamation-triangle me-2"></i>{% trans "Confirm" %}
                     </h6>
                 </div>
+
+    <!-- Update Modal -->
+
                 <div class="modal-body text-center py-4">
                     <p id="confirmMessage" class="mb-0 fw-medium"></p>
                 </div>
@@ -266,6 +290,23 @@
     </div>
 
     {% block extra_scripts %}{% endblock %}
+
+    <!-- Update Modal -->
+    <div class="modal fade" id="updateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="modal-title text-white fw-bold">
+                        <i class="bi bi-cloud-download me-2"></i>{% trans "System Updates" %}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    {% include 'manager/update_checker.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
     <footer class="text-center mt-auto py-2 text-muted bg-muted" style="font-size: 0.8rem;">
         &copy; <span id="year"></span> {% trans "Internet 2000 Solutions. All rights reserved." %}
     </footer>

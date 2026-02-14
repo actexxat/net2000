@@ -217,3 +217,16 @@ class QuickFireItem(models.Model):
 
     def __str__(self):
         return f"{self.item.name} (Order {self.order})"
+
+class ActionLog(models.Model):
+    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+    action_type = models.CharField(max_length=50) # 'ORDER', 'PRINT', 'COPY', 'CHECKIN', 'CHECKOUT', etc.
+    details = models.TextField()
+    table = models.ForeignKey(Table, on_delete=models.SET_NULL, null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.user} - {self.action_type} - {self.timestamp}"

@@ -28,6 +28,19 @@ def superuser_required(view_func):
         return view_func(request, *args, **kwargs)
     return _wrapped_view
 
+def log_action(user, action_type, details, table=None):
+    from .models import ActionLog
+    try:
+        ActionLog.objects.create(
+            user=user if user.is_authenticated else None,
+            action_type=action_type,
+            details=details,
+            table=table
+        )
+    except Exception:
+        pass
+
+
 def _activate_language(request):
     """
     Centralized helper to activate language for a request.
@@ -428,6 +441,10 @@ def add_order(request, table_id):
                 messages.success(request, _("Added %(item)s to Table %(number)s.") % {'item': added_items[0], 'number': table.number})
             else:
                 messages.success(request, _("Added %(count)s items to Table %(number)s.") % {'count': len(added_items), 'number': table.number})
+            
+            # Log action
+            log_details = f"Added {len(added_items)} items: {', '.join(added_items)}"
+            log_action(request.user, 'ORDER', log_details, table)
         else:
             messages.error(request, _("Failed to add items to bill."))
             
@@ -752,6 +769,10 @@ def add_print(request, table_id):
                 transaction_price=total,
                 description=name
             )
+            
+            # Log action
+            log_action(request.user, 'PRINT', name, table)
+
             messages.success(request, _("Added %(name)s to Table %(number)s.") % {'name': name, 'number': table.number})
         except Exception:
             messages.error(request, _("Failed to add print to bill."))
@@ -879,6 +900,23 @@ def monitor(request):
         'all_tables': all_tables,
     }
     return render(request, 'manager/monitor.html', context)
+
+@login_required
+def log_modal(request):
+    """Returns the log modal content."""
+    from .models import ActionLog
+    logs = ActionLog.objects.all()[:100]
+    return render(request, 'manager/partials/modals/log_modal.html', {'logs': logs})
+
+@login_required
+@superuser_required
+def clear_log(request):
+    """Clears the action log."""
+    from .models import ActionLog
+    if request.method == "POST":
+        ActionLog.objects.all().delete()
+    return log_modal(request)
+
 def pong_game(request):
     """View to render the Pong game page."""
     if not request.session.session_key:
@@ -1019,6 +1057,9 @@ def add_order_direct(request, table_id):
         order_source='WalkIn'
     )
     
+    # Log action
+    log_action(request.user, 'ORDER', f"Added {item.name} ({price} EGP)", table)
+    
     # Refresh table context for the card update
     settings, created = GlobalSettings.objects.get_or_create(id=1)
     _get_table_context(table, settings)
@@ -1079,6 +1120,9 @@ def add_fax(request, table_id):
         transaction_price=price
     )
     
+    # Log action
+    log_action(request.user, 'FAX', desc_str, table)
+
     messages.success(request, _("Added Fax (%(pages)s pages) to Table %(number)s. Cost: %(cost)s") % {
         'pages': pages, 
         'number': table.number,
@@ -1139,6 +1183,10 @@ def add_copy(request, table_id):
             description=name,
             is_paid=False
         )
+        
+        # Log action
+        log_action(request.user, 'COPY', name, table)
+
         messages.success(request, _("Added %(name)s to Table %(number)s. Cost: %(cost)s") % {
             'name': name, 
             'number': table.number,
@@ -1260,6 +1308,10 @@ def add_custom_item(request, table_id):
             description=item_name,
             is_paid=False
         )
+        
+        # Log action
+        log_action(request.user, 'CUSTOM', f"Added {item_name} ({price} EGP)", table)
+
         messages.success(request, _("Added '%(name)s' to Table %(number)s. Price: %(price)s") % {
             'name': item_name, 
             'number': table.number,
@@ -1341,6 +1393,9 @@ def discard_order(request, order_id):
             'order_type': order.order_source
         }
         
+        # Log action
+        log_action(request.user, 'DISCARD', f"Discarded: {item_name} ({order.transaction_price} EGP)", table)
+
         order.delete()
         
         if table:
@@ -1756,3 +1811,12 @@ def delete_sticky_note(request, note_id):
         note.delete()
         return HttpResponse(status=204, headers={'HX-Trigger': 'refresh'})
     return HttpResponse(status=403)
+
+# Import update system views
+from .update_views import (
+    update_check_view,
+    update_download_view,
+    update_progress_view,
+    update_apply_view,
+    system_update_view
+)

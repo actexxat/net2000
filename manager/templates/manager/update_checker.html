@@ -1,0 +1,258 @@
+{% load i18n %}
+{% load static %}
+
+<div class="update-checker-container p-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-cloud-download me-2"></i>
+                {% trans "System Updates" %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div id="update-status" class="mb-3">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                        <span class="visually-hidden">{% trans "Loading..." %}</span>
+                    </div>
+                    <span>{% trans "Checking for updates..." %}</span>
+                </div>
+            </div>
+
+            <div id="update-info" class="d-none">
+                <div class="alert alert-info" role="alert">
+                    <h6 class="alert-heading">{% trans "Current Version" %}</h6>
+                    <p class="mb-0"><strong id="current-version">--</strong></p>
+                </div>
+
+                <!-- Critical Update Alert -->
+                <div id="critical-update-alert" class="alert alert-danger d-none" role="alert">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        {% trans "CRITICAL UPDATE REQUIRED" %}
+                    </h6>
+                    <p class="mb-0">
+                        <strong>{% trans "This is a critical security or bug fix update. Please update immediately." %}</strong>
+                    </p>
+                </div>
+
+                <div id="update-available" class="alert alert-success d-none" role="alert">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span id="update-heading">{% trans "Update Available!" %}</span>
+                    </h6>
+                    <p><strong>{% trans "New Version:" %}</strong> <span id="latest-version">--</span></p>
+                    <div id="release-notes" class="mt-2 p-2 bg-light rounded">
+                        <small class="text-muted">{% trans "Loading release notes..." %}</small>
+                    </div>
+                    <button id="download-update-btn" class="btn btn-success mt-3">
+                        <i class="bi bi-download me-2"></i>
+                        <span id="download-btn-text">{% trans "Download Update" %}</span>
+                    </button>
+                </div>
+
+                <div id="no-update" class="alert alert-secondary d-none" role="alert">
+                    <i class="bi bi-check-circle me-2"></i>
+                    {% trans "You are running the latest version!" %}
+                </div>
+
+                <div id="update-error" class="alert alert-danger d-none" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span id="error-message">{% trans "Error checking for updates" %}</span>
+                </div>
+            </div>
+
+            <div id="download-progress" class="d-none">
+                <h6>{% trans "Downloading Update..." %}</h6>
+                <div class="progress mb-3">
+                    <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%">0%</div>
+                </div>
+                <small class="text-muted">{% trans "Please wait while the update is downloaded..." %}</small>
+            </div>
+
+            <div id="update-ready" class="d-none">
+                <div class="alert alert-warning" role="alert">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        {% trans "Update Ready to Install" %}
+                    </h6>
+                    <p>{% trans "The update has been downloaded and is ready to install. The application will restart automatically." %}</p>
+                    <button id="apply-update-btn" class="btn btn-warning">
+                        <i class="bi bi-arrow-repeat me-2"></i>
+                        {% trans "Install Update & Restart" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusDiv = document.getElementById('update-status');
+    const infoDiv = document.getElementById('update-info');
+    const updateAvailableDiv = document.getElementById('update-available');
+    const noUpdateDiv = document.getElementById('no-update');
+    const errorDiv = document.getElementById('update-error');
+    const downloadProgressDiv = document.getElementById('download-progress');
+    const updateReadyDiv = document.getElementById('update-ready');
+    const criticalAlertDiv = document.getElementById('critical-update-alert');
+    
+    const downloadBtn = document.getElementById('download-update-btn');
+    const applyBtn = document.getElementById('apply-update-btn');
+    
+    let downloadUrl = null;
+    let progressInterval = null;
+
+    // Check for updates on page load
+    checkForUpdates();
+
+    function checkForUpdates() {
+        fetch('{% url "update_check" %}')
+            .then(response => response.json())
+            .then(data => {
+                statusDiv.classList.add('d-none');
+                infoDiv.classList.remove('d-none');
+                
+                document.getElementById('current-version').textContent = data.current_version || '--';
+                
+                if (data.error) {
+                    errorDiv.classList.remove('d-none');
+                    document.getElementById('error-message').textContent = data.error;
+                } else if (data.available) {
+                    updateAvailableDiv.classList.remove('d-none');
+                    document.getElementById('latest-version').textContent = data.latest_version;
+                    document.getElementById('release-notes').innerHTML = 
+                        '<pre class="mb-0"><small>' + escapeHtml(data.release_notes) + '</small></pre>';
+                    downloadUrl = data.download_url;
+                    
+                    // Handle critical updates
+                    if (data.is_critical) {
+                        criticalAlertDiv.classList.remove('d-none');
+                        updateAvailableDiv.classList.remove('alert-success');
+                        updateAvailableDiv.classList.add('alert-danger');
+                        document.getElementById('update-heading').innerHTML = 
+                            '<i class="bi bi-exclamation-triangle-fill me-2"></i>{% trans "CRITICAL UPDATE AVAILABLE!" %}';
+                        downloadBtn.classList.remove('btn-success');
+                        downloadBtn.classList.add('btn-danger');
+                        document.getElementById('download-btn-text').textContent = '{% trans "Download Critical Update NOW" %}';
+                    }
+                } else {
+                    noUpdateDiv.classList.remove('d-none');
+                }
+
+            })
+            .catch(error => {
+                statusDiv.classList.add('d-none');
+                infoDiv.classList.remove('d-none');
+                errorDiv.classList.remove('d-none');
+                document.getElementById('error-message').textContent = 
+                    '{% trans "Failed to check for updates. Please try again later." %}';
+            });
+    }
+
+    downloadBtn.addEventListener('click', function() {
+        if (!downloadUrl) return;
+        
+        updateAvailableDiv.classList.add('d-none');
+        downloadProgressDiv.classList.remove('d-none');
+        
+        // Start download
+        fetch('{% url "update_download" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: 'download_url=' + encodeURIComponent(downloadUrl)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'downloading') {
+                // Start polling for progress
+                progressInterval = setInterval(checkProgress, 1000);
+            }
+        })
+        .catch(error => {
+            downloadProgressDiv.classList.add('d-none');
+            errorDiv.classList.remove('d-none');
+            document.getElementById('error-message').textContent = 
+                '{% trans "Failed to start download. Please try again." %}';
+        });
+    });
+
+    function checkProgress() {
+        fetch('{% url "update_progress" %}')
+            .then(response => response.json())
+            .then(data => {
+                const progress = data.progress || 0;
+                const progressBar = document.getElementById('progress-bar');
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
+                
+                if (data.ready) {
+                    clearInterval(progressInterval);
+                    downloadProgressDiv.classList.add('d-none');
+                    updateReadyDiv.classList.remove('d-none');
+                }
+            });
+    }
+
+    applyBtn.addEventListener('click', function() {
+        if (!confirm('{% trans "The application will restart. Continue?" %}')) {
+            return;
+        }
+        
+        applyBtn.disabled = true;
+        applyBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>{% trans "Restarting..." %}';
+        
+        fetch('{% url "update_apply" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(() => {
+            // Show restarting message
+            updateReadyDiv.innerHTML = 
+                '<div class="alert alert-info"><i class="bi bi-arrow-repeat me-2"></i>{% trans "Application is restarting..." %}</div>';
+        });
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
+</script>
+
+<style>
+.update-checker-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+#release-notes pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+}
+</style>

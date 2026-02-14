@@ -1,0 +1,355 @@
+# Auto-Update System Architecture
+
+## System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Internet 2000 Application                    │
+│                                                                   │
+│  ┌────────────────┐         ┌──────────────────┐                │
+│  │  Django Admin  │────────▶│  Update Views    │                │
+│  │     Panel      │         │  (update_views)  │                │
+│  └────────────────┘         └──────────────────┘                │
+│         │                            │                           │
+│         │                            ▼                           │
+│         │                   ┌──────────────────┐                │
+│         │                   │  Update Engine   │                │
+│         │                   │   (updater.py)   │                │
+│         │                   └──────────────────┘                │
+│         │                            │                           │
+│         ▼                            │                           │
+│  ┌────────────────┐                 │                           │
+│  │  Update UI     │                 │                           │
+│  │  (HTML/JS)     │◀────────────────┘                           │
+│  └────────────────┘                                              │
+│         │                                                        │
+└─────────┼────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         GitHub API                               │
+│                                                                   │
+│  GET /repos/{owner}/{repo}/releases/latest                       │
+│  ├─ Returns: version, download_url, release_notes                │
+│  └─ Headers: User-Agent, Accept                                  │
+│                                                                   │
+│  GET {download_url}                                              │
+│  └─ Returns: ZIP file (binary)                                   │
+└─────────────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Update Process                              │
+│                                                                   │
+│  1. Download ZIP to temp folder                                  │
+│  2. Extract to _update_temp/new_version/                         │
+│  3. Create backup in _backup/                                    │
+│  4. Generate update batch script                                 │
+│  5. Execute script and exit app                                  │
+│  6. Script replaces files                                        │
+│  7. Script restarts application                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Component Interaction
+
+```
+┌──────────────┐
+│    User      │
+└──────┬───────┘
+       │ Opens Admin Panel
+       ▼
+┌──────────────────────┐
+│  update_checker.html │
+│  ┌────────────────┐  │
+│  │ Check Updates  │──┼──┐
+│  └────────────────┘  │  │
+│  ┌────────────────┐  │  │
+│  │ Download       │──┼──┼──┐
+│  └────────────────┘  │  │  │
+│  ┌────────────────┐  │  │  │
+│  │ Install        │──┼──┼──┼──┐
+│  └────────────────┘  │  │  │  │
+└──────────────────────┘  │  │  │
+                          │  │  │
+       ┌──────────────────┘  │  │
+       │                     │  │
+       ▼                     │  │
+┌──────────────────────┐    │  │
+│ update_check_view    │    │  │
+│ ┌────────────────┐   │    │  │
+│ │ UpdateChecker  │   │    │  │
+│ │ .check_for_    │   │    │  │
+│ │  updates()     │   │    │  │
+│ └────────┬───────┘   │    │  │
+│          │           │    │  │
+│          ▼           │    │  │
+│    GitHub API        │    │  │
+│          │           │    │  │
+│          ▼           │    │  │
+│    JSON Response     │    │  │
+└──────────────────────┘    │  │
+                            │  │
+       ┌────────────────────┘  │
+       │                       │
+       ▼                       │
+┌──────────────────────┐      │
+│ update_download_view │      │
+│ ┌────────────────┐   │      │
+│ │ UpdateChecker  │   │      │
+│ │ .download_     │   │      │
+│ │  update()      │   │      │
+│ └────────┬───────┘   │      │
+│          │           │      │
+│          ▼           │      │
+│   Download ZIP       │      │
+│          │           │      │
+│          ▼           │      │
+│   Extract Files      │      │
+│          │           │      │
+│          ▼           │      │
+│   Create Backup      │      │
+└──────────────────────┘      │
+                              │
+       ┌──────────────────────┘
+       │
+       ▼
+┌──────────────────────┐
+│ update_apply_view    │
+│ ┌────────────────┐   │
+│ │ UpdateChecker  │   │
+│ │ .apply_update_ │   │
+│ │  and_restart() │   │
+│ └────────┬───────┘   │
+│          │           │
+│          ▼           │
+│   Execute Script     │
+│          │           │
+│          ▼           │
+│   Exit Application   │
+└──────────────────────┘
+       │
+       ▼
+┌──────────────────────┐
+│  apply_update.bat    │
+│  ┌────────────────┐  │
+│  │ Wait 3 sec     │  │
+│  └────────┬───────┘  │
+│           ▼          │
+│  ┌────────────────┐  │
+│  │ Backup Files   │  │
+│  └────────┬───────┘  │
+│           ▼          │
+│  ┌────────────────┐  │
+│  │ Copy New Files │  │
+│  └────────┬───────┘  │
+│           ▼          │
+│  ┌────────────────┐  │
+│  │ Cleanup Temp   │  │
+│  └────────┬───────┘  │
+│           ▼          │
+│  ┌────────────────┐  │
+│  │ Restart App    │  │
+│  └────────────────┘  │
+└──────────────────────┘
+```
+
+## File Structure During Update
+
+```
+Application Root/
+│
+├── Internet2000_Server.exe    (Running)
+├── version.py                 (Current: 1.0.0)
+├── updater.py
+├── db.sqlite3                 (Preserved)
+│
+├── _update_temp/              (Created during update)
+│   ├── new_version/           (Extracted ZIP)
+│   │   ├── Internet2000_Server.exe
+│   │   ├── version.py         (New: 1.0.1)
+│   │   └── ...
+│   ├── apply_update.bat       (Generated script)
+│   └── exclude.txt            (Backup exclusions)
+│
+├── _backup/                   (Created by script)
+│   ├── Internet2000_Server.exe (Old version)
+│   ├── version.py             (Old: 1.0.0)
+│   └── ...                    (All old files)
+│
+└── ... (Updated files after script runs)
+```
+
+## Data Flow
+
+```
+┌─────────┐
+│  User   │
+└────┬────┘
+     │
+     │ 1. Click "Check Updates"
+     ▼
+┌─────────────────┐
+│  Frontend (JS)  │
+└────┬────────────┘
+     │
+     │ 2. AJAX GET /update/check/
+     ▼
+┌─────────────────────┐
+│  update_check_view  │
+└────┬────────────────┘
+     │
+     │ 3. Call updater.check_for_updates()
+     ▼
+┌─────────────────┐
+│  UpdateChecker  │
+└────┬────────────┘
+     │
+     │ 4. HTTP GET to GitHub API
+     ▼
+┌─────────────────┐
+│   GitHub API    │
+└────┬────────────┘
+     │
+     │ 5. Return JSON (version, url, notes)
+     ▼
+┌─────────────────┐
+│  UpdateChecker  │
+└────┬────────────┘
+     │
+     │ 6. Compare versions
+     ▼
+┌─────────────────────┐
+│  update_check_view  │
+└────┬────────────────┘
+     │
+     │ 7. Return JSON response
+     ▼
+┌─────────────────┐
+│  Frontend (JS)  │
+└────┬────────────┘
+     │
+     │ 8. Display update info
+     ▼
+┌─────────┐
+│  User   │
+└─────────┘
+```
+
+## State Machine
+
+```
+┌─────────────┐
+│   Initial   │
+└──────┬──────┘
+       │
+       │ Check for updates
+       ▼
+┌─────────────┐     No update      ┌─────────────┐
+│  Checking   │───────────────────▶│ Up to Date  │
+└──────┬──────┘                    └─────────────┘
+       │
+       │ Update available
+       ▼
+┌─────────────┐
+│  Available  │
+└──────┬──────┘
+       │
+       │ User clicks download
+       ▼
+┌─────────────┐     Error          ┌─────────────┐
+│ Downloading │───────────────────▶│   Failed    │
+└──────┬──────┘                    └─────────────┘
+       │
+       │ Download complete
+       ▼
+┌─────────────┐
+│    Ready    │
+└──────┬──────┘
+       │
+       │ User clicks install
+       ▼
+┌─────────────┐
+│  Installing │
+└──────┬──────┘
+       │
+       │ Script launched
+       ▼
+┌─────────────┐
+│ Restarting  │
+└──────┬──────┘
+       │
+       │ App restarts
+       ▼
+┌─────────────┐
+│   Updated   │
+└─────────────┘
+```
+
+## Security Layers
+
+```
+┌─────────────────────────────────────────┐
+│         User Authentication             │
+│  (Django @staff_member_required)        │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│         CSRF Protection                 │
+│  (Django CSRF tokens)                   │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│         HTTPS/SSL                       │
+│  (GitHub API communication)             │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│         Version Validation              │
+│  (Semantic version comparison)          │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│         Backup Creation                 │
+│  (Automatic rollback capability)        │
+└─────────────────────────────────────────┘
+```
+
+## Error Handling Flow
+
+```
+┌─────────────┐
+│  Any Step   │
+└──────┬──────┘
+       │
+       │ Error occurs
+       ▼
+┌─────────────────┐
+│  Try/Except     │
+└──────┬──────────┘
+       │
+       ├─────────────┐
+       │             │
+       ▼             ▼
+┌─────────────┐  ┌─────────────┐
+│ Log Error   │  │ Return JSON │
+└─────────────┘  │ with error  │
+                 └──────┬──────┘
+                        │
+                        ▼
+                 ┌─────────────┐
+                 │ Display to  │
+                 │    User     │
+                 └─────────────┘
+```
+
+This architecture ensures:
+- ✅ Safe updates with backups
+- ✅ Clear user feedback
+- ✅ Robust error handling
+- ✅ Secure communication
+- ✅ Easy rollback
