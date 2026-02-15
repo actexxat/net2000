@@ -7,15 +7,22 @@ from django.views.decorators.http import require_POST
 from django.db import models
 from django.db.models import Sum, Q, Prefetch, Avg, Count, Max, Min, F, ExpressionWrapper, fields
 from django.db.models.functions import Coalesce, ExtractHour, ExtractWeekDay
-from .models import Table, Item, Order, TableSession, GlobalSettings, StickyNote, PongLobby, QuickFireItem
+from .models import Table, Item, Order, TableSession, StickyNote, PongLobby, QuickFireItem
+from infrastructure.models import GlobalSettings
 from decimal import Decimal, InvalidOperation
 
-import datetime, json
-from django.utils.translation import gettext_lazy as _, get_language
+import re, datetime, json
+from django.utils.translation import gettext_lazy as _, get_language, get_language
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 
+
+def _loc(val):
+    from django.utils.translation import get_language
+    is_ar = get_language() == 'ar'
+    if not is_ar: return str(val)
+    return str(val).translate(str.maketrans("0123456789", "٠١٣٤٥٦٧٨٩"))
 
 def superuser_required(view_func):
     """Decorator for views that checks that the user is a superuser, redirecting to unauthorized if not."""
@@ -84,7 +91,8 @@ def _get_table_context(table, settings=None):
 def _get_sorted_tables(sort_by_status=True):
     """Helper to get all tables sorted by status, with contexts prepared."""
     from django.db.models import Prefetch
-    from .models import Table, Order, GlobalSettings, Item
+    from .models import Table, Order, Item
+    from infrastructure.models import GlobalSettings
     
     # Ensure Table 0 exists and is always occupied
     t0, created = Table.objects.get_or_create(number=0, defaults={'capacity': 50, 'is_occupied': True})
@@ -117,17 +125,8 @@ def _get_sorted_tables(sort_by_status=True):
         
     return tables
 
-@login_required
-def dashboard(request):
-    """Main view to see all tables and their current bills."""
-    from django.db.models import Prefetch
-    
-    tables = _get_sorted_tables()
-    
-    settings, created = GlobalSettings.objects.get_or_create(id=1)
-    
-    # Items grouping logic...
-    
+def _get_grouped_items():
+    """Helper to group items by category for the menu."""
     items = Item.objects.all()
     # Group items by category if available, otherwise use simple heuristics
     # 1. Collect all doubles
@@ -175,17 +174,18 @@ def dashboard(request):
         grouped.setdefault(cat, []).append(it)
     # sort categories and items
     grouped_items = {k: sorted(v, key=lambda x: x.name) for k, v in sorted(grouped.items())}
-    
-    # Get the global minimum charge (creates a default of 25 if none exists)
-    # Quick Fire Items (Top 5 selling)
-    # Manually curated list for Quick Fire bar (priority items)
-    # Now fetched from the database (QuickFireItem model)
+    return grouped_items
+
+def _get_quick_items():
+    """Helper to get the quick fire items for the bar."""
     db_items = list(QuickFireItem.objects.all().order_by('order').select_related('item'))
     
     if db_items:
         quick_items = [q.item for q in db_items]
     else:
         # Fallback to hardcoded list if DB is empty (legacy support)
+        items = Item.objects.all()
+        quick_items = []
         target_names = ["turkish coffee", "tea", "water", "latte", "redbull", "twist", "v cola", "sun top", "volt", "nescafe"]
         
         # 1. Fetch prefered items in order
@@ -208,14 +208,32 @@ def dashboard(request):
                 continue
     
     # Limit to reasonable number
-    quick_items = quick_items[:12]
+    return quick_items[:12]
+
+@login_required
+def dashboard(request):
+    """Main view to see all tables and their current bills."""
+    from django.db.models import Prefetch
+    
+    tables = _get_sorted_tables()
+    
+    settings, created = GlobalSettings.objects.get_or_create(id=1)
+    
+    # Items grouping logic...
+    
+    grouped_items = _get_grouped_items()
+    
+    # Get the global minimum charge (creates a default of 25 if none exists)
+    # Quick Fire Items (Top 5 selling)
+    # Manually curated list for Quick Fire bar (priority items)
+    # Now fetched from the database (QuickFireItem model)
+    quick_items = _get_quick_items()
 
     # Sticky Notes
     notes = StickyNote.objects.all().select_related('author').order_by('-created_at')
 
     return render(request, 'manager/dashboard.html', {
         'tables': tables,
-        'items': items,
         'grouped_items': grouped_items,
         'quick_items': quick_items,
         'notes': notes,
@@ -223,12 +241,8 @@ def dashboard(request):
         'server_now': timezone.now().isoformat()
     })
 
-@login_required
-def dashboard_grid(request):
-    """Returns OOB updates for all tables to update them in-place."""
-    import hashlib
-    from django.http import HttpResponse, HttpResponseNotModified
-    from django.template.loader import render_to_string
+def _get_dashboard_grid_state_string(request):
+    """Helper to generate a state string for the dashboard grid."""
     from django.db.models import Max, Count, Sum
     
     # 1. Cheap State Check (DB Aggregation) to avoid rendering
@@ -260,9 +274,16 @@ def dashboard_grid(request):
     # v17-layout: Force refresh after layout changes (hero height)
     lang = user_language
     state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{notes_agg['cnt']}-{n_upd}-{lang}-v17-layout"
+    return state_str
+
+@login_required
+def dashboard_grid(request):
+    """Returns OOB updates for all tables to update them in-place."""
+    import hashlib
+    from django.http import HttpResponse, HttpResponseNotModified
+    from django.template.loader import render_to_string
     
-    # Explicitly check if 'last_updated' session variable (if we used one) matches? 
-    # Or just hash this state.
+    state_str = _get_dashboard_grid_state_string(request)
     et = hashlib.md5(state_str.encode('utf-8')).hexdigest()
     
     # Handle quoted ETags
@@ -368,44 +389,7 @@ def add_order(request, table_id):
 
     if request.method == "GET":
         # logic to populate menu items for the modal
-        items = Item.objects.all()
-        doubles = {} 
-        for it in items:
-            if "(Double)" in it.name:
-                base = it.name.replace("(Double)", "").strip().lower()
-                doubles[base] = it
-
-        grouped = {}
-        for it in items:
-            if "(Double)" in it.name:
-                continue
-            
-            temp_name = it.name.replace("(Single)", "").replace("(single)", "").strip()
-            it.short_name = temp_name
-            
-            base = temp_name.lower()
-            it.double_variant = doubles.get(base)
-            if not it.double_variant:
-                 base_stripped = base.strip()
-                 if base_stripped in doubles:
-                     it.double_variant = doubles[base_stripped]
-
-            cat = getattr(it, 'category', None)
-            if not cat:
-                name = (it.name or '').lower()
-                if 'hot' in name:
-                    cat = 'Hot'
-                elif 'cold' in name:
-                    cat = 'Cold'
-                elif 'juice' in name:
-                    cat = 'Juice'
-                elif 'tea' in name or 'coffee' in name:
-                    cat = 'Hot'
-                else:
-                    cat = 'Other'
-            grouped.setdefault(cat, []).append(it)
-        
-        grouped_items = {k: sorted(v, key=lambda x: x.name) for k, v in sorted(grouped.items())}
+        grouped_items = _get_grouped_items()
          
         _get_table_context(table)
         
@@ -459,12 +443,8 @@ def add_order(request, table_id):
             
     return redirect('dashboard')
 
-@login_required
-def check_out(request, table_id):
-    """Calculates final total, saves to history, and resets the table."""
-    table = get_object_or_404(Table, id=table_id)
-    summary = table.get_bill_summary()
-    
+def _create_table_session(table, summary, user):
+    """Helper to create a TableSession from a table and bill summary."""
     final_bill = summary['final_total']
     
     items_list = []
@@ -484,10 +464,20 @@ def check_out(request, table_id):
         total_amount=final_bill,
         check_in_time=table.opened_at or timezone.now(),
         shift=settings.active_shift,
-        user=request.user
+        user=user
     )
+    return final_bill
 
+@login_required
+def check_out(request, table_id):
+    """Calculates final total, saves to history, and resets the table."""
+    table = get_object_or_404(Table, id=table_id)
+    summary = table.get_bill_summary()
+    
+    final_bill = _create_table_session(table, summary, request.user)
+    
     # 2. Reset the table and mark orders as paid
+    settings, created = GlobalSettings.objects.get_or_create(id=1)
     table.order_set.filter(is_paid=False).update(is_paid=True, shift=settings.active_shift, paid_at=timezone.now())
     
     # Table 0 is a special permanent table (e.g. for takeaway)
@@ -518,24 +508,8 @@ def check_out(request, table_id):
         
     return redirect('dashboard')
 
-@login_required
-@superuser_required
-def metrics_dashboard(request):
-    """Business metrics and analytics view."""
-    _activate_language(request)
-    from django.db.models import Sum, Count, Avg, Min, Max, F, ExpressionWrapper, fields
-    from django.db.models.functions import ExtractHour, ExtractWeekDay, Coalesce
-    import datetime
-    
-    is_ar = get_language() == 'ar'
-    def _loc(val):
-        if not is_ar: return str(val)
-        return str(val).translate(str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩"))
-
-    now = timezone.localtime(timezone.now())
-    today = now.date()
-    
-    # 1. Comparison & Growth
+def _get_growth_metrics(today):
+    """Helper to calculate growth metrics."""
     last_week_day = today - datetime.timedelta(days=7)
     today_sessions = TableSession.objects.filter(check_out_time__date=today)
     last_week_sessions = TableSession.objects.filter(check_out_time__date=last_week_day)
@@ -547,16 +521,20 @@ def metrics_dashboard(request):
     if last_week_rev > 0:
         growth = ((today_rev - last_week_rev) / last_week_rev) * 100
     
-    # 2. Product Performance
-    paid_item_orders = Order.objects.filter(is_paid=True).exclude(item=None)
-    top_selling_items = paid_item_orders.values('item__name').annotate(
-        count=Count('id'),
-        revenue=Sum(Coalesce('transaction_price', 'item__price'))
-    ).order_by('-count')[:5]
+    return growth, today_rev, last_week_rev
 
-    category_data = paid_item_orders.values('item__category').annotate(
-        revenue=Sum(Coalesce('transaction_price', 'item__price'))
-    ).order_by('-revenue')
+
+@login_required
+@superuser_required
+def metrics_dashboard(request):
+    """
+    Renders the metrics dashboard with various statistics.
+    """
+    _activate_language(request)
+    now = timezone.now()
+    today = now.date()
+
+    growth, today_rev, last_week_rev = _get_growth_metrics(today)
 
     # 3. Efficiency Metrics
     all_sessions = TableSession.objects.all()
@@ -589,6 +567,7 @@ def metrics_dashboard(request):
         occupancy_rate = (total_active_duration.total_seconds() / total_possible_secs) * 100
 
     # 4. Audit & Security
+    today_sessions = TableSession.objects.filter(check_out_time__date=today)
     opening_time = today_sessions.aggregate(m=Min('check_in_time'))['m']
     closing_time = today_sessions.aggregate(m=Max('check_out_time'))['m']
 
@@ -598,6 +577,37 @@ def metrics_dashboard(request):
 
     # 6. Highest Bill Today (Replaces Occupancy Rate)
     highest_bill = today_sessions.aggregate(Max('total_amount'))['total_amount__max'] or Decimal('0.00')
+
+    # Top selling items
+    top_selling_items = Order.objects.filter(is_paid=True, item__isnull=False).values('item__name').annotate(
+        total_quantity=Count('item__name'),
+        total_revenue=Sum('transaction_price')
+    ).order_by('-total_quantity', '-total_revenue')[:5]
+
+    top_selling_items = [
+        {
+            'name': item['item__name'],
+            'quantity': _loc(item['total_quantity']),
+            'revenue': _loc(f"{item['total_revenue']:.2f}")
+        }
+        for item in top_selling_items
+    ]
+
+    # Category data
+    category_data_raw = Order.objects.filter(is_paid=True, item__isnull=False).values('item__category').annotate(
+        total_revenue=Sum('transaction_price')
+    ).order_by('-total_revenue')
+
+    category_labels = []
+    category_revenues = []
+    for category in category_data_raw:
+        category_labels.append(category['item__category'] or _("Uncategorized"))
+        category_revenues.append(float(category['total_revenue'] or 0))
+
+    category_data = {
+        'labels': json.dumps(category_labels),
+        'data': json.dumps(category_revenues)
+    }
 
     import re
     regex_bw = re.compile(r'B/W.*?\((\d+)\s*pages\)', re.IGNORECASE)
@@ -630,8 +640,9 @@ def metrics_dashboard(request):
     else:
         busiest_hour = "--"
         busiest_rev = 0
-
-
+    
+    is_ar = get_language() == 'ar' # Define is_ar here
+    
     return render(request, 'manager/metrics.html', {
         'month_revenue': _loc(f"{month_revenue:.2f}"),
         'month_name': now.strftime('%B'),
@@ -1289,6 +1300,12 @@ def add_custom_item(request, table_id):
     cat = request.POST.get('custom_category', 'other')
     if cat == 'food':
         item_name = "Food"
+    elif cat == 'fax':
+        item_name = "Fax"
+    elif cat == 'computer':
+        item_name = "Computer"
+    elif cat == 'internet_card':
+        item_name = "Internet Card"
     else:
         item_name = request.POST.get('item_name', '').strip() or _("Custom Service")
         
@@ -1348,10 +1365,10 @@ def checkout_preview(request, table_id):
     # Pass all context variables needed for the modal
     context = {
         'table': table,
-        'actual_orders_list': ctx.orders,  # attribute is .orders
-        'total_orders_price': ctx.actual_orders, # attribute is .actual_orders
-        'shortfall': ctx.shortfall,
-        'final_total': ctx.final_total,
+        'actual_orders_list': getattr(ctx, 'orders', []),
+        'total_orders_price': getattr(ctx, 'actual_orders', 0),
+        'shortfall': getattr(ctx, 'shortfall', 0),
+        'final_total': getattr(ctx, 'final_total', 0),
     }
     return render(request, 'manager/partials/checkout_modal_content.html', context)
 
@@ -1590,9 +1607,8 @@ def daily_receipt(request, year, month, day):
         if t_num not in table_aggregation:
             table_aggregation[t_num] = {
                 'table': t_num,
-                'drink': 0, 'food': 0, 'print_bw': 0, 'print_color': 0,
+                'drink': 0, 'food': 0, 'fax': 0, 'print_bw': 0, 'print_color': 0,
                 'copy_bw': 0, 'min_charge': 0, 'other': 0,
-
                 'total': 0,
                 'items_total_price': 0
             }
@@ -1612,6 +1628,8 @@ def daily_receipt(request, year, month, day):
         if o.item is None:
             if o.description == "Food":
                 row['food'] += price
+            elif o.description == "Fax":
+                row['fax'] += price
             else:
                 row['other'] += price
         elif is_drink:
@@ -1622,7 +1640,7 @@ def daily_receipt(request, year, month, day):
             else:
                 row['print_bw'] += price
         elif item_name == "Fax Service" or item_name == "Fax":
-            row['other'] += price
+            row['fax'] += price
         elif item_name == "Copy Service":
             row['copy_bw'] += price
         else:
@@ -1642,8 +1660,8 @@ def daily_receipt(request, year, month, day):
 
     categorized_sessions = []
     totals = {
-        'drink': Decimal('0.00'), 'food': Decimal('0.00'), 'print_bw': Decimal('0.00'), 
-        'print_color': Decimal('0.00'), 'copy_bw': Decimal('0.00'), 
+        'drink': Decimal('0.00'), 'food': Decimal('0.00'), 'fax': Decimal('0.00'),
+        'print_bw': Decimal('0.00'), 'print_color': Decimal('0.00'), 'copy_bw': Decimal('0.00'), 
         'min_charge': Decimal('0.00'), 'other': Decimal('0.00'), 
         'final': Decimal('0.00')
     }
@@ -1664,8 +1682,22 @@ def daily_receipt(request, year, month, day):
         for key in totals:
             if key == 'final':
                 totals['final'] += row['total']
-            else:
-                totals[key] += row[key]
+            elif key == 'drink':
+                totals['drink'] += row['drink']
+            elif key == 'food':
+                totals['food'] += row['food']
+            elif key == 'fax':
+                totals['fax'] += row['fax']
+            elif key == 'print_bw':
+                totals['print_bw'] += row['print_bw']
+            elif key == 'print_color':
+                totals['print_color'] += row['print_color']
+            elif key == 'copy_bw':
+                totals['copy_bw'] += row['copy_bw']
+            elif key == 'min_charge':
+                totals['min_charge'] += row['min_charge']
+            elif key == 'other':
+                totals['other'] += row['other']
 
     return render(request, 'manager/receipt.html', {
         'categorization_date': target_date,
