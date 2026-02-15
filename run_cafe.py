@@ -18,8 +18,13 @@ def open_browser():
 
 if __name__ == '__main__':
     # DATABASE INITIALIZATION (Must happen BEFORE importing application to avoid SQLite creating empty file)
-    # Safe handling for updates: db_initial.sqlite3 is shipped, db.sqlite3 is user data
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    if getattr(sys, 'frozen', False):
+        # When running as EXE, base_dir is the folder containing the EXE
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        # When running as script, base_dir is the script's folder
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        
     db_path = os.path.join(base_dir, 'db.sqlite3')
     db_initial = os.path.join(base_dir, 'db_initial.sqlite3')
     

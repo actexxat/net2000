@@ -170,23 +170,31 @@ class UpdateChecker:
             
             if is_frozen:
                 app_dir = Path(sys.executable).parent
+                exe_name = os.path.basename(sys.executable)
             else:
                 app_dir = Path(__file__).parent
+                exe_name = "run_cafe.py"
             
-            # Create update script directory
-            update_dir = app_dir / '_update_temp'
-            update_dir.mkdir(exist_ok=True)
+            # Create a temp directory for the new files OUTSIDE of the app directory
+            # to avoid "Cyclic Copy" errors with xcopy.
+            system_temp = Path(tempfile.gettempdir())
+            update_source_dir = system_temp / 'internet2000_new_files'
+            
+            if update_source_dir.exists():
+                shutil.rmtree(update_source_dir)
+            update_source_dir.mkdir(exist_ok=True)
             
             # Extract zip to temp location
-            extract_dir = update_dir / 'new_version'
-            if extract_dir.exists():
-                shutil.rmtree(extract_dir)
-            
+            print(f"Extracting to {update_source_dir}...")
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_dir)
+                zip_ref.extractall(update_source_dir)
+            
+            # Create update script directory (inside app_dir is fine for the small script)
+            script_dir = app_dir / '_update_temp'
+            script_dir.mkdir(exist_ok=True)
             
             # Create update batch script
-            update_script = self._create_update_script(app_dir, extract_dir)
+            update_script = self._create_update_script(app_dir, update_source_dir, exe_name)
             
             return update_script
             
@@ -194,16 +202,15 @@ class UpdateChecker:
             print(f"Error preparing update: {e}")
             return None
     
-    def _create_update_script(self, app_dir, extract_dir):
+    def _create_update_script(self, app_dir, source_dir, exe_name):
         """Create a batch script that will replace files after the app closes."""
         script_path = app_dir / '_update_temp' / 'apply_update.bat'
         
         # Find the actual content directory (might be nested in zip)
-        content_dir = extract_dir
-        for item in extract_dir.iterdir():
-            if item.is_dir():
-                content_dir = item
-                break
+        content_dir = source_dir
+        items = list(source_dir.iterdir())
+        if len(items) == 1 and items[0].is_dir():
+            content_dir = items[0]
         
         script_content = f'''@echo off
 echo ========================================
@@ -218,13 +225,20 @@ if exist "{app_dir}\\_backup" rmdir /s /q "{app_dir}\\_backup"
 mkdir "{app_dir}\\_backup"
 
 echo Copying files to backup...
+rem Use simple copy for backup to avoid complexity
 xcopy "{app_dir}\\*.*" "{app_dir}\\_backup\\" /E /I /Y /EXCLUDE:{app_dir}\\_update_temp\\exclude.txt >nul
+
+echo Preparing directory for new version...
+rem Delete the existing executable and _internal folder to prevent "two server files"
+if exist "{app_dir}\\{exe_name}" del /f /q "{app_dir}\\{exe_name}"
+if exist "{app_dir}\\_internal" rmdir /s /q "{app_dir}\\_internal"
 
 echo Installing new version...
 xcopy "{content_dir}\\*.*" "{app_dir}\\" /E /I /Y >nul
 
 echo Cleaning up...
 rmdir /s /q "{app_dir}\\_update_temp"
+rmdir /s /q "{source_dir}"
 
 echo.
 echo ========================================
@@ -235,10 +249,23 @@ echo Starting application...
 timeout /t 2 /nobreak >nul
 
 cd /d "{app_dir}"
-start "" "Internet2000_Server.exe"
+rem Start the new version. If the exe name changed in the zip, we should start that one.
+rem We look for any .exe in the root if the original isn't there.
+if exist "{exe_name}" (
+    start "" "{exe_name}"
+) else (
+    for %%f in (*.exe) do (
+        if not "%%f"=="python.exe" if not "%%f"=="pythonw.exe" (
+            start "" "%%f"
+            goto end
+        )
+    )
+)
 
+:end
 exit
 '''
+        
         
         # Create exclusion list (don't backup temp files)
         exclude_path = app_dir / '_update_temp' / 'exclude.txt'
@@ -264,8 +291,9 @@ exit
             subprocess.Popen(['cmd', '/c', update_script], 
                            creationflags=subprocess.CREATE_NEW_CONSOLE)
             
-            # Exit the current application
-            sys.exit(0)
+            # Exit the current application immediately and silently
+            import os
+            os._exit(0)
             
         except Exception as e:
             print(f"Error applying update: {e}")
