@@ -1,6 +1,6 @@
 @echo off
 TITLE Cafe Management System Server
-cd /d %~dp0
+cd /d "%~dp0"
 
 :: Check if server is already running
 wmic process where "commandline like '%%run_cafe.py%%'" get processid /format:list | find "ProcessId" > nul
