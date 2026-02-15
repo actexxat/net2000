@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('templates', 'templates'), ('static', 'static'), ('locale', 'locale'), ('manager/templates', 'manager/templates')]
+datas = [('templates', 'templates'), ('staticfiles', 'staticfiles'), ('locale', 'locale'), ('manager/templates', 'manager/templates'), ('version.py', '.'), ('updater.py', '.')]
 binaries = []
 hiddenimports = ['waitress', 'whitenoise', 'whitenoise.middleware', 'django.core.management', 'django.db.backends.sqlite3']
 tmp_ret = collect_all('manager')
