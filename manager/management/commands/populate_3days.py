@@ -57,10 +57,10 @@ class Command(BaseCommand):
                     table_number=table.number,
                     people_count=random.randint(1, 4),
                     total_amount=Decimal('0.00'),
-                    check_in_time=check_in
+                    session_start_time=check_in
                 )
                 # Force update timestamps
-                TableSession.objects.filter(pk=session.pk).update(check_out_time=check_out)
+                TableSession.objects.filter(pk=session.pk).update(checkout_time=check_out)
                 
                 session.refresh_from_db()
 

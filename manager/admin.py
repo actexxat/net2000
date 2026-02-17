@@ -26,10 +26,10 @@ class OrderAdmin(ModelAdmin):
 
 @admin.register(TableSession)
 class TableSessionAdmin(ModelAdmin):
-    list_display = ('id', 'table_number', 'check_out_time', 'total_amount', 'user', 'people_count')
-    list_filter = ('check_out_time', 'user', 'table_number')
+    list_display = ('id', 'table_number', 'checkout_time', 'total_amount', 'user', 'people_count')
+    list_filter = ('checkout_time', 'user', 'table_number')
     search_fields = ('items_summary', 'table_number')
-    date_hierarchy = 'check_out_time'
+    date_hierarchy = 'checkout_time'
     
 @admin.register(GlobalSettings)
 class GlobalSettingsAdmin(ModelAdmin):

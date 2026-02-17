@@ -62,12 +62,14 @@ urlpatterns = [
     path('log-modal/', manager_views.log_modal, name='log_modal'),
     path('clear-log/', manager_views.clear_log, name='clear_log'),
 
-    # Auto-Update System (these were in the original, but seem to be intentionally removed now)
-    # path('system-update/', manager_views.system_update_view, name='system_update'),
-    # path('update/check/', manager_views.update_check_view, name='update_check'),
-    # path('update/download/', manager_views.update_download_view, name='update_download'),
-    # path('update/progress/', manager_views.update_progress_view, name='update_progress'),
-    # path('update/apply/', manager_views.update_apply_view, name='update_apply'),
+    path('clear-log/', manager_views.clear_log, name='clear_log'),
+
+    # Auto-Update System
+    path('system-update/', manager_views.system_update_view, name='system_update'),
+    path('update/check/', manager_views.update_check_view, name='update_check'),
+    path('update/download/', manager_views.update_download_view, name='update_download'),
+    path('update/progress/', manager_views.update_progress_view, name='update_progress'),
+    path('update/apply/', manager_views.update_apply_view, name='update_apply'),
 
     # Menu
     path('menu/', include('manager.urls_menu')),

@@ -38,7 +38,7 @@
                     <i class="bi bi-currency-exchange stat-icon-bg"></i>
                     <h6 class="text-uppercase small fw-bold opacity-75">{% trans "Revenue Today" %}</h6>
                     <div class="d-flex align-items-baseline">
-                        <h2 class="display-6 fw-bold mb-0">{{ today_rev }}</h2>
+                        <h2 class="display-6 fw-bold mb-0">{{ today_rev|default:"0"|floatformat:0|translate_numbers }}</h2>
                         <span class="ms-2 opacity-75">{% trans "EGP" %}</span>
                     </div>
                     <div class="mt-2">

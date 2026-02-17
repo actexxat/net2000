@@ -151,19 +151,19 @@ class TableSession(models.Model):
     people_count = models.IntegerField()
     items_summary = models.TextField(default="")
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    check_in_time = models.DateTimeField(auto_now_add=True)
-    check_out_time = models.DateTimeField(auto_now=True)
+    session_start_time = models.DateTimeField(auto_now_add=True)
+    checkout_time = models.DateTimeField(null=True, blank=True)
     shift = models.CharField(max_length=10, choices=SHIFT_CHOICES, default='MORNING')
     user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         indexes = [
-            models.Index(fields=['check_out_time']),
+            models.Index(fields=['checkout_time']),
         ]
 
     def __str__(self):
         # ADD 'self.' before table_number
-        return f"Table {self.table_number} - {self.check_out_time.strftime('%d/%m/%Y')}"
+        return f"Table {self.table_number} - {self.checkout_time.strftime('%d/%m/%Y')}" if self.checkout_time else f"Table {self.table_number} - Open"
 
     
 

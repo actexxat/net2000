@@ -272,8 +272,9 @@ def _get_dashboard_grid_state_string(request):
     
     # Create a unique state string
     # v17-layout: Force refresh after layout changes (hero height)
+    # v18-cache: Invalidate ETag cache to apply new styling for closed tables.
     lang = user_language
-    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{notes_agg['cnt']}-{n_upd}-{lang}-v17-layout"
+    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{notes_agg['cnt']}-{n_upd}-{lang}-v18-cache"
     return state_str
 
 @login_required
@@ -282,6 +283,8 @@ def dashboard_grid(request):
     import hashlib
     from django.http import HttpResponse, HttpResponseNotModified
     from django.template.loader import render_to_string
+    
+    _activate_language(request)
     
     state_str = _get_dashboard_grid_state_string(request)
     et = hashlib.md5(state_str.encode('utf-8')).hexdigest()
@@ -462,7 +465,8 @@ def _create_table_session(table, summary, user):
         people_count=table.current_people,
         items_summary=items_summary,
         total_amount=final_bill,
-        check_in_time=table.opened_at or timezone.now(),
+        session_start_time=table.opened_at or timezone.now(),
+        checkout_time=timezone.now(),
         shift=settings.active_shift,
         user=user
     )
@@ -512,17 +516,10 @@ def _get_growth_metrics(today):
     """Helper to calculate growth metrics."""
     import datetime
     
-    # Define start and end of today in local timezone
-    start_of_today = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min))
-    end_of_today = timezone.make_aware(datetime.datetime.combine(today, datetime.time.max))
-
-    # Define start and end of last week day in local timezone
     last_week_day = today - datetime.timedelta(days=7)
-    start_of_last_week_day = timezone.make_aware(datetime.datetime.combine(last_week_day, datetime.time.min))
-    end_of_last_week_day = timezone.make_aware(datetime.datetime.combine(last_week_day, datetime.time.max))
 
-    today_sessions = TableSession.objects.filter(check_out_time__range=(start_of_today, end_of_today))
-    last_week_sessions = TableSession.objects.filter(check_out_time__range=(start_of_last_week_day, end_of_last_week_day))
+    today_sessions = TableSession.objects.filter(checkout_time__date=today)
+    last_week_sessions = TableSession.objects.filter(checkout_time__date=last_week_day)
     
     today_rev = today_sessions.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
     last_week_rev = last_week_sessions.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
@@ -549,7 +546,7 @@ def metrics_dashboard(request):
     # 3. Efficiency Metrics
     all_sessions = TableSession.objects.all()
     avg_duration = all_sessions.annotate(
-        duration=ExpressionWrapper(F('check_out_time') - F('check_in_time'), output_field=fields.DurationField())
+        duration=ExpressionWrapper(F('checkout_time') - F('session_start_time'), output_field=fields.DurationField())
     ).aggregate(Avg('duration'))['duration__avg']
     
     if avg_duration:
@@ -566,9 +563,9 @@ def metrics_dashboard(request):
     avg_per_person = total_rev_all / total_people_all
 
     table_count = Table.objects.count() or 1
-    recent_sessions = all_sessions.filter(check_out_time__date__gte=today - datetime.timedelta(days=6))
+    recent_sessions = all_sessions.filter(checkout_time__date__gte=today - datetime.timedelta(days=6))
     total_active_duration = recent_sessions.annotate(
-        duration=ExpressionWrapper(F('check_out_time') - F('check_in_time'), output_field=fields.DurationField())
+        duration=ExpressionWrapper(F('checkout_time') - F('session_start_time'), output_field=fields.DurationField())
     ).aggregate(s=Sum('duration'))['s']
     
     occupancy_rate = 0
@@ -577,13 +574,13 @@ def metrics_dashboard(request):
         occupancy_rate = (total_active_duration.total_seconds() / total_possible_secs) * 100
 
     # 4. Audit & Security
-    today_sessions = TableSession.objects.filter(check_out_time__date=today)
-    opening_time = today_sessions.aggregate(m=Min('check_in_time'))['m']
-    closing_time = today_sessions.aggregate(m=Max('check_out_time'))['m']
+    today_sessions = TableSession.objects.filter(checkout_time__date=today)
+    opening_time = today_sessions.aggregate(m=Min('session_start_time'))['m']
+    closing_time = today_sessions.aggregate(m=Max('checkout_time'))['m']
 
     # 5. Month-to-Date Revenue (Replaces Total Transactions)
     this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_revenue = TableSession.objects.filter(check_out_time__gte=this_month_start).aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
+    month_revenue = TableSession.objects.filter(checkout_time__gte=this_month_start).aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
 
     # 6. Highest Bill Today (Replaces Occupancy Rate)
     highest_bill = today_sessions.aggregate(Max('total_amount'))['total_amount__max'] or Decimal('0.00')
@@ -632,14 +629,14 @@ def metrics_dashboard(request):
     top_tables = [{'number': _loc(tr['table_number']), 'revenue': _loc(f"{tr['revenue']:.2f}"), 'count': _loc(tr['count'])} for tr in table_rev_agg]
 
     # Hourly Heatmap
-    hourly_traffic = all_sessions.annotate(h=ExtractHour('check_out_time')).values('h').annotate(c=Count('id'), r=Sum('total_amount')).order_by('h')
+    hourly_traffic = all_sessions.exclude(checkout_time__isnull=True).annotate(h=ExtractHour('checkout_time')).values('h').annotate(c=Count('id'), r=Sum('total_amount')).order_by('h')
     hours_labels = [f"{h:02d}:00" for h in range(24)]
     hours_data_rev = [0.0] * 24
     for h in hourly_traffic:
         hours_data_rev[h['h']] = float(h['r'] or 0)
 
     # 7. Busiest Hour Today (Replaces Traffic Prediction)
-    peak_hour_data = today_sessions.annotate(h=ExtractHour('check_out_time')).values('h').annotate(r=Sum('total_amount')).order_by('-r').first()
+    peak_hour_data = today_sessions.annotate(h=ExtractHour('checkout_time')).values('h').annotate(r=Sum('total_amount')).order_by('-r').first()
     
     if peak_hour_data:
         ph = peak_hour_data['h']
@@ -654,6 +651,7 @@ def metrics_dashboard(request):
     is_ar = get_language() == 'ar' # Define is_ar here
     
     return render(request, 'manager/metrics.html', {
+        'today_rev': today_rev,
         'month_revenue': _loc(f"{month_revenue:.2f}"),
         'month_name': now.strftime('%B'),
         'growth': round(growth, 1),
@@ -672,6 +670,7 @@ def metrics_dashboard(request):
         'busiest_rev': _loc(f"{busiest_rev:.0f}"),
         'hours_labels': json.dumps(hours_labels),
         'hours_data_rev': json.dumps(hours_data_rev),
+        'occupancy': round(occupancy_rate, 1),
         'is_ar': is_ar,
     })
 
@@ -703,9 +702,9 @@ def session_history(request):
     end_aware = timezone.make_aware(end_local, current_tz)
 
     sessions = TableSession.objects.filter(
-        check_out_time__range=(start_aware, end_aware),
+        checkout_time__range=(start_aware, end_aware),
         shift=shift_filter
-    ).order_by('-check_out_time')
+    ).order_by('-checkout_time')
     
     is_ar = get_language() == 'ar'
     def _loc(val):
@@ -721,7 +720,7 @@ def session_history(request):
             'table_number_loc': _loc(s.table_number),
             'p_count_loc': _loc(s.people_count),
             'total_loc': _loc(f"{s.total_amount:.2f}"),
-            'time_loc': _loc(timezone.localtime(s.check_out_time).strftime('%H:%M'))
+            'time_loc': _loc(timezone.localtime(s.checkout_time).strftime('%H:%M'))
         })
         
     return render(request, 'manager/history.html', {
@@ -823,7 +822,7 @@ def revenue_30(request):
 
     for i in range(29, -1, -1):
         day = today - datetime.timedelta(days=i)
-        day_total = TableSession.objects.filter(check_out_time__date=day).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        day_total = TableSession.objects.filter(checkout_time__date=day).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
         dates.append(day.strftime('%Y-%m-%d'))
         totals.append(float(day_total))
 
@@ -843,14 +842,14 @@ def busy_times(request):
     sessions = TableSession.objects.all()
 
     # 1. Hourly Traffic (0-23)
-    hourly = sessions.annotate(h=ExtractHour('check_out_time')).values('h').annotate(c=Count('id')).order_by('h')
+    hourly = sessions.annotate(h=ExtractHour('checkout_time')).values('h').annotate(c=Count('id')).order_by('h')
     h_map = {x['h']: x['c'] for x in hourly}
     
     hours_labels = [f"{h:02d}:00" for h in range(24)]
     hours_data = [h_map.get(h, 0) for h in range(24)]
 
     # 2. Daily Traffic (1=Sunday ... 7=Saturday)
-    daily = sessions.annotate(d=ExtractWeekDay('check_out_time')).values('d').annotate(c=Count('id')).order_by('d')
+    daily = sessions.annotate(d=ExtractWeekDay('checkout_time')).values('d').annotate(c=Count('id')).order_by('d')
     d_map = {x['d']: x['c'] for x in daily}
 
     # Sort Mon(2) -> Sun(1)
@@ -1491,7 +1490,7 @@ def daily_receipt(request, year, month, day):
     # Get all paid orders for this date
     # Use paid_at if available (correct for crossovers), fallback to timestamp for old data
     order_filter = Q(is_paid=True) & (Q(paid_at__date=target_date) | Q(paid_at__isnull=True, timestamp__date=target_date))
-    session_filter = Q(check_out_time__date=target_date)
+    session_filter = Q(checkout_time__date=target_date)
     
     # User asked for "reports separately for each shift".
     # Only show itemized orders if NO shift filter is applied, 
@@ -1649,7 +1648,7 @@ def clear_data(request):
                 orders_count, deleted_info = Order.objects.filter(is_paid=True, timestamp__lte=until_dt).delete()
             
             # 3. Delete TableSessions (History records)
-            sessions_count, deleted_info = TableSession.objects.filter(check_out_time__lte=until_dt).delete()
+            sessions_count, deleted_info = TableSession.objects.filter(checkout_time__lte=until_dt).delete()
             
             # 4. Optional: Full Reset
             if clear_all and until_date >= datetime.date.today():

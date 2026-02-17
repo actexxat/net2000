@@ -75,8 +75,8 @@ class Command(BaseCommand):
                 
                 # Force update timestamps to historical values
                 TableSession.objects.filter(pk=session.pk).update(
-                    check_in_time=check_in,
-                    check_out_time=check_out
+                    session_start_time=check_in,
+                    checkout_time=check_out
                 )
                 
                 # Re-fetch to have correct data if needed (though we use session.pk mostly)
