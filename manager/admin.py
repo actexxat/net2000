@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.urls import path
 from django.shortcuts import redirect
-from .models import Table, Item, Order, GlobalSettings, TableSession, QuickFireItem
+from .models import Table, Item, Order, TableSession, QuickFireItem
+from infrastructure.models import GlobalSettings
 from unfold.admin import ModelAdmin
 
 @admin.register(Table)

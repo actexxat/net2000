@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'manager',
+    'infrastructure',
 ]
 
 MIDDLEWARE = [
@@ -271,7 +272,7 @@ UNFOLD = {
                     {
                         "title": _("System Settings"),
                         "icon": "settings",
-                        "link": reverse_lazy("admin:manager_globalsettings_changelist"),
+                        "link": reverse_lazy("admin:infrastructure_globalsettings_changelist"),
                     },
                 ],
             },

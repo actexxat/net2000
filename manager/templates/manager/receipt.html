@@ -110,6 +110,8 @@
                         <th class="text-end">{% trans "Print B/W" %}</th>
                         <th class="text-end">{% trans "Print Color" %}</th>
                         <th class="text-end">{% trans "Copy B/W" %}</th>
+                        <th class="text-end">{% trans "Fax" %}</th>
+                        <th class="text-end">{% trans "Internet" %}</th>
                         <th class="text-end">{% trans "Min chg" %}</th>
                         <th class="text-end">{% trans "Other" %}</th>
                         <th class="pe-4 text-end fw-bold">{% trans "Total" %}</th>
@@ -128,13 +130,15 @@
                         <td class="text-end">{% if row.print_bw > 0 %}{{ row.print_bw|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
                         <td class="text-end">{% if row.print_color > 0 %}{{ row.print_color|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
                         <td class="text-end">{% if row.copy_bw > 0 %}{{ row.copy_bw|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.fax > 0 %}{{ row.fax|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
+                        <td class="text-end">{% if row.internet > 0 %}{{ row.internet|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
                         <td class="text-end">{% if row.min_charge > 0 %}{{ row.min_charge|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
                         <td class="text-end">{% if row.other > 0 %}{{ row.other|floatformat:0|translate_numbers }}{% else %}-{% endif %}</td>
                         <td class="pe-4 text-end fw-bolder text-dark" style="font-size: 1.25rem;">{{ row.total|floatformat:2|translate_numbers }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center py-5 text-muted">{% trans "No paid orders recorded for this date." %}</td>
+                        <td colspan="11" class="text-center py-5 text-muted">{% trans "No paid orders recorded for this date." %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -147,6 +151,8 @@
                         <td class="text-end fw-bold">{{ category_totals.print_bw|floatformat:1|translate_numbers }}</td>
                         <td class="text-end fw-bold">{{ category_totals.print_color|floatformat:1|translate_numbers }}</td>
                         <td class="text-end fw-bold">{{ category_totals.copy_bw|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.fax|floatformat:1|translate_numbers }}</td>
+                        <td class="text-end fw-bold">{{ category_totals.internet|floatformat:1|translate_numbers }}</td>
                         <td class="text-end fw-bold">{{ category_totals.min_charge|floatformat:1|translate_numbers }}</td>
                         <td class="text-end fw-bold">{{ category_totals.other|floatformat:1|translate_numbers }}</td>
                         <td class="pe-4 text-end fw-bolder text-primary" style="font-size: 1.35rem;">{{ category_totals.final|floatformat:2|translate_numbers }}</td>

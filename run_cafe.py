@@ -26,17 +26,11 @@ if __name__ == '__main__':
         base_dir = os.path.dirname(os.path.abspath(__file__))
         
     db_path = os.path.join(base_dir, 'db.sqlite3')
-    db_initial = os.path.join(base_dir, 'db_initial.sqlite3')
-    
-    # Initialize if db doesn't exist OR is 0 bytes
-    if (not os.path.exists(db_path) or os.path.getsize(db_path) == 0) and os.path.exists(db_initial):
-        print(f"[INIT] Initializing database from {db_initial}...")
-        import shutil
-        try:
-            shutil.copy2(db_initial, db_path)
-            print("[INIT] Database initialized successfully.")
-        except Exception as e:
-            print(f"[ERROR] Failed to initialize database: {e}")
+    # If db.sqlite3 does not exist, it means either the build process failed to include it,
+    # or this is a fresh run where a database needs to be initialized.
+    # In a typical PyInstaller build scenario, db.sqlite3 should already be present and migrated.
+    # No explicit initialization from db_initial.sqlite3 is needed as the build script now
+    # copies db.sqlite3 directly.
 
     print("--------------------------------------------------")
     print("Cafe App is starting...")

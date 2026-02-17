@@ -11,24 +11,11 @@ if %ERRORLEVEL% EQU 1 (
     pause
 )
 
-pyinstaller --noconfirm --onedir --console --name "Internet2000_Server" ^
-    --add-data "templates;templates" ^
-    --add-data "static;static" ^
-    --add-data "locale;locale" ^
-    --add-data "manager/templates;manager/templates" ^
-    --hidden-import "waitress" ^
-    --hidden-import "whitenoise" ^
-    --hidden-import "whitenoise.middleware" ^
-    --hidden-import "django.core.management" ^
-    --hidden-import "django.db.backends.sqlite3" ^
-    --collect-all "manager" ^
-    --collect-all "core" ^
-    --collect-all "whitenoise" ^
-    run_cafe.py
+pyinstaller --noconfirm --clean "Internet2000_win10.spec"
 
 if %ERRORLEVEL% EQU 0 (
     echo Build successful!
-    echo Executable is in dist\Internet2000_Server\Internet2000_Server.exe
+    echo Executable is in dist\Internet2000_win10\Internet2000_win10.exe
     echo.
     echo REMINDER: If you built this with Python 3.10+, it will only run on Windows 8.1/10/11.
 ) else (

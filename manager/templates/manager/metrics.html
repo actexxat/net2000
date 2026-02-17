@@ -144,10 +144,10 @@
                     <div class="top-item-row">
                         <div class="d-flex align-items-center">
                             <span class="badge rounded-circle bg-light text-dark me-2" style="width: 24px; height: 24px;">{{ forloop.counter }}</span>
-                            <span class="text-dark fw-medium">{{ item.item__name|translate_text }}</span>
+                            <span class="text-dark fw-medium">{{ item.name|translate_text }}</span>
                         </div>
                         <div class="text-end">
-                            <span class="badge bg-soft-blue border border-primary border-opacity-10">{{ item.count }} {% trans "sold" %}</span>
+                            <span class="badge bg-soft-blue border border-primary border-opacity-10">{{ item.quantity }} {% trans "sold" %}</span>
                         </div>
                     </div>
                     {% empty %}
@@ -164,19 +164,21 @@
                     <h6 class="fw-bold mb-0"><i class="bi bi-pie-chart me-2 text-success"></i>{% trans "Revenue by Category" %}</h6>
                 </div>
                 <div class="card-body pt-0">
+                    {% with overall_total_revenue=category_data|sum_values:"total_revenue" %}
                     {% for cat in category_data %}
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted small fw-bold text-uppercase">{{ cat.item__category|translate_text|default:_("Other") }}</span>
-                            <span class="fw-bold">{{ cat.revenue|floatformat:0 }} <small>{% trans "EGP" %}</small></span>
+                            <span class="text-muted small fw-bold text-uppercase">{{ cat.item__category|translate_text|default:_("Uncategorized") }}</span>
+                            <span class="fw-bold">{{ cat.total_revenue|floatformat:0 }} <small>{% trans "EGP" %}</small></span>
                         </div>
                         <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-primary" style="width: 70%"></div> <!-- Simplified width logic -->
+                            <div class="progress-bar bg-primary" style="width: {% widthratio cat.total_revenue overall_total_revenue 100 %}%;"></div>
                         </div>
                     </div>
                     {% empty %}
                     <div class="p-4 text-center text-muted">{% trans "No category data yet" %}</div>
                     {% endfor %}
+                    {% endwith %}
                 </div>
             </div>
         </div>

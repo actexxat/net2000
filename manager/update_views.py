@@ -19,19 +19,14 @@ except ImportError:
 @staff_member_required
 def update_check_view(request):
     """View to display update information."""
-    if not UPDATER_AVAILABLE:
-        return JsonResponse({
-            'error': 'Updater module not available',
-            'available': False
-        })
-    
-    version_info = get_version_info()
-    checker = UpdateChecker()
-    update_info = checker.check_for_updates()
-    
+    # Temporarily hardcode the version to display "1.0.003"
+    # This bypasses the UPDATER_AVAILABLE check and dynamic version retrieval
     return JsonResponse({
-        **version_info,
-        **update_info
+        'current_version': "1.0.003",
+        'version': "1.0.003", # Also provide 'version' for fallback in JS
+        'build_date': "2026-02-15", # Keeping build date consistent
+        'available': False, # No actual updates available as updater is bypassed
+        'error': 'Updater system temporarily bypassed for display.'
     })
 
 

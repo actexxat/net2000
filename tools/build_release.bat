@@ -10,6 +10,9 @@ echo Internet 2000 Build and Release
 echo ========================================
 echo.
 
+REM Set working directory to project root
+cd /d "%~dp0\.."
+
 REM Get version from user
 set /p VERSION="Enter version number (e.g., 1.0.1): "
 if "%VERSION%"=="" (
@@ -20,7 +23,7 @@ if "%VERSION%"=="" (
 
 REM Safe Version Update
 echo Updating version.py...
-python scripts\update_version.py "%VERSION%"
+python scripts/update_version.py "%VERSION%"
 if %ERRORLEVEL% NEQ 0 (
     echo Error updating version file!
     pause
@@ -36,17 +39,10 @@ echo Building executable with PyInstaller...
 echo.
 
 REM Clean previous build
-echo Clearing previous build directories...
-if exist "dist\Internet2000_Server" rmdir /s /q "dist\Internet2000_Server"
-if exist "dist\Internet2000_win10" rmdir /s /q "dist\Internet2000_win10"
 if exist "dist" rmdir /s /q "dist"
 if exist "build" rmdir /s /q "build"
-timeout /t 2 /nobreak >nul
-echo.
-echo IMPORTANT: If the build fails with 'PermissionError', please ensure no programs (like Explorer or a previous instance of the app) are accessing the 'dist' folder.
-pause
 
-pyinstaller --noconfirm "Internet2000_win10.spec"
+pyinstaller --noconfirm Internet2000.spec
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -61,12 +57,12 @@ echo.
 
 REM Post-Build Setup
 echo Setting up production environment...
-set TARGET_DIR=dist\Internet2000_win10
+set TARGET_DIR=dist\Internet2000_Server
 
 REM 1. Copy Database (Safe Update Strategy)
 if exist "db.sqlite3" (
     echo Copying database safely...
-    copy "db.sqlite3" "%TARGET_DIR%\db.sqlite3" >nul
+    copy "db.sqlite3" "%TARGET_DIR%\db_initial.sqlite3" >nul
 ) else (
     echo WARNING: db.sqlite3 not found! No initial database will be included.
 )
@@ -100,7 +96,7 @@ echo =====================================
 echo.
 echo Installation:
 echo 1. Extract this ZIP file to a folder
-echo 2. Run Internet2000_win10.exe
+echo 2. Run Internet2000_Server.exe
 echo 3. The application will open in your default browser
 echo.
 echo System Requirements:

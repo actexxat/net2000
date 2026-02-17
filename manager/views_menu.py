@@ -4,7 +4,8 @@ from django.views.decorators.http import require_POST
 from django.utils.translation import gettext as _
 import socket
 from django.contrib.auth.decorators import login_required
-from .models import Table, Item, Order, GlobalSettings
+from .models import Table, Item, Order
+from infrastructure.models import GlobalSettings
 
 def get_local_ip():
     """Get the local network IP address of the server."""

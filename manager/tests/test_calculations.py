@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.test import TestCase
-from manager.models import Table, Item, Order, GlobalSettings
+from manager.models import Table, Item, Order
+from infrastructure.models import GlobalSettings
 from manager.views import _get_table_context
 
 class CalculationTests(TestCase):

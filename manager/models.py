@@ -17,7 +17,7 @@ class Table(models.Model):
         Non-drink items (food, services, etc.) are added on top of the minimum charge/drink total.
         """
         from decimal import Decimal
-        from .models import GlobalSettings
+        from infrastructure.models import GlobalSettings
         
         if not settings:
             settings, _ = GlobalSettings.objects.get_or_create(id=1)
@@ -28,51 +28,46 @@ class Table(models.Model):
         else:
             unpaid_orders = list(self.order_set.filter(is_paid=False).select_related('item').order_by('timestamp'))
         
-        order_total = Decimal('0.00')
-        eligible_total = Decimal('0.00')
         
+        order_total = Decimal('0.00')
+
         for order in unpaid_orders:
             # Calculate effective price
             price = order.transaction_price if order.transaction_price is not None else (order.item.price if order.item else Decimal('0.00'))
             price = price or Decimal('0.00')
             order_total += price
             
-            # Check eligibility (Only drinks count towards min charge)
-            if order.item and order.item.is_drink:
-                eligible_total += price
-            
         # Calculate totals and shortfall per person
-        min_charge = settings.min_charge_per_person
+        min_charge = Decimal(str(settings.min_charge_per_person))
         
         shortfall = Decimal('0.00')
         progress = 100  # Default
 
-        if self.number != 0 and min_charge > 0:
+        if self.number != 0 and min_charge > Decimal('0.00'):
             total_target = Decimal(self.current_people) * min_charge
             
-            # New Logic: No-Pooling / Individual Allocation Approximation
-            # Each drink item covers at most 'min_charge' worth of liability.
-            # This prevents one expensive drink from covering multiple people.
-            # e.g. If Min=25, Drink=100. It covers 25. The remaining 75 is excess/ignored for min-charge purposes.
+            # New Logic: No-Pooling - Each drink contributes at most min_charge to total coverage.
+            # However, the total covered amount should NOT be capped at total_target,
+            # as excess from one person's drinks can't cover another's shortfall (as per user clarification).
             
             covered_amount = Decimal('0.00')
             for order in unpaid_orders:
                 if order.item and order.item.is_drink:
                     price = order.transaction_price if order.transaction_price is not None else order.item.price
-                    # Each drink contributes at most min_charge to total coverage
+                    price = Decimal(str(price or '0.00'))
+                    # Each drink contributes at most min_charge towards meeting the overall minimum
                     contribution = min(price, min_charge)
                     covered_amount += contribution
             
-            # Cap the total covered amount at the total target (cannot exceed 100% coverage overall)
-            covered_amount = min(covered_amount, total_target)
-            
-            shortfall = total_target - covered_amount
+            # Shortfall is the difference between the total target and the covered amount, cannot be negative.
+            shortfall = max(Decimal('0.00'), total_target - covered_amount)
             
             if total_target > 0:
-                progress = int((covered_amount / total_target) * 100)
+                # Progress is based on how much is covered vs. the target, capped at 100%.
+                # Use covered_amount as is, it's already summed up contributions (capped per drink).
+                progress = int((min(covered_amount, total_target) / total_target) * 100)
             else:
-                progress = 100
-        
+                progress = 100        
         
         return {
             'orders': unpaid_orders,
@@ -172,16 +167,6 @@ class TableSession(models.Model):
 
     
 
-class GlobalSettings(models.Model):
-    SHIFT_CHOICES = [('MORNING', 'Morning'), ('NIGHT', 'Night')]
-    min_charge_per_person = models.DecimalField(max_digits=10, decimal_places=2, default=25.00)
-    active_shift = models.CharField(max_length=10, choices=SHIFT_CHOICES, default='MORNING')
-
-    def __str__(self):
-        return "Global Space Settings"
-
-    class Meta:
-        verbose_name_plural = "Global Settings"
 
 class StickyNote(models.Model):
     author = models.ForeignKey('auth.User', on_delete=models.CASCADE)
@@ -192,19 +177,6 @@ class StickyNote(models.Model):
 
     def __str__(self):
         return f"Note by {self.author.username}"
-
-class PongLobby(models.Model):
-    session_key = models.CharField(max_length=40, unique=True)
-    is_ready = models.BooleanField(default=False)
-    y_pos = models.IntegerField(default=250)
-    bx = models.IntegerField(default=375)
-    by = models.IntegerField(default=292)
-    bdx = models.IntegerField(default=5)
-    bdy = models.IntegerField(default=-5)
-    last_seen = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Pong Player {self.session_key[:8]}"
 
 class QuickFireItem(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='quickfire_items')

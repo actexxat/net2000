@@ -146,47 +146,19 @@
                         <span class="fw-600">{% trans "Dashboard" %}</span>
                     </a>
                     
-                    <a href="{% url 'qr_dashboard' %}" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red {% if request.resolver_match.url_name == 'qr_dashboard' %}active-nav-item{% endif %}">
-                        <i class="bi bi-qr-code-scan fs-5"></i>
-                        <span class="fw-600">{% trans "QR Management" %}</span>
-                    </a>
-                    
-
                     {% if user.is_superuser %}
-                    <div class="mt-4 mb-2">
-                        <small class="text-white text-opacity-50 fw-bold text-uppercase small" style="letter-spacing: 2px;">{% trans "Administration" %}</small>
-                    </div>
-                    
                     <a href="{% url 'monitor' %}" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red {% if request.resolver_match.url_name == 'monitor' %}active-nav-item{% endif %}">
                         <i class="bi bi-display fs-5"></i>
                         <span class="fw-600">{% trans "Live Monitor" %}</span>
-                    </a>
-                    <a href="{% url 'metrics' %}" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red {% if request.resolver_match.url_name == 'metrics' %}active-nav-item{% endif %}">
-                        <i class="bi bi-bar-chart-line fs-5"></i>
-                        <span class="fw-600">{% trans "Business Metrics" %}</span>
                     </a>
                     <a href="{% url 'session_history' %}" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red {% if request.resolver_match.url_name == 'session_history' %}active-nav-item{% endif %}">
                         <i class="bi bi-journal-text fs-5"></i>
                         <span class="fw-600">{% trans "Financial History" %}</span>
                     </a>
-
-                    <div class="mt-4 mb-2">
-                        <small class="text-white text-opacity-50 fw-bold text-uppercase small" style="letter-spacing: 2px;">{% trans "Control Center" %}</small>
-                    </div>
-                    
-                    <a href="/admin/" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red">
-                        <i class="bi bi-gear fs-5"></i>
-                        <span class="fw-600">{% trans "Admin Panel" %}</span>
+                    <a href="{% url 'metrics' %}" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red {% if request.resolver_match.url_name == 'metrics' %}active-nav-item{% endif %}">
+                        <i class="bi bi-bar-chart-line fs-5"></i>
+                        <span class="fw-600">{% trans "Business Metrics" %}</span>
                     </a>
-                    
-                    <button type="button" 
-                            class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red text-start w-100"
-                            data-bs-toggle="modal" 
-                            data-bs-target="#updateModal">
-                        <i class="bi bi-cloud-download fs-5"></i>
-                        <span class="fw-600">{% trans "System Updates" %}</span>
-                    </button>
-                    
                     <form action="{% url 'switch_shift' %}" method="post" 
                           data-confirm-msg="{% trans "Start new shift? Open tables will be handed over to the new shift." %}"
                           onsubmit="return confirm(this.dataset.confirmMsg)">
@@ -202,6 +174,26 @@
                             {% endif %}
                         </button>
                     </form>
+                    <a href="{% url 'qr_dashboard' %}" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red {% if request.resolver_match.url_name == 'qr_dashboard' %}active-nav-item{% endif %}">
+                        <i class="bi bi-qr-code-scan fs-5"></i>
+                        <span class="fw-600">{% trans "QR Management" %}</span>
+                    </a>
+                    <a href="/admin/" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red">
+                        <i class="bi bi-gear fs-5"></i>
+                        <span class="fw-600">{% trans "Admin Panel" %}</span>
+                    </a>
+                    <button type="button" 
+                            class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red text-start w-100"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#updateModal">
+                        <i class="bi bi-cloud-download fs-5"></i>
+                        <span class="fw-600">{% trans "System Updates" %}</span>
+                    </button>
+                    {% else %}
+                    <a href="{% url 'qr_dashboard' %}" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red {% if request.resolver_match.url_name == 'qr_dashboard' %}active-nav-item{% endif %}">
+                        <i class="bi bi-qr-code-scan fs-5"></i>
+                        <span class="fw-600">{% trans "QR Management" %}</span>
+                    </a>
                     {% endif %}
                 </div>
             </div>

@@ -7,7 +7,7 @@ from django.views.decorators.http import require_POST
 from django.db import models
 from django.db.models import Sum, Q, Prefetch, Avg, Count, Max, Min, F, ExpressionWrapper, fields
 from django.db.models.functions import Coalesce, ExtractHour, ExtractWeekDay
-from .models import Table, Item, Order, TableSession, StickyNote, PongLobby, QuickFireItem
+from .models import Table, Item, Order, TableSession, StickyNote, QuickFireItem
 from infrastructure.models import GlobalSettings
 from decimal import Decimal, InvalidOperation
 
@@ -22,7 +22,7 @@ def _loc(val):
     from django.utils.translation import get_language
     is_ar = get_language() == 'ar'
     if not is_ar: return str(val)
-    return str(val).translate(str.maketrans("0123456789", "٠١٣٤٥٦٧٨٩"))
+    return str(val).translate(str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩"))
 
 def superuser_required(view_func):
     """Decorator for views that checks that the user is a superuser, redirecting to unauthorized if not."""
@@ -510,9 +510,19 @@ def check_out(request, table_id):
 
 def _get_growth_metrics(today):
     """Helper to calculate growth metrics."""
+    import datetime
+    
+    # Define start and end of today in local timezone
+    start_of_today = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min))
+    end_of_today = timezone.make_aware(datetime.datetime.combine(today, datetime.time.max))
+
+    # Define start and end of last week day in local timezone
     last_week_day = today - datetime.timedelta(days=7)
-    today_sessions = TableSession.objects.filter(check_out_time__date=today)
-    last_week_sessions = TableSession.objects.filter(check_out_time__date=last_week_day)
+    start_of_last_week_day = timezone.make_aware(datetime.datetime.combine(last_week_day, datetime.time.min))
+    end_of_last_week_day = timezone.make_aware(datetime.datetime.combine(last_week_day, datetime.time.max))
+
+    today_sessions = TableSession.objects.filter(check_out_time__range=(start_of_today, end_of_today))
+    last_week_sessions = TableSession.objects.filter(check_out_time__range=(start_of_last_week_day, end_of_last_week_day))
     
     today_rev = today_sessions.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
     last_week_rev = last_week_sessions.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
@@ -648,7 +658,7 @@ def metrics_dashboard(request):
         'month_name': now.strftime('%B'),
         'growth': round(growth, 1),
         'top_items': top_selling_items,
-        'category_data': category_data,
+        'category_data': category_data_raw,
         'avg_duration': avg_dur_str,
         'avg_bill': _loc(f"{avg_bill:.2f}"),
         'avg_per_person': _loc(f"{avg_per_person:.2f}"),
@@ -928,110 +938,6 @@ def clear_log(request):
         ActionLog.objects.all().delete()
     return log_modal(request)
 
-def pong_game(request):
-    """View to render the Pong game page."""
-    if not request.session.session_key:
-        request.session.save()
-    
-    # Initial cleanup of very old entries
-    PongLobby.objects.filter(last_seen__lt=timezone.now() - datetime.timedelta(seconds=30)).delete()
-    
-    return render(request, 'manager/pong.html')
-
-def pong_status(request):
-    """API endpoint to get lobby status with high-performance optimizations."""
-    if not request.session.session_key:
-        return HttpResponse(json.dumps({'error': 'No session'}), content_type="application/json")
-    
-    session_key = request.session.session_key
-    now = timezone.now()
-    
-    # Update current player with minimal writes
-    player, _ = PongLobby.objects.get_or_create(session_key=session_key)
-    update_fields = ['last_seen']
-    player.last_seen = now
-    
-    # Only update position if it moved significantly to reduce DB pressure
-    y = request.GET.get('y')
-    bx = request.GET.get('bx')
-    by = request.GET.get('by')
-    bdx = request.GET.get('bdx')
-    bdy = request.GET.get('bdy')
-
-    if y is not None:
-        try:
-            ny = int(float(y))
-            if abs(player.y_pos - ny) > 1:
-                player.y_pos = ny
-                update_fields.append('y_pos')
-            
-            if bx: # Master updates ball state
-                player.bx = int(float(bx))
-                player.by = int(float(by))
-                player.bdx = int(float(bdx))
-                player.bdy = int(float(bdy))
-                update_fields.extend(['bx', 'by', 'bdx', 'bdy'])
-        except (ValueError, TypeError):
-            pass
-            
-    player.save(update_fields=update_fields)
-    
-    # Periodic cleanup (every 5 seconds) instead of every request
-    # Use a simple random trigger to amortize cost
-    import random
-    if random.random() < 0.05:
-        PongLobby.objects.filter(last_seen__lt=now - datetime.timedelta(seconds=10)).delete()
-    
-    all_players = PongLobby.objects.all().order_by('id')
-    ready_players = all_players.filter(is_ready=True)
-    
-    side = "spectator"
-    opponent_y = 250
-    ball_sync = None
-    
-    player_ids = list(all_players.values_list('session_key', flat=True))
-    
-    if session_key in player_ids[:2]:
-        is_p1 = player_ids[0] == session_key
-        side = "left" if is_p1 else "right"
-        
-        # Find opponent efficiently
-        opponent = all_players.exclude(session_key=session_key).first()
-        if opponent:
-            opponent_y = opponent.y_pos
-            if not is_p1: # P2 (Client) syncs from P1 (Master)
-                ball_sync = {
-                    'x': opponent.bx,
-                    'y': opponent.by,
-                    'dx': opponent.bdx,
-                    'dy': opponent.bdy,
-                    'ts': opponent.last_seen.timestamp() # Include timestamp for latency compensation
-                }
-
-    data = {
-        'connected_count': all_players.count(),
-        'ready_count': ready_players.count(),
-        'is_ready': player.is_ready,
-        'start_game': ready_players.count() >= 2,
-        'side': side,
-        'opponent_y': opponent_y,
-        'ball': ball_sync,
-        'server_time': now.timestamp()
-    }
-    return HttpResponse(json.dumps(data), content_type="application/json")
-
-@require_POST
-def pong_toggle_ready(request):
-    """Endpoint to toggle ready status."""
-    if not request.session.session_key:
-        return HttpResponse("Unauthorized", status=401)
-    
-    session_key = request.session.session_key
-    player, created = PongLobby.objects.get_or_create(session_key=session_key)
-    player.is_ready = not player.is_ready
-    player.save()
-    return HttpResponse("OK")
-
 @require_POST
 @login_required
 def add_order_direct(request, table_id):
@@ -1304,8 +1210,8 @@ def add_custom_item(request, table_id):
         item_name = "Fax"
     elif cat == 'computer':
         item_name = "Computer"
-    elif cat == 'internet_card':
-        item_name = "Internet Card"
+    elif cat == 'internet':
+        item_name = "Internet Service"
     else:
         item_name = request.POST.get('item_name', '').strip() or _("Custom Service")
         
@@ -1608,7 +1514,7 @@ def daily_receipt(request, year, month, day):
             table_aggregation[t_num] = {
                 'table': t_num,
                 'drink': 0, 'food': 0, 'fax': 0, 'print_bw': 0, 'print_color': 0,
-                'copy_bw': 0, 'min_charge': 0, 'other': 0,
+                'copy_bw': 0, 'min_charge': 0, 'other': 0, 'internet': 0,
                 'total': 0,
                 'items_total_price': 0
             }
@@ -1630,6 +1536,8 @@ def daily_receipt(request, year, month, day):
                 row['food'] += price
             elif o.description == "Fax":
                 row['fax'] += price
+            elif o.description == "Internet Service":
+                row['internet'] += price
             else:
                 row['other'] += price
         elif is_drink:
@@ -1662,7 +1570,7 @@ def daily_receipt(request, year, month, day):
     totals = {
         'drink': Decimal('0.00'), 'food': Decimal('0.00'), 'fax': Decimal('0.00'),
         'print_bw': Decimal('0.00'), 'print_color': Decimal('0.00'), 'copy_bw': Decimal('0.00'), 
-        'min_charge': Decimal('0.00'), 'other': Decimal('0.00'), 
+        'min_charge': Decimal('0.00'), 'other': Decimal('0.00'), 'internet': Decimal('0.00'), 
         'final': Decimal('0.00')
     }
 
@@ -1698,6 +1606,8 @@ def daily_receipt(request, year, month, day):
                 totals['min_charge'] += row['min_charge']
             elif key == 'other':
                 totals['other'] += row['other']
+            elif key == 'internet':
+                totals['internet'] += row['internet']
 
     return render(request, 'manager/receipt.html', {
         'categorization_date': target_date,

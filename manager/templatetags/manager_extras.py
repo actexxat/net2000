@@ -1,5 +1,6 @@
 from django import template
 from django.utils.translation import get_language, gettext as _
+from decimal import Decimal
 
 register = template.Library()
 
@@ -52,6 +53,22 @@ def translate_text(value):
     
 @register.simple_tag
 def get_shift_status():
-    from manager.models import GlobalSettings
+    from infrastructure.models import GlobalSettings
     settings, _ = GlobalSettings.objects.get_or_create(id=1)
     return settings.active_shift
+
+@register.filter
+def sum_values(queryset, field_name):
+    """
+    Sums the values of a given field from a queryset (list of dictionaries).
+    Usage: {{ some_list|sum_values:"some_field" }}
+    """
+    total = Decimal('0.00')
+    for item in queryset:
+        value = item.get(field_name, 0)
+        try:
+            total += Decimal(value)
+        except (TypeError, ValueError, AttributeError):
+            # Handle cases where value might not be directly convertible to Decimal
+            pass
+    return total

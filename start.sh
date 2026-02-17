@@ -21,10 +21,10 @@ else
 fi
 
 # Check for virtual environment
-if [ -f ".venv/Scripts/python.exe" ]; then
-    PYTHON=".venv/Scripts/python.exe"
-elif [ -f ".venv/bin/python" ]; then
+if [ -f ".venv/bin/python" ]; then
     PYTHON=".venv/bin/python"
+elif [ -f ".venv/Scripts/python.exe" ]; then
+    PYTHON=".venv/Scripts/python.exe"
 else
     echo "[WARNING] Virtual environment not found. Using system python."
     PYTHON="python"

@@ -24,6 +24,18 @@
                                     {% trans "Food" %}
                                 </label>
                             </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="custom_category" id="catFax" value="fax">
+                                <label class="form-check-label" for="catFax">
+                                    {% trans "Fax" %}
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="custom_category" id="catInternet" value="internet">
+                                <label class="form-check-label" for="catInternet">
+                                    {% trans "Internet" %}
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -72,6 +84,8 @@
         // Toggle description based on category
         var otherRadio = document.getElementById('catOther');
         var foodRadio = document.getElementById('catFood');
+        var faxRadio = document.getElementById('catFax');
+        var internetRadio = document.getElementById('catInternet');
         var nameInput = document.getElementById('customItemName');
         var nameGroup = document.getElementById('itemNameGroup');
 
@@ -81,15 +95,34 @@
                 nameInput.disabled = true;
                 nameInput.required = false;
                 nameGroup.style.opacity = '0.5';
-            } else {
+            } else if (faxRadio.checked) {
+                if(nameInput.value === "" || nameInput.value === "Food" || nameInput.value === "Internet Service") {
+                    nameInput.value = "Fax Service";
+                }
                 nameInput.disabled = false;
                 nameInput.required = true;
-                if(nameInput.value === "Food") nameInput.value = "";
+                nameGroup.style.opacity = '1';
+            } else if (internetRadio.checked) {
+                if(nameInput.value === "" || nameInput.value === "Food" || nameInput.value === "Fax Service") {
+                    nameInput.value = "Internet Service";
+                }
+                nameInput.disabled = false;
+                nameInput.required = true;
+                nameGroup.style.opacity = '1';
+            }
+            else {
+                nameInput.disabled = false;
+                nameInput.required = true;
+                if(nameInput.value === "Food" || nameInput.value === "Fax Service" || nameInput.value === "Internet Service") {
+                    nameInput.value = "";
+                }
                 nameGroup.style.opacity = '1';
             }
         }
 
         otherRadio.addEventListener('change', toggleInputs);
         foodRadio.addEventListener('change', toggleInputs);
+        faxRadio.addEventListener('change', toggleInputs);
+        internetRadio.addEventListener('change', toggleInputs);
     })();
 </script>
