@@ -46,7 +46,7 @@
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             margin-bottom: 0;
-            transition: transform 0.2s;
+            transition: transform 0.1s;
             overflow: hidden;
             position: relative;
             background-color: #fff;
@@ -101,7 +101,7 @@
             line-height: 1.2;
             text-align: center;
             white-space: normal;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: all 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
         .add-btn:hover {
             transform: translateY(-2px);
@@ -186,7 +186,7 @@
             display: none; /* Shown when cart has items */
             border-top-left-radius: 20px;
             border-top-right-radius: 20px;
-            animation: slideUp 0.3s ease-out;
+            animation: slideUp 0.15s ease-out;
         }
         @keyframes slideUp {
             from { transform: translateY(100%); }
@@ -228,7 +228,7 @@
             overflow-y: auto;
             display: none;
             padding: 25px;
-            animation: slideUp 0.3s ease-out;
+            animation: slideUp 0.15s ease-out;
         }
         .cart-item {
             display: flex;
@@ -273,7 +273,7 @@
             border-radius: 12px;
             padding: 6px;
             margin-top: 8px;
-            animation: slideDownFade 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: slideDownFade 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         @keyframes slideDownFade {
             from { opacity: 0; transform: translateY(-10px); }
@@ -294,7 +294,7 @@
             font-size: 0.8rem;
             font-family: 'Tajawal', sans-serif;
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color 0.1s;
         }
         .notes-input:focus {
             border-color: #dc3545;
@@ -313,7 +313,7 @@
             margin-top: 8px;
             font-weight: 700;
             flex-shrink: 0;
-            transition: transform 0.2s, background 0.2s;
+            transition: transform 0.1s, background 0.1s;
             box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
         .btn-confirm-add:active {
@@ -347,9 +347,11 @@
     <div class="category-header px-3 mb-3">
         <ul class="nav nav-pills" id="pills-tab" role="tablist">
             {% for cat, items in grouped_items.items %}
+            {% if cat != "Services" %}
             <li class="nav-item" role="presentation">
                 <button class="nav-link {% if forloop.first %}active{% endif %}" id="pills-{{ forloop.counter }}-tab" data-bs-toggle="pill" data-bs-target="#pills-{{ forloop.counter }}" type="button" role="tab">{{ cat|translate_text }}</button>
             </li>
+            {% endif %}
             {% endfor %}
         </ul>
     </div>
@@ -358,6 +360,7 @@
     <div class="container-fluid">
         <div class="tab-content" id="pills-tabContent">
             {% for cat, items in grouped_items.items %}
+            {% if cat != "Services" %}
             <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" id="pills-{{ forloop.counter }}" role="tabpanel">
                 <h6 class="text-muted fw-bold mb-3 ms-2">{{ cat|translate_text }}</h6>
                 
@@ -429,6 +432,7 @@
                 </div>
                 
             </div>
+            {% endif %}
             {% endfor %}
         </div>
     </div>

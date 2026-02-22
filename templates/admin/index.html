@@ -1,27 +1,45 @@
-{% extends "admin/index.html" %}
+{% extends 'admin/base.html' %}
 
-{% block content_title %}
-<h1>Admin Dashboard</h1>
-{% endblock %}
+{% load i18n unfold %}
 
 {% block content %}
-<div id="content-main">
-    {{ block.super }}
-</div>
+    <div class="flex flex-col lg:flex-row lg:gap-8">
+        <!-- Main Admin Index Content (Left/Center) -->
+        <div class="grow space-y-8">
+            {% block content_main %}
+                <!-- Include native Unfold app list -->
+                {% include "unfold/helpers/app_list_default.html" %}
+            {% endblock %}
+        </div>
 
-<div id="content-related" style="margin-top: 20px;">
-    <div class="module" id="system-maintenance">
-        <h2 style="background: #dc3545;">System Maintenance</h2>
-        <ul style="padding: 10px;">
-            <li style="list-style: none; margin-bottom: 10px;">
-                <a href="{% url 'session_history' %}" class="button" style="background: #dc3545; color: white; padding: 10px; text-decoration: none; border-radius: 4px; display: block; text-align: center;">
-                    🗑️ Clear Old Data (Orders/Sessions)
-                </a>
-            </li>
-            <li style="list-style: none;">
-                <p style="font-size: 0.8em; color: #666;">Delete past transaction records to keep the database light and fast.</p>
-            </li>
-        </ul>
+        <!-- Sidebar Actions (Right) -->
+        <div class="lg:w-96 space-y-8">
+            <!-- System Maintenance Card -->
+            <div class="bg-base-50 dark:bg-base-800 rounded-default p-4 border border-base-200 dark:border-base-700 shadow-sm">
+                <h2 class="text-sm font-bold text-red-600 dark:text-red-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">settings</span>
+                    {% trans "Maintenance" %}
+                </h2>
+                <div class="space-y-4">
+                    <p class="text-xs text-base-500 dark:text-base-400 leading-relaxed italic">
+                        {% trans "Manage database size by removing old records." %}
+                    </p>
+                    <a href="{% url 'session_history' %}" class="flex items-center justify-center gap-2 w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 px-4 rounded-lg shadow-lg transition-all text-[0.65rem] uppercase tracking-widest">
+                        <span class="material-symbols-outlined text-lg">delete_sweep</span>
+                        {% trans "Clear Old Data" %}
+                    </a>
+                </div>
+                <div class="mt-4 pt-4 border-t border-base-200 dark:border-base-700">
+                    <p class="text-[10px] text-base-400 dark:text-base-500 leading-relaxed">
+                        {% trans "Warning: This action is irreversible. Ensure you have backups." %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Recent Actions History -->
+            {% block content_related %}
+                {% include "unfold/helpers/history.html" %}
+            {% endblock %}
+        </div>
     </div>
-</div>
 {% endblock %}

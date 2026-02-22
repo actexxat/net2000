@@ -5,6 +5,7 @@ from manager import views as manager_views
 from django.contrib.auth import views as auth_views
 from django.conf import settings # Need to re-add settings import for media/static serving
 from django.conf.urls.static import static # Need to re-add static import for media/static serving
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns # Import this for serving static files in development
 
 
 urlpatterns = [
@@ -30,6 +31,8 @@ urlpatterns = [
     path('table/<int:table_id>/checkout/', manager_views.check_out, name='check_out'), # Original path
     path('checkout/<int:table_id>/', manager_views.check_out, name='checkout_simplified'), # Simplified path (used in templates)
     path('table/<int:table_id>/dismiss/', manager_views.dismiss_table, name='dismiss_table'),
+    path('table/<int:table_id>/approve-reset/', manager_views.approve_reset_table, name='approve_reset_table'),
+    path('table/<int:table_id>/deny-reset/', manager_views.deny_reset_table, name='deny_reset_table'),
     path('update-people/<int:table_id>/', manager_views.update_people, name='update_people'),
     path('refresh-table/<int:table_id>/', manager_views.refresh_table, name='refresh_table'),
     path('create-table/', manager_views.create_table, name='create_table'),
@@ -75,6 +78,7 @@ urlpatterns = [
     path('menu/', include('manager.urls_menu')),
 ]
 
+# Serving static and media files during development and in frozen mode (Waitress)
 if settings.DEBUG or getattr(settings, 'IS_FROZEN', False):
     urlpatterns += [
         re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),

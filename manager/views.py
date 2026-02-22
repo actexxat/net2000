@@ -30,7 +30,6 @@ def superuser_required(view_func):
         if not request.user.is_authenticated:
             return redirect('login')
         if not request.user.is_superuser:
-            # print(f"ACCESS DENIED: User {request.user.username} is not a superuser.")
             return redirect('unauthorized')
         return view_func(request, *args, **kwargs)
     return _wrapped_view
@@ -231,6 +230,8 @@ def dashboard(request):
 
     # Sticky Notes
     notes = StickyNote.objects.all().select_related('author').order_by('-created_at')
+    
+    stats = _get_dashboard_stats()
 
     return render(request, 'manager/dashboard.html', {
         'tables': tables,
@@ -238,8 +239,23 @@ def dashboard(request):
         'quick_items': quick_items,
         'notes': notes,
         'global_min_charge': settings.min_charge_per_person,
-        'server_now': timezone.now().isoformat()
+        'server_now': timezone.now().isoformat(),
+        **stats
     })
+
+def _get_dashboard_stats():
+    """Helper to calculate live metrics for the dashboard cards."""
+    from django.db.models import Sum, Count, Q
+    orders_count = Order.objects.filter(is_paid=False).count()
+    tables_stats = Table.objects.exclude(number=0).aggregate(
+        occupied_cnt=Count('id', filter=Q(is_occupied=True)),
+        people_sum=Sum('current_people', filter=Q(is_occupied=True))
+    )
+    return {
+        'open_tables_count': tables_stats['occupied_cnt'] or 0,
+        'total_guests_count': tables_stats['people_sum'] or 0,
+        'total_orders_count': orders_count,
+    }
 
 def _get_dashboard_grid_state_string(request):
     """Helper to generate a state string for the dashboard grid."""
@@ -254,18 +270,19 @@ def _get_dashboard_grid_state_string(request):
         served_cnt=Sum('is_served')
     )
     
-    tables_agg = Table.objects.aggregate(
+    tables_agg = Table.objects.exclude(number=0).aggregate(
         occupied_cnt=Count('id', filter=models.Q(is_occupied=True)),
-        people_sum=Sum('current_people')
+        people_sum=Sum('current_people', filter=models.Q(is_occupied=True))
     )
     
     # Handle None values from Sum on empty sets
     s_cnt = orders_agg['served_cnt'] or 0
     p_sum = tables_agg['people_sum'] or 0
+
+    pending_cnt = Table.objects.filter(pending_reset=True).count()
     
     # v16-localization: Force activate language using centralized helper
     user_language = _activate_language(request)
-    # print(f"DEBUG: polling grid. Lang detected: {user_language}")
 
     notes_agg = StickyNote.objects.aggregate(cnt=Count('id'), last_upd=Max('updated_at'))
     n_upd = notes_agg['last_upd'].isoformat() if notes_agg['last_upd'] else 'none'
@@ -273,8 +290,14 @@ def _get_dashboard_grid_state_string(request):
     # Create a unique state string
     # v17-layout: Force refresh after layout changes (hero height)
     # v18-cache: Invalidate ETag cache to apply new styling for closed tables.
+    # v20-stat-cards: Add live stat cards to dashboard.
+    # v22-revert-t0: Revert Table 0 and fix refresh issues.
+    # v23-stats-fix: Fix people sum and table count to exclude Table 0 and inactive tables.
+    # v24-alignment-fix: Align metric cards with the table grid.
+    # v25-layout-reorg: Relocate Table 0 to the main grid and center metric cards.
+    # v26-translations: Added missing translations for metric cards.
     lang = user_language
-    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{notes_agg['cnt']}-{n_upd}-{lang}-v18-cache"
+    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{pending_cnt}-{notes_agg['cnt']}-{n_upd}-{lang}-v27-pending-reset"
     return state_str
 
 @login_required
@@ -301,10 +324,12 @@ def dashboard_grid(request):
     # 2. Fetch Data & Render (Only if changed)
     tables = _get_sorted_tables(sort_by_status=True)
     notes = StickyNote.objects.all().select_related('author').order_by('-created_at')
+    stats = _get_dashboard_stats()
     
     content = render_to_string('manager/partials/table_grid_premium.html', {
         'tables': tables,
-        'notes': notes
+        'notes': notes,
+        **stats
     }, request=request)
     
     response = HttpResponse(content)
@@ -1668,41 +1693,100 @@ def clear_data(request):
 
 @login_required
 def dismiss_table(request, table_id):
-    """Resets the table and deletes all its unpaid orders without saving to history."""
+    """Resets the table and deletes all its unpaid orders without saving to history. Non-admins request approval."""
     _activate_language(request)
     
     if request.method == "POST":
         table = get_object_or_404(Table, id=table_id)
         
-        # 1. Delete all unpaid orders for this table
-        table.order_set.filter(is_paid=False).delete()
+        if not request.user.is_superuser:
+            table.pending_reset = True
+            table.save()
+            log_action(request.user, 'RESET', f"Table {table.number} reset requested", table)
+            messages.success(request, _("Table %(number)s reset requested. Waiting for admin approval.") % {'number': table.number})
+            
+            if request.headers.get('HX-Request'):
+                from django.template.loader import render_to_string
+                from django.http import HttpResponse
+                tables = _get_sorted_tables()
+                grid_html = render_to_string('manager/partials/table_grid_premium.html', {'tables': tables}, request=request)
+                messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+                return HttpResponse(grid_html + messages_html)
+            return redirect('dashboard')
         
-        # 2. Reset the table
+        # Admin direct reset
+        table.pending_reset = False
+        table.order_set.filter(is_paid=False).delete()
         if int(table.number) != 0:
             table.is_occupied = False
             table.current_people = 0
         else:
-            # Table 0 is special, just reset metadata
             table.is_occupied = True
             table.current_people = 1
             table.opened_at = timezone.now()
             
         table.save()
+        log_action(request.user, 'RESET', f"Table {table.number} was forcefully reset by admin", table)
         messages.success(request, _("Table %(number)s dismissed") % {'number': table.number})
         
         if request.headers.get('HX-Request'):
             from django.template.loader import render_to_string
             from django.http import HttpResponse
-            
-            # Return full grid to re-sort if necessary
             tables = _get_sorted_tables()
             grid_html = render_to_string('manager/partials/table_grid_premium.html', {'tables': tables}, request=request)
-            
-            # Render messages popup for instant display
             messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
-            
             return HttpResponse(grid_html + messages_html)
             
+    return redirect('dashboard')
+
+@login_required
+@superuser_required
+def approve_reset_table(request, table_id):
+    """Admin endpoint to approve a requested table reset."""
+    _activate_language(request)
+    if request.method == "POST":
+        table = get_object_or_404(Table, id=table_id)
+        table.pending_reset = False
+        table.order_set.filter(is_paid=False).delete()
+        if int(table.number) != 0:
+            table.is_occupied = False
+            table.current_people = 0
+        else:
+            table.is_occupied = True
+            table.current_people = 1
+            table.opened_at = timezone.now()
+        table.save()
+        log_action(request.user, 'RESET', f"Table {table.number} reset request was approved by admin", table)
+        messages.success(request, _("Table %(number)s reset approved and dismissed.") % {'number': table.number})
+
+        if request.headers.get('HX-Request'):
+            from django.template.loader import render_to_string
+            from django.http import HttpResponse
+            tables = _get_sorted_tables()
+            grid_html = render_to_string('manager/partials/table_grid_premium.html', {'tables': tables}, request=request)
+            messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+            return HttpResponse(grid_html + messages_html)
+    return redirect('dashboard')
+
+@login_required
+@superuser_required
+def deny_reset_table(request, table_id):
+    """Admin endpoint to deny a requested table reset."""
+    _activate_language(request)
+    if request.method == "POST":
+        table = get_object_or_404(Table, id=table_id)
+        table.pending_reset = False
+        table.save()
+        log_action(request.user, 'RESET', f"Table {table.number} reset request was denied by admin", table)
+        messages.success(request, _("Table %(number)s reset denied.") % {'number': table.number})
+
+        if request.headers.get('HX-Request'):
+            from django.template.loader import render_to_string
+            from django.http import HttpResponse
+            tables = _get_sorted_tables()
+            grid_html = render_to_string('manager/partials/table_grid_premium.html', {'tables': tables}, request=request)
+            messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+            return HttpResponse(grid_html + messages_html)
     return redirect('dashboard')
 
 @login_required
@@ -1711,7 +1795,7 @@ def switch_shift(request):
     """Toggles the current active shift. Tables remain open for manual handover."""
     _activate_language(request)
     if request.method == "POST":
-        settings, created = GlobalSettings.objects.get_or_create(id=1)
+        settings, created = GlobalSettings.objects.get_or_create(id=1);
         old_shift = settings.active_shift
         new_shift = 'NIGHT' if old_shift == 'MORNING' else 'MORNING'
         

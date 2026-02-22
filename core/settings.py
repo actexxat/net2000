@@ -32,11 +32,6 @@ if IS_FROZEN:
     BASE_DIR = Path(sys.executable).resolve().parent
     
     pass
-    # print(f"[BOOT] Frozen Mode detected.")
-    # print(f"[BOOT] sys.executable: {sys.executable}")
-    # print(f"[BOOT] sys._MEIPASS: {meipass}")
-    # print(f"[BOOT] BUNDLE_DIR: {BUNDLE_DIR}")
-    # print(f"[BOOT] BASE_DIR: {BASE_DIR}")
 else:
     BUNDLE_DIR = Path(__file__).resolve().parent.parent
     BASE_DIR = BUNDLE_DIR
@@ -98,9 +93,14 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.static',
+                'django.template.context_processors.media',
+                'django.template.context_processors.i18n',
+                'manager.context_processors.version_info',
             ],
         },
     },
@@ -177,8 +177,6 @@ mimetypes.add_type("text/javascript", ".js", True)
 
 if IS_FROZEN:
     pass
-    # print(f"[DEBUG] Frozen Mode: BUNDLE_DIR={BUNDLE_DIR}")
-    # print(f"[DEBUG] Frozen Mode: BASE_DIR={BASE_DIR}")
 
 STATIC_URL = '/static/'
 _static_dir = BUNDLE_DIR / 'static'
@@ -187,7 +185,6 @@ STATIC_ROOT = str(BUNDLE_DIR / 'staticfiles')
 
 if IS_FROZEN:
     pass
-    # print(f"[BOOT] STATIC_ROOT: {STATIC_ROOT}")
 
 # Use WhiteNoise to serve static files
 STORAGES = {
@@ -198,6 +195,10 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.StaticFilesStorage",
     },
 }
+
+# WhiteNoise settings for correct behavior in both Dev and Prod
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = DEBUG
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -234,6 +235,17 @@ UNFOLD = {
         "show_search": True,
         "show_all_applications": False,
         "navigation": [
+            {
+                "title": _("App Control"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Live Dashboard"),
+                        "icon": "dashboard",
+                        "link": "/",
+                    },
+                ],
+            },
             {
                 "title": _("Operations"),
                 "separator": True,

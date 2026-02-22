@@ -9,25 +9,48 @@ from django.views.decorators.http import require_http_methods
 import threading
 
 try:
-    from updater import UpdateChecker
-    from version import get_version_info
+    from core.updater import UpdateChecker
+    from core.version import get_version_info
     UPDATER_AVAILABLE = True
 except ImportError:
-    UPDATER_AVAILABLE = False
+    try:
+        from updater import UpdateChecker
+        from version import get_version_info
+        UPDATER_AVAILABLE = True
+    except ImportError:
+        UPDATER_AVAILABLE = False
 
 
 @staff_member_required
 def update_check_view(request):
     """View to display update information."""
-    # Temporarily hardcode the version to display "1.0.003"
-    # This bypasses the UPDATER_AVAILABLE check and dynamic version retrieval
-    return JsonResponse({
-        'current_version': "1.0.003",
-        'version': "1.0.003", # Also provide 'version' for fallback in JS
-        'build_date': "2026-02-15", # Keeping build date consistent
-        'available': False, # No actual updates available as updater is bypassed
-        'error': 'Updater system temporarily bypassed for display.'
-    })
+    if not UPDATER_AVAILABLE:
+        return JsonResponse({'error': 'Updater or version information not available'}, status=400)
+    
+    try:
+        checker = UpdateChecker()
+        info = get_version_info()
+        
+        # Check for actual updates on GitHub
+        update_info = checker.check_for_updates()
+        
+        # Ensure all required keys exist in the response
+        return JsonResponse({
+            'current_version': info.get('version', 'Unknown'),
+            'version': info.get('version', 'Unknown'),
+            'build_date': info.get('build_date', ''),
+            'available': update_info.get('available', False),
+            'latest_version': update_info.get('latest_version', info.get('version')),
+            'download_url': update_info.get('download_url'),
+            'release_notes': update_info.get('release_notes', ''),
+            'is_critical': update_info.get('is_critical', False),
+            'error': update_info.get('error')
+        })
+    except Exception as e:
+        return JsonResponse({
+            'error': f'System error: {str(e)}',
+            'current_version': 'Unknown'
+        }, status=500)
 
 
 @staff_member_required

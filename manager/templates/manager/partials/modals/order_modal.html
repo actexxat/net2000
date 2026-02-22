@@ -49,14 +49,17 @@
                             <button class="btn btn-dark rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm transition-all" 
                                     onclick="filterCategoryDynamic('all', this)">{% trans "All" %}</button>
                             {% for category in grouped_items %}
+                            {% if category != "Services" %}
                             <button class="btn btn-white border text-dark bg-white rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm transition-all" 
                                     onclick="filterCategoryDynamic('{{ category|slugify }}', this)">{{ category|translate_text }}</button>
+                            {% endif %}
                             {% endfor %}
                         </div>
 
                         <!-- Grid -->
                         <div id="menu-container-dynamic" class="pb-5 select-none">
                             {% for category, cat_items in grouped_items.items %}
+                            {% if category != "Services" %}
                             <div class="mb-5 category-section" data-category="{{ category|slugify }}">
                                 <h5 class="fw-bold text-dark mb-3 border-start border-4 border-danger ps-2">{{ category|translate_text }}</h5>
                                 <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
@@ -162,6 +165,7 @@
                                     {% endfor %}
                                 </div>
                             </div>
+                            {% endif %}
                             {% endfor %}
                         </div>
                     </div>

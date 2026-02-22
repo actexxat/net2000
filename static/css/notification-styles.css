@@ -8,7 +8,7 @@
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
     opacity: 0;
     transform: translateY(-20px);
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: all 0.15s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     max-width: 500px;
     border: 2px solid rgba(255, 255, 255, 0.2);
 }
@@ -85,7 +85,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.1s ease;
     padding: 0;
 }
 

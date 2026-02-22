@@ -1,9 +1,14 @@
 from django.contrib import admin
 from django.urls import path
 from django.shortcuts import redirect
-from .models import Table, Item, Order, TableSession, QuickFireItem
+from .models import Table, Item, Order, TableSession, QuickFireItem, StickyNote
 from infrastructure.models import GlobalSettings
 from unfold.admin import ModelAdmin
+
+@admin.register(StickyNote)
+class StickyNoteAdmin(ModelAdmin):
+    list_display = ('author', 'created_at', 'color')
+    list_filter = ('author', 'color')
 
 @admin.register(Table)
 class TableAdmin(ModelAdmin):

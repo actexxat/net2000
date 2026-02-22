@@ -43,8 +43,9 @@
     --shadow-red: 0 4px 14px 0 rgba(220, 38, 38, 0.39);
 
     /* Transitions */
-    --transition-fast: 0.15s ease-out;
-    --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: 0.1s ease-out;
+    --transition-smooth: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Status Lines for Table Cards */
@@ -126,8 +127,16 @@ body {
     background-size: calc(20*var(--s)) calc(20*var(--s));
 }
 
+/* Arabic Font Refinement */
+[dir="rtl"], [dir="rtl"] body, [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6, [dir="rtl"] .btn, [dir="rtl"] .navbar {
+    font-family: 'Tajawal', var(--font-primary) !important;
+}
+[dir="rtl"] .fw-800 { font-weight: 900 !important; }
+[dir="rtl"] .fw-bold { font-weight: 800 !important; }
+[dir="rtl"] .fw-600 { font-weight: 700 !important; }
+
 .theme-transition {
-    transition: background-color 0.4s ease, color 0.4s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 #dashboard-root {
@@ -233,7 +242,7 @@ a { text-decoration: none; }
 
 /* Masonry Item Transition */
 .table-container {
-    transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1), opacity 0.4s ease;
+    transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease;
 }
 
 .grid-sizer {
@@ -245,13 +254,15 @@ a { text-decoration: none; }
 
 /* Card Available */
 .card-available {
-    background: linear-gradient(135deg, #4b5563 0%, #1f2937 100%) !important;
+    background: linear-gradient(135deg, rgba(75, 85, 99, 0.3) 0%, rgba(31, 41, 55, 0.3) 100%) !important;
     color: white !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 .card-available:hover {
-    border-color: #64748b !important;
-    background: linear-gradient(135deg, #64748b 0%, #334155 100%) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.4) 0%, rgba(51, 65, 85, 0.4) 100%) !important;
 }
 
 /* Card Occupied */
@@ -328,7 +339,7 @@ a { text-decoration: none; }
 
 .table-container {
     padding: 0.75rem !important;
-    transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1), opacity 0.4s ease;
+    transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease;
 }
 
 .grid-sizer {
@@ -395,7 +406,7 @@ a { text-decoration: none; }
     overflow-x: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(0,0,0,0.1) transparent;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy expand */
+    transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy expand */
     transform: scale(0.9); /* Smaller by default */
     transform-origin: bottom center;
 }
@@ -419,7 +430,7 @@ a { text-decoration: none; }
     background: rgba(255,255,255,0.4);
     color: var(--color-text-secondary);
     font-weight: 700;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -475,7 +486,7 @@ a { text-decoration: none; }
     box-shadow: var(--shadow-lg);
     pointer-events: auto;
     opacity: 0; transform: translateX(50px);
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: all 0.15s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     overflow: hidden;
 }
 .order-notification.show { opacity: 1; transform: translateX(0); }
@@ -582,13 +593,13 @@ a { text-decoration: none; }
     overflow: hidden;
 }
 .table-progress .progress-bar {
-    transition: width 0.5s var(--transition-smooth);
+    transition: width 0.15s var(--transition-smooth);
     border-radius: 10px;
 }
 
 .btn-checkout {
     font-size: 1rem !important;
-    transition: all 0.3s var(--transition-bounce) !important;
+    transition: all 0.15s var(--transition-bounce) !important;
 }
 .btn-checkout:hover {
     transform: scale(1.02);
@@ -659,32 +670,25 @@ a { text-decoration: none; }
 .sticky-note-box {
     width: 260px;
     min-height: 180px;
-    border-radius: 16px; /* Slightly larger radius */
+    border-radius: 12px;
     padding: 1rem;
     position: relative;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
-    
-    /* Dark Glass Effect */
-    background-color: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white; /* Default text color to white */
 }
 .sticky-note-box:hover {
-    transform: translateY(-5px) scale(1.03); /* Modern lift effect */
-    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
+    transform: rotate(-1deg) scale(1.02);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 .note-author {
     font-size: 0.65rem;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: rgba(255, 255, 255, 0.5); /* Lighter author text */
+    opacity: 0.5;
 }
 
 .note-content-area {
@@ -693,7 +697,6 @@ a { text-decoration: none; }
     font-size: 0.9rem;
     flex-grow: 1;
     overflow-y: auto;
-    color: rgba(255, 255, 255, 0.9); /* Main content text */
 }
 
 .note-footer {
@@ -702,35 +705,33 @@ a { text-decoration: none; }
     justify-content: flex-end;
 }
 
-/* Note Colors (Subtle border/glow effect on top of dark glass) */
-.bg-soft-yellow { border-top: 4px solid rgba(253, 224, 71, 0.5); }
-.bg-soft-green { border-top: 4px solid rgba(74, 222, 128, 0.5); }
-.bg-soft-blue { border-top: 4px solid rgba(96, 165, 250, 0.5); }
-.bg-soft-purple { border-top: 4px solid rgba(167, 139, 250, 0.5); }
-.bg-soft-orange { border-top: 4px solid rgba(251, 146, 60, 0.5); }
-.bg-soft-red { border-top: 4px solid rgba(248, 113, 113, 0.5); }
+/* Note Colors */
+.bg-soft-yellow { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.bg-soft-green { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.bg-soft-blue { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+.bg-soft-purple { background-color: #f3e8ff; color: #5b21b6; border: 1px solid #e9d5ff; }
+.bg-soft-orange { background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+.bg-soft-red { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
 .note-btn {
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.4); /* Lighter button color */
-    transition: all 0.2s;
+    opacity: 0.4;
+    transition: opacity 0.2s;
     font-size: 0.9rem;
 }
-.note-btn:hover { color: white; }
+.note-btn:hover { opacity: 1; }
 
 .sticky-note-input {
-    background: rgba(0,0,0,0.2);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: white;
+    background: transparent;
+    border: 1px dashed rgba(0,0,0,0.1);
     width: 100%;
     height: 100px;
     resize: none;
     font-size: 0.9rem;
-    padding: 0.5rem;
-    border-radius: 8px;
+    padding: 0.25rem;
 }
-.sticky-note-input:focus { outline: none; border-color: rgba(255,255,255,0.3); }
+.sticky-note-input:focus { outline: none; border-color: rgba(0,0,0,0.3); }
 
 /* --- Dashboard Control System --- */
 .action-grid {
@@ -785,6 +786,8 @@ a { text-decoration: none; }
     transform: translateY(0);
 }
 
+/* Reverted dashboard stat cards to use metrics page style */
+
 /* Specific Tile Variants */
 .tile-primary { background: rgba(37, 99, 235, 0.2) !important; border-color: rgba(37, 99, 235, 0.3) !important; }
 .tile-primary:hover { background: rgba(37, 99, 235, 0.4) !important; }
@@ -810,7 +813,7 @@ a { text-decoration: none; }
     text-transform: uppercase;
     letter-spacing: 1px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    transition: all 0.3s var(--transition-bounce);
+    transition: all 0.15s var(--transition-bounce);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -828,16 +831,18 @@ a { text-decoration: none; }
 }
 
 .card-available-modern {
-    background: linear-gradient(135deg, #4b5563 0%, #1f2937 100%) !important;
+    background: linear-gradient(135deg, rgba(75, 85, 99, 0.3) 0%, rgba(31, 41, 55, 0.3) 100%) !important;
     color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.15s cubic-bezier(.25,.8,.25,1);
 }
 
 .card-available-modern:hover {
-    box-shadow: 0 14px 28px rgba(0,0,0,0.2), 0 10px 10px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 14px 28px rgba(0,0,0,0.3), 0 10px 10px rgba(0,0,0,0.2) !important;
     transform: translateY(-5px);
-    border-color: #64748b !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
 }
 
 /* Updated Button Styles for Red Background */
@@ -948,7 +953,7 @@ a { text-decoration: none; }
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    transition: all 0.3s var(--transition-bounce);
+    transition: all 0.15s var(--transition-bounce);
     box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
 }
 
@@ -1039,7 +1044,7 @@ a { text-decoration: none; }
     max-width: 420px;
     border-radius: 50px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    animation: slide-down 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: slide-down 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex;
     align-items: center;
     padding: 0.6rem 1.2rem;
@@ -1267,4 +1272,15 @@ a { text-decoration: none; }
     from { opacity: 0; transform: translateX(-10px); }
     to { opacity: 1; transform: translateX(0); }
 }
-.animate-slide-in { animation: slideInLeft 0.3s ease-out; }
+.animate-slide-in { animation: slideInLeft 0.15s ease-out; }
+
+/* Admin Table Alignment Fix */
+.dlt, .changelist-form table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.dlt th, .dlt td, .changelist-form th, .changelist-form td {
+    word-wrap: break-word; /* Prevent long words from expanding columns */
+    overflow-wrap: break-word; /* Standard property */
+}

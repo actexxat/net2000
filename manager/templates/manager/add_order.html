@@ -21,7 +21,9 @@
                             <label class="form-label fw-bold text-muted small text-uppercase">{% trans "Select Item" %}</label>
                             <select name="item_id" class="form-select form-select-lg border-2" style="border-radius: var(--radius-md);">
                                 {% for item in items %}
+                                {% if item.category != "Services" %}
                                 <option value="{{ item.id }}">{{ item.name }} - EGP {{ item.price|floatformat:0 }}</option>
+                                {% endif %}
                                 {% endfor %}
                             </select>
                         </div>

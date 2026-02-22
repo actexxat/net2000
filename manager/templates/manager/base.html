@@ -10,7 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Internet 2000{% endblock %}</title>
     <link href="{% static 'vendor/bootstrap.min.css' %}" rel="stylesheet">
-    <link href="{% static 'css/theme.css' %}?v=2.15" rel="stylesheet">
+    <link href="{% static 'css/theme.css' %}?v={{ APP_VERSION }}" rel="stylesheet">
     <link href="{% static 'css/notification-styles.css' %}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="{% static 'vendor/htmx.min.js' %}"></script>
@@ -21,7 +21,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     
     <!-- Flatpickr for Modern Date Selection -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -50,6 +50,7 @@
                     <span class="fw-800 text-white tracking-tighter fs-4" style="letter-spacing: -0.5px;">INTERNET <span style="color: #ff4d4d !important;">2000</span></span>
                     <div class="d-flex align-items-center gap-1">
                         <span class="bg-primary rounded-pill px-2 text-white fw-bold" style="font-size: 0.55rem; letter-spacing: 1px; padding-top: 1px; padding-bottom: 1px;">HQ</span>
+                        <span class="text-white text-opacity-50 fw-bold" style="font-size: 0.65rem;">v{{ APP_VERSION }}</span>
                     </div>
 
                 </div>
@@ -58,14 +59,16 @@
             <!-- Right Actions -->
             <div class="d-flex align-items-center gap-2 gap-md-3">
                 
-                {% if user.is_superuser %}
-                <a href="#" class="text-white text-opacity-75 text-decoration-none small fw-bold me-2 hover-scale" 
-                   hx-get="{% url 'log_modal' %}" 
-                   hx-target="#log-modal-container" 
-                   hx-swap="innerHTML">
-                   {% trans "LOGS" %}
-                </a>
-                {% endif %}
+                <!-- Language -->
+                <form action="{% url 'set_language' %}" method="post" class="d-none d-sm-block">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                    <button type="submit" name="language" value="{% if LANGUAGE_CODE == 'en' %}ar{% else %}en{% endif %}" 
+                            class="btn btn-dark btn-sm rounded-pill border border-white border-opacity-10 px-3 fw-bold" 
+                            style="font-size: 0.75rem; background: rgba(255,255,255,0.05);">
+                        {{ LANGUAGE_CODE|upper }} <i class="bi bi-translate ms-1"></i>
+                    </button>
+                </form>
 
                 <!-- Shift Indicator -->
                 {% get_shift_status as current_shift %}
@@ -79,17 +82,14 @@
                     {% endif %}
                 </div>
 
-                <!-- Language -->
-                <form action="{% url 'set_language' %}" method="post" class="d-none d-sm-block">
-                    {% csrf_token %}
-                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
-                    <button type="submit" name="language" value="{% if LANGUAGE_CODE == 'en' %}ar{% else %}en{% endif %}" 
-                            class="btn btn-dark btn-sm rounded-pill border border-white border-opacity-10 px-3 fw-bold" 
-                            style="font-size: 0.75rem; background: rgba(255,255,255,0.05);">
-                        {{ LANGUAGE_CODE|upper }} <i class="bi bi-translate ms-1"></i>
-                    </button>
-                </form>
-
+                {% if user.is_superuser %}
+                <a href="#" class="text-white text-opacity-75 text-decoration-none small fw-bold mx-1 hover-scale" 
+                   hx-get="{% url 'log_modal' %}" 
+                   hx-target="#log-modal-container" 
+                   hx-swap="innerHTML">
+                   {% trans "LOGS" %}
+                </a>
+                {% endif %}
 
                 <!-- Notification -->
                 <div class="dropdown">
@@ -596,10 +596,10 @@
                 }
             }, 50);
 
-            // Auto-dismiss after 60 seconds
+            // Auto-dismiss after 15 seconds
             setTimeout(() => {
                 dismissNotification(id);
-            }, 60000);
+            }, 15000);
         }
         
         function dismissNotification(id) {
@@ -613,7 +613,7 @@
             setTimeout(() => {
                 toastEl.remove();
                 updateSoundStatus(); // Stop sound if no more notifications
-            }, 500);
+            }, 150);
         }
     </script>
 

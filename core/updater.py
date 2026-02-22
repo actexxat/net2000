@@ -10,10 +10,13 @@ import zipfile
 import shutil
 import tempfile
 import subprocess
+import logging
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 import ssl
+
+logger = logging.getLogger(__name__)
 
 # Import version info
 try:
@@ -161,7 +164,7 @@ class UpdateChecker:
             return zip_path
             
         except Exception as e:
-            print(f"Error downloading update: {e}")
+            logger.error(f"Error downloading update: {e}")
             return None
     
     def install_update(self, zip_path):
@@ -178,7 +181,7 @@ class UpdateChecker:
                 app_dir = Path(sys.executable).parent
                 exe_name = os.path.basename(sys.executable)
             else:
-                app_dir = Path(__file__).parent
+                app_dir = Path(__file__).parent.parent
                 exe_name = "run_cafe.py"
             
             # Create a temp directory for the new files OUTSIDE of the app directory
@@ -191,7 +194,7 @@ class UpdateChecker:
             update_source_dir.mkdir(exist_ok=True)
             
             # Extract zip to temp location
-            print(f"Extracting to {update_source_dir}...")
+            logger.info(f"Extracting to {update_source_dir}...")
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(update_source_dir)
             
@@ -205,7 +208,7 @@ class UpdateChecker:
             return update_script
             
         except Exception as e:
-            print(f"Error preparing update: {e}")
+            logger.error(f"Error preparing update: {e}")
             return None
     
     def _create_update_script(self, app_dir, source_dir, exe_name):
@@ -240,7 +243,7 @@ if exist "{app_dir}\\{exe_name}" del /f /q "{app_dir}\\{exe_name}"
 if exist "{app_dir}\\_internal" rmdir /s /q "{app_dir}\\_internal"
 
 echo Installing new version...
-xcopy "{content_dir}\\*.*" "{app_dir}\\" /E /I /Y >nul
+xcopy "{content_dir}\\*.*" "{app_dir}\\" /E /I /Y /EXCLUDE:{app_dir}\\_update_temp\\exclude.txt >nul
 
 echo Cleaning up...
 rmdir /s /q "{app_dir}\\_update_temp"
@@ -258,7 +261,11 @@ cd /d "{app_dir}"
 rem Start the new version. If the exe name changed in the zip, we should start that one.
 rem We look for any .exe in the root if the original isn't there.
 if exist "{exe_name}" (
-    start "" "{exe_name}"
+    if "{exe_name}"=="run_cafe.py" (
+        start "" python "{exe_name}"
+    ) else (
+        start "" "{exe_name}"
+    )
 ) else (
     for %%f in (*.exe) do (
         if not "%%f"=="python.exe" if not "%%f"=="pythonw.exe" (
@@ -274,13 +281,13 @@ exit
 '''
         
         
-        # Create exclusion list (don't backup temp files)
+        # Create exclusion list (don't backup or overwrite temp/data files)
         exclude_path = app_dir / '_update_temp' / 'exclude.txt'
         with open(exclude_path, 'w') as f:
-            f.write('_update_temp\n')
-            f.write('_backup\n')
-            f.write('db.sqlite3\n')
-            f.write('media\n')
+            f.write('\\_update_temp\\\n')
+            f.write('\\_backup\\\n')
+            f.write('\\db.sqlite3\n')
+            f.write('\\media\\\n')
         
         # Write the script
         with open(script_path, 'w') as f:
@@ -303,7 +310,7 @@ exit
             os._exit(0)
             
         except Exception as e:
-            print(f"Error applying update: {e}")
+            logger.error(f"Error applying update: {e}")
             return False
 
 

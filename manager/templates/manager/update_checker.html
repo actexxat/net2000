@@ -22,7 +22,7 @@
             <div id="update-info" class="d-none">
                 <div class="alert alert-info" role="alert">
                     <h6 class="alert-heading">{% trans "Current Version" %}</h6>
-                    <p class="mb-0"><strong id="current-version">--</strong></p>
+                    <p class="mb-0"><strong id="current-version">{{ APP_VERSION|default:"--" }}</strong></p>
                 </div>
 
                 <!-- Critical Update Alert -->
@@ -106,16 +106,37 @@ document.addEventListener('DOMContentLoaded', function() {
     let progressInterval = null;
 
     // Check for updates on page load
-    checkForUpdates();
+    runSystemUpdateCheck();
 
-    function checkForUpdates() {
+    // Also check when modal is opened
+    const updateModalEl = document.getElementById('updateModal');
+    if (updateModalEl) {
+        updateModalEl.addEventListener('shown.bs.modal', function () {
+            // Reset UI state before re-checking
+            errorDiv.classList.add('d-none');
+            updateAvailableDiv.classList.add('d-none');
+            noUpdateDiv.classList.add('d-none');
+            statusDiv.classList.remove('d-none');
+            runSystemUpdateCheck();
+        });
+    }
+
+    function runSystemUpdateCheck() {
+        console.log("Checking for system updates...");
         fetch('{% url "update_check" %}')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                return response.json();
+            })
             .then(data => {
                 statusDiv.classList.add('d-none');
                 infoDiv.classList.remove('d-none');
                 
-                document.getElementById('current-version').textContent = data.current_version || data.version || '--';
+                if (data.current_version) {
+                    document.getElementById('current-version').textContent = data.current_version;
+                }
                 
                 if (data.error) {
                     errorDiv.classList.remove('d-none');

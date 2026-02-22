@@ -2,8 +2,8 @@
 #include "winver.h"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,3
- PRODUCTVERSION 1,0,0,3
+ FILEVERSION 1, 0, 3, 0
+ PRODUCTVERSION 1, 0, 3, 0
  FILEFLAGSMASK 0x3f
 #ifdef _DEBUG
  FILEFLAGS 0x1
@@ -20,12 +20,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Internet 2000 Team"
             VALUE "FileDescription", "Cafe Management System Server"
-            VALUE "FileVersion", "1.0.0.3"
+            VALUE "FileVersion", "1.0.003"
             VALUE "InternalName", "Internet2000_Server"
             VALUE "LegalCopyright", "Copyright (C) 2026 Internet 2000 Team"
             VALUE "OriginalFilename", "Internet2000_Server.exe"
             VALUE "ProductName", "Internet 2000 Cafe Management System"
-            VALUE "ProductVersion", "1.0.0.3"
+            VALUE "ProductVersion", "1.0.003"
         END
     END
     BLOCK "VarFileInfo"

@@ -21,10 +21,10 @@
             var messages = document.querySelectorAll('.message-popup');
             messages.forEach(msg => {
                 msg.style.opacity = '0';
-                msg.style.transition = 'opacity 0.5s ease-out';
-                setTimeout(() => msg.remove(), 500);
+                msg.style.transition = 'opacity 0.2s ease-out';
+                setTimeout(() => msg.remove(), 200);
             });
-        }, 4000);
+        }, 2000);
     </script>
     {% endif %}
 </div>

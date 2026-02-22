@@ -343,7 +343,7 @@ html { scroll-behavior: auto !important; }
                         percentPosition: true,
                         horizontalOrder: true,
                         originLeft: !isRtl,
-                        transitionDuration: '0.3s' // Add a subtle transition for smoother snapping
+                        transitionDuration: '0.1s' // Add a subtle transition for smoother snapping
                     });
                 } else {
                     msnry.reloadItems();
@@ -360,7 +360,7 @@ html { scroll-behavior: auto !important; }
                         percentPosition: true,
                         horizontalOrder: true,
                         originLeft: !isRtl,
-                        transitionDuration: '0.3s'
+                        transitionDuration: '0.1s'
                     });
                 } else {
                     msnryAvailable.reloadItems();
@@ -444,7 +444,7 @@ html { scroll-behavior: auto !important; }
                 setTimeout(() => {
                     const root = document.getElementById('dashboard-root');
                     if (root) root.style.minHeight = '';
-                }, 1000);
+                }, 200);
             }
         }
     });

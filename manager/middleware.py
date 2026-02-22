@@ -7,7 +7,10 @@ from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 
 try:
-    from version import is_version_allowed, get_version_info
+    try:
+        from core.version import is_version_allowed, get_version_info
+    except ImportError:
+        from version import is_version_allowed, get_version_info
     VERSION_CHECK_AVAILABLE = True
 except ImportError:
     VERSION_CHECK_AVAILABLE = False
@@ -40,12 +43,29 @@ class VersionEnforcementMiddleware(MiddlewareMixin):
             if request.path.startswith(allowed_path):
                 return None
         
-        # Check if version is allowed
+        # Check if version is allowed locally
         allowed, message = is_version_allowed()
+        version_info = get_version_info()
         
+        # Check GitHub for updates (cached)
+        from django.core.cache import cache
+        github_update = cache.get('github_update_info')
+        if github_update is None:
+            try:
+                from core.updater import check_for_updates_simple
+                github_update = check_for_updates_simple()
+                cache.set('github_update_info', github_update, 3600) # Cache for 1 hour
+            except Exception:
+                github_update = {'available': False}
+                cache.set('github_update_info', github_update, 300) # Cache error for 5 mins
+                
+        if github_update and github_update.get('available'):
+            allowed = False
+            new_version = github_update.get('latest_version', 'Unknown')
+            message = f"A required system update (v{new_version}) is available. The system has been paused. Admin must install this update to continue."
+
         if not allowed:
             # Return a blocking page that forces update
-            version_info = get_version_info()
             
             html = f"""
             <!DOCTYPE html>
