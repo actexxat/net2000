@@ -3,8 +3,8 @@ Version information for Internet 2000 application.
 This file is automatically updated during the build process.
 """
 
-__version__ = "1.0.003"
-__build_date__ = "2026-02-18"
+__version__ = "1.0.004"
+__build_date__ = "2026-02-22"
 __github_repo__ = "actexxat/net2000"  # Update this with your actual GitHub repo
 
 # Minimum version required to run the application
