@@ -69,6 +69,10 @@ class UpdateChecker:
             req = Request(self.api_url)
             req.add_header('User-Agent', 'Internet2000-AutoUpdater')
             
+            token = os.environ.get('GITHUB_TOKEN')
+            if token:
+                req.add_header('Authorization', f'Bearer {token}')
+            
             # Fetch latest release info
             with urlopen(req, context=context, timeout=10) as response:
                 data = json.loads(response.read().decode('utf-8'))
@@ -114,7 +118,33 @@ class UpdateChecker:
             
         except HTTPError as e:
             if e.code == 404:
-                return {'available': False, 'error': 'No releases found on GitHub'}
+                # Fallback to tags API if no releases exist
+                try:
+                    tags_url = f"https://api.github.com/repos/{self.github_repo}/tags"
+                    tags_req = Request(tags_url)
+                    tags_req.add_header('User-Agent', 'Internet2000-AutoUpdater')
+                    if token:
+                        tags_req.add_header('Authorization', f'Bearer {token}')
+                    with urlopen(tags_req, context=ssl._create_unverified_context(), timeout=10) as response:
+                        tags_data = json.loads(response.read().decode('utf-8'))
+                        
+                    if tags_data:
+                        latest_version = tags_data[0]['name'].lstrip('v')
+                        download_url = tags_data[0].get('zipball_url')
+                        is_newer = self._compare_versions(latest_version, self.current_version)
+                        
+                        return {
+                            'available': is_newer,
+                            'current_version': self.current_version,
+                            'latest_version': latest_version,
+                            'download_url': download_url,
+                            'release_notes': 'Auto-detected from GitHub project tags.',
+                            'is_critical': False,
+                            'error': None
+                        }
+                    return {'available': False, 'error': 'No releases or tags found on GitHub'}
+                except Exception as tags_ex:
+                    return {'available': False, 'error': f'No releases and failed to check tags.'}
             return {'available': False, 'error': f'HTTP Error: {e.code}'}
         except URLError as e:
             return {'available': False, 'error': f'Network error: {str(e)}'}
@@ -144,6 +174,10 @@ class UpdateChecker:
             # Download with progress
             req = Request(download_url)
             req.add_header('User-Agent', 'Internet2000-AutoUpdater')
+            
+            token = os.environ.get('GITHUB_TOKEN')
+            if token:
+                req.add_header('Authorization', f'Bearer {token}')
             
             with urlopen(req, context=context, timeout=30) as response:
                 total_size = int(response.headers.get('content-length', 0))
