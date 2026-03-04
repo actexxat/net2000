@@ -85,7 +85,7 @@ class OrderAdmin(ModelAdmin):
     def item_display(self, obj):
         return obj.item_name_display
 
-    @display(description=_("Price"), header=True)
+    @display(description=_("Price"))
     def price_display(self, obj):
         p = obj.transaction_price if obj.transaction_price is not None else (obj.item.price if obj.item else 0)
         return f"{p:.2f} EGP"
@@ -127,11 +127,11 @@ class TableSessionAdmin(ModelAdmin):
         }),
     )
 
-    @display(description=_("Checkout"), header=True)
+    @display(description=_("Checkout"))
     def checkout_time_display(self, obj):
         return obj.checkout_time.strftime("%d/%m/%Y %H:%M") if obj.checkout_time else "-"
 
-    @display(description=_("Total"), header=True)
+    @display(description=_("Total"))
     def total_amount_display(self, obj):
         return f"{obj.total_amount:.2f} EGP"
 
