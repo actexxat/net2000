@@ -20,6 +20,6 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b
 )
 
-:: Launch the background handler
-".venv\Scripts\python.exe" run_cafe.py --background
-exit
+:: Start the server
+".venv\Scripts\python.exe" run_cafe.py
+pause

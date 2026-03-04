@@ -93,15 +93,7 @@ REM Copy built files
 echo Copying files to release folder...
 xcopy "%TARGET_DIR%\*.*" "%RELEASE_DIR%\" /E /I /Y >nul
 
-REM Create server shutdown script
-echo Creating server shutdown script...
-(
-    echo @echo off
-    echo echo Stopping Internet 2000 Background Server...
-    echo taskkill /F /IM Internet2000_win10.exe /T
-    echo echo Server stopped successfully.
-    echo timeout /t 3 ^^>nul
-) > "%RELEASE_DIR%\server_shutdown.bat"
+
 
 REM Create README for release
 echo Creating release README...
