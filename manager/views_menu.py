@@ -192,3 +192,8 @@ def toggle_served_redirect(request, order_id):
             return render(request, 'manager/partials/table_card.html', {'table': order.table})
             
     return redirect('dashboard')
+
+def heartbeat(request):
+    """Simple endpoint to check if server is alive."""
+    from django.http import HttpResponse
+    return HttpResponse("OK", content_type="text/plain")

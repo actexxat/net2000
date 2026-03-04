@@ -182,19 +182,7 @@ class TableSession(models.Model):
     
 
 
-class StickyNote(models.Model):
-    author = models.ForeignKey('auth.User', on_delete=models.CASCADE, verbose_name=_("Author"))
-    content = models.TextField(blank=True, verbose_name=_("Content"))
-    color = models.CharField(max_length=50, default='bg-soft-yellow', verbose_name=_("Color")) # CSS class or hex
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
-    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
-    class Meta:
-        verbose_name = _("Sticky Note")
-        verbose_name_plural = _("Sticky Notes")
-
-    def __str__(self):
-        return _("Note by %s") % self.author.username
 
 class QuickFireItem(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='quickfire_items', verbose_name=_("Item"))

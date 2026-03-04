@@ -5,6 +5,9 @@ Middleware for enforcing version requirements and update checks.
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
+from django.utils import timezone
+from django.contrib.auth import logout
+from infrastructure.models import GlobalSettings
 
 try:
     try:
@@ -162,4 +165,89 @@ class VersionEnforcementMiddleware(MiddlewareMixin):
             
             return HttpResponse(html, status=403)
         
+        return None
+
+
+class AutoLogoutMiddleware(MiddlewareMixin):
+    """
+    Middleware that automatically logs out users after a period of inactivity.
+    Also handles global logout signaled from other devices on the same network.
+    """
+    
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR')
+
+    def process_request(self, request):
+        # Skip for non-authenticated users
+        if not hasattr(request, 'user') or not request.user.is_authenticated:
+            return None
+            
+        # Skip for static and media files to avoid unnecessary DB hits
+        if request.path.startswith('/static/') or request.path.startswith('/media/'):
+            return None
+
+        # Get settings
+        try:
+            settings, _ = GlobalSettings.objects.get_or_create(id=1)
+            now = timezone.now()
+            client_ip = self.get_client_ip(request)
+
+            # --- 1. Global Logout Check ---
+            # Skip if user is excluded based on management settings (e.g. Admin shouldn't be affected if target is NON_ADMIN)
+            is_excluded = (settings.auto_logout_target == 'NON_ADMIN' and request.user.is_superuser)
+            
+            if not is_excluded:
+                login_time_str = request.session.get('login_timestamp')
+                if login_time_str:
+                    try:
+                        login_time = timezone.datetime.fromisoformat(login_time_str)
+                        if timezone.is_naive(login_time):
+                            login_time = timezone.make_aware(login_time)
+                        
+                        if settings.last_global_logout and settings.last_global_logout > login_time:
+                            logout(request)
+                            return None
+                    except (ValueError, TypeError):
+                        request.session['login_timestamp'] = now.isoformat()
+                else:
+                    request.session['login_timestamp'] = now.isoformat()
+
+            # --- 2. Idle Logout Check ---
+            if settings.auto_logout_minutes <= 0:
+                if 'last_activity' in request.session:
+                    del request.session['last_activity']
+                return None
+
+            if settings.auto_logout_target == 'NON_ADMIN' and request.user.is_superuser:
+                return None
+
+            last_activity_str = request.session.get('last_activity')
+
+            if last_activity_str:
+                try:
+                    last_activity = timezone.datetime.fromisoformat(last_activity_str)
+                    if timezone.is_naive(last_activity):
+                        last_activity = timezone.make_aware(last_activity)
+                        
+                    idle_duration = (now - last_activity).total_seconds() / 60
+
+                    if idle_duration > settings.auto_logout_minutes:
+                        # Signal Global Logout for this network
+                        settings.last_global_logout = now
+                        settings.last_global_logout_ip = client_ip
+                        settings.save(update_fields=['last_global_logout', 'last_global_logout_ip'])
+                        
+                        logout(request)
+                        return None
+                except (ValueError, TypeError):
+                    pass
+
+            request.session['last_activity'] = now.isoformat()
+            
+        except Exception:
+            pass
+            
         return None

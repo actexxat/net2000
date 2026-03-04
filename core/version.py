@@ -3,14 +3,14 @@ Version information for Internet 2000 application.
 This file is automatically updated during the build process.
 """
 
-__version__ = "1.0.005"
-__build_date__ = "2026-02-22"
+__version__ = "1.1.1"
+__build_date__ = "2026-03-05"
 __github_repo__ = "actexxat/net2000"  # Update this with your actual GitHub repo
 
 # Minimum version required to run the application
 # Set this to enforce updates (e.g., "1.0.0" means versions below 1.0.0 cannot run)
 # Set to None to disable enforcement
-__minimum_required_version__ = "1.0.005"
+__minimum_required_version__ = "1.1.1"
 
 def get_version():
     """Returns the current version string."""

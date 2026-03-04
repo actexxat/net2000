@@ -36,17 +36,32 @@ else:
     BUNDLE_DIR = Path(__file__).resolve().parent.parent
     BASE_DIR = BUNDLE_DIR
 
-# Custom setting for conditional logic in URLs/Views
-IS_FROZEN = IS_FROZEN
+# Handle SECRET_KEY: Generate and save if not exists, otherwise read.
+# This ensures each production installation has a unique key without extra setup.
+def get_secret_key():
+    key_file = BASE_DIR / 'secret.key'
+    try:
+        if key_file.exists():
+            with open(key_file, 'r', encoding='utf-8') as f:
+                key = f.read().strip()
+                if key:
+                    return key
+        
+        # Generate new key if not exists or empty
+        import secrets
+        import string
+        # Use a diverse set of characters for security
+        chars = string.ascii_letters + string.digits + "!@#$%^&*(-_=+)"
+        new_key = ''.join(secrets.choice(chars) for _ in range(64))
+        
+        with open(key_file, 'w', encoding='utf-8') as f:
+            f.write(new_key)
+        return new_key
+    except Exception:
+        # Emergency fallback if file system is read-only
+        return 'django-insecure-fallback-key-for-internet-2000-cafe-app-change-manually-if-needed'
 
-# Keep the original BASE_DIR name for compatibility with variables below,
-# but internally use BUNDLE_DIR for things that are packaged.
-    
-# SECURITY WARNING: keep the secret key used in production secret!
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ey_(_35rg!!m&if9_sp6@)d4=25a%**g9!x0!9ul0+!=kluv(d'
+SECRET_KEY = get_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not IS_FROZEN
@@ -79,6 +94,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'manager.middleware.VersionEnforcementMiddleware',  # Version enforcement for force updates
+    'manager.middleware.AutoLogoutMiddleware',  # Automatic logout based on inactivity
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -123,20 +139,7 @@ DATABASES = {
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+AUTH_PASSWORD_VALIDATORS = []
 
 
 # Internationalization
@@ -282,9 +285,25 @@ UNFOLD = {
                         "link": reverse_lazy("admin:manager_item_changelist"),
                     },
                     {
+                        "title": _("Quick Fire"),
+                        "icon": "flash_on",
+                        "link": reverse_lazy("admin:manager_quickfireitem_changelist"),
+                    },
+                    {
                         "title": _("System Settings"),
                         "icon": "settings",
                         "link": reverse_lazy("admin:infrastructure_globalsettings_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Audits & Logs"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Action Logs"),
+                        "icon": "history_edu",
+                        "link": reverse_lazy("admin:manager_actionlog_changelist"),
                     },
                 ],
             },

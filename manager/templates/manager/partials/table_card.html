@@ -40,7 +40,7 @@
                     <span class="fs-4 lh-1">{{ table.number|translate_numbers }}</span>
                     {% endif %}
                 </h5>
-                {% if table.is_occupied %}
+                {% if table.is_occupied and table.number != 0 %}
                 <div class="mt-1 d-flex align-items-center gap-1">
                     <span class="badge bg-white bg-opacity-10 text-white fw-normal px-2 py-1 rounded-pill" style="font-size: 0.65rem;">
                         <i class="bi bi-clock me-1"></i> {{ table.opened_at|timesince }}

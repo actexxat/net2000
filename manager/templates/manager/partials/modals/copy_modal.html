@@ -31,13 +31,16 @@
                     </div>
 
                     <div class="mb-3">
-                        <input type="hidden" name="copy_type" value="bw">
-                        <div class="form-text mt-2" id="bwPricingInfo">
-                            <small class="text-muted">
-                                <i class="bi bi-info-circle me-1"></i>
-                                {% trans "B/W Pricing: 1.00 EGP/page (≤100 pages), 0.75 EGP/page (>100 pages)" %}
-                            </small>
+                        <label class="form-label fw-bold">{% trans "Total Price (EGP)" %}</label>
+                        <input type="number" name="price" id="totalPriceInput" class="form-control form-control-lg border-dark text-dark fw-bold" step="0.5" value="1.00" required>
+                        <div class="form-text text-muted small mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            {% trans "1.00 EGP/page (≤100), 0.75 EGP/page (>100). You can edit this manually." %}
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="hidden" name="copy_type" value="bw">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -74,12 +77,24 @@
         });
 
         var pagesInput = document.getElementById('pagesInput');
+        var priceInput = document.getElementById('totalPriceInput');
+
+        window.updateCalculatedPrice = function() {
+            let pages = parseInt(pagesInput.value) || 0;
+            let ppp = (pages <= 100) ? 1.00 : 0.75;
+            let total = (pages * ppp).toFixed(2);
+            priceInput.value = total;
+        };
 
         window.updatePages = function(amount, isAdd = false) {
             let current = parseInt(pagesInput.value) || 0;
             current += amount;
             if (current < 1) current = 1;
             pagesInput.value = current;
+            updateCalculatedPrice();
         };
+
+        // Event listener for manual page input
+        pagesInput.addEventListener('input', updateCalculatedPrice);
     })();
 </script>

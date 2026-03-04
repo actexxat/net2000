@@ -1,0 +1,99 @@
+{% load i18n manager_extras %}
+<div class="modal-content border-0 shadow-lg overflow-hidden" style="border-radius: 20px;">
+    <div class="modal-header border-0 p-4 {% if current_shift == 'MORNING' %}bg-warning text-dark{% else %}bg-indigo text-white{% endif %}">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                {% if current_shift == 'MORNING' %}
+                <i class="bi bi-sun-fill fs-3"></i>
+                {% else %}
+                <i class="bi bi-moon-stars-fill fs-3"></i>
+                {% endif %}
+            </div>
+            <div>
+                <h5 class="modal-title fw-800 mb-0">{% trans "Shift Handover" %}</h5>
+                <small class="text-uppercase fw-bold opacity-75" style="font-size: 0.65rem; letter-spacing: 1px;">
+                    {{ current_shift }} <i class="bi bi-arrow-right mx-1"></i> {{ next_shift }}
+                </small>
+            </div>
+        </div>
+        <button type="button" class="btn-close {% if current_shift == 'NIGHT' %}btn-close-white{% endif %}" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+
+    <div class="modal-body p-4 bg-light">
+        {% if pending_resets > 0 %}
+        <div class="alert alert-danger border-0 rounded-4 d-flex align-items-center gap-3 mb-4 shadow-sm">
+            <i class="bi bi-exclamation-octagon-fill fs-3"></i>
+            <div>
+                <h6 class="mb-0 fw-bold">{% trans "Blocked: Pending Actions" %}</h6>
+                <small>{% trans "You have" %} {{ pending_resets|translate_numbers }} {% trans "table resets waiting for approval. Approve or deny them before switching shifts." %}</small>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-3">
+            <!-- Table Status -->
+            <div class="col-6">
+                <div class="handover-stat-card shadow-sm h-100">
+                    <div class="text-uppercase text-muted fw-bold mb-2" style="font-size: 0.65rem; letter-spacing: 1px;">{% trans "Open Tables" %}</div>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <span class="fs-2 fw-800">{{ active_tables_count|translate_numbers }}</span>
+                        <small class="text-muted">{% trans "Active" %}</small>
+                    </div>
+                </div>
+            </div>
+            <!-- Guest Count -->
+            <div class="col-6">
+                <div class="handover-stat-card shadow-sm h-100">
+                    <div class="text-uppercase text-muted fw-bold mb-2" style="font-size: 0.65rem; letter-spacing: 1px;">{% trans "Current Guests" %}</div>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <span class="fs-2 fw-800">{{ total_people|translate_numbers }}</span>
+                        <i class="bi bi-people-fill text-muted"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- Financial Snapshot -->
+            <div class="col-12">
+                <div class="handover-stat-card border-primary bg-primary bg-opacity-10 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="text-uppercase text-primary fw-bold" style="font-size: 0.65rem; letter-spacing: 1px;">{% trans "Unpaid Revenue Handover" %}</div>
+                        <i class="bi bi-cash-stack text-primary fs-4"></i>
+                    </div>
+                    <div class="display-6 fw-800 text-primary">{{ total_unpaid|floatformat:2|translate_numbers }} <span class="fs-6">EGP</span></div>
+                    <p class="text-muted small mt-2 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        {% trans "All open orders and tables will be handed over to the" %} <strong>{{ next_shift }}</strong> {% trans "shift manager." %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 p-3 rounded-4 bg-white border d-flex align-items-center gap-3">
+            <div class="bg-success bg-opacity-10 text-success rounded-circle p-2">
+                <i class="bi bi-journal-check fs-5"></i>
+            </div>
+            <div class="text-muted small">
+                {% trans "A detailed transition report will be recorded in the system logs automatically." %}
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer border-0 p-4 bg-white">
+        <button type="button" class="btn btn-light px-4 py-2 rounded-pill fw-bold" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" 
+                class="btn {% if next_shift == 'MORNING' %}btn-warning{% else %}btn-primary{% endif %} px-5 py-2 rounded-pill fw-800 shadow-sm"
+                hx-post="{% url 'switch_shift' %}"
+                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                hx-swap="none"
+                {% if pending_resets > 0 %}disabled{% endif %}>
+            {% if next_shift == 'MORNING' %}
+            <i class="bi bi-sun-fill me-2"></i> {% trans "Start Morning Shift" %}
+            {% else %}
+            <i class="bi bi-moon-stars-fill me-2"></i> {% trans "Start Night Shift" %}
+            {% endif %}
+        </button>
+    </div>
+</div>
+
+<style>
+    .bg-indigo { background-color: #4338ca !important; }
+</style>

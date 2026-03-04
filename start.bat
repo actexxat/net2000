@@ -20,6 +20,6 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b
 )
 
-echo Activating environment and starting server...
-".venv\Scripts\python.exe" run_cafe.py
-pause
+:: Launch the background handler
+".venv\Scripts\python.exe" run_cafe.py --background
+exit

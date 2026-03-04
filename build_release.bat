@@ -67,6 +67,7 @@ REM 1. Copy Database (Safe Update Strategy)
 if exist "db.sqlite3" (
     echo Copying database safely...
     copy "db.sqlite3" "%TARGET_DIR%\db.sqlite3" >nul
+    python scripts\clean_db.py "%TARGET_DIR%\db.sqlite3"
 ) else (
     echo WARNING: db.sqlite3 not found! No initial database will be included.
 )
@@ -92,6 +93,16 @@ REM Copy built files
 echo Copying files to release folder...
 xcopy "%TARGET_DIR%\*.*" "%RELEASE_DIR%\" /E /I /Y >nul
 
+REM Create server shutdown script
+echo Creating server shutdown script...
+(
+    echo @echo off
+    echo echo Stopping Internet 2000 Background Server...
+    echo taskkill /F /IM Internet2000_win10.exe /T
+    echo echo Server stopped successfully.
+    echo timeout /t 3 ^^>nul
+) > "%RELEASE_DIR%\server_shutdown.bat"
+
 REM Create README for release
 echo Creating release README...
 (
@@ -111,32 +122,29 @@ echo For support, visit: https://github.com/actexxat/net2000
 ) > "%RELEASE_DIR%\README.txt"
 
 REM Create ZIP file
-echo Creating ZIP archive...
-powershell -command "Compress-Archive -Path '%RELEASE_DIR%\*' -DestinationPath 'releases\%RELEASE_NAME%.zip' -Force"
+echo Skipping ZIP archive creation for testing...
+REM powershell -command "Compress-Archive -Path '%RELEASE_DIR%\*' -DestinationPath 'releases\%RELEASE_NAME%.zip' -Force"
 
-if %ERRORLEVEL% EQU 0 (
-    echo.
-    echo ========================================
-    echo Release package created successfully!
-    echo ========================================
-    echo.
-    echo Package: releases\%RELEASE_NAME%.zip
-    echo.
-    echo Next steps:
-    echo 1. Test the release package
-    echo 2. Create a git tag: git tag v%VERSION%
-    echo 3. Push the tag: git push origin v%VERSION%
-    echo 4. Create a GitHub release and upload: releases\%RELEASE_NAME%.zip
-    echo.
-    echo GitHub Release Instructions:
-    echo 1. Go to: https://github.com/actexxat/net2000/releases/new
-    echo 2. Tag version: v%VERSION%
-    echo 3. Release title: Internet 2000 v%VERSION%
-    echo 4. Upload: releases\%RELEASE_NAME%.zip
-    echo 5. Publish release
-    echo.
-) else (
-    echo Failed to create ZIP archive!
-)
+echo.
+echo ========================================
+echo Release directory created successfully!
+echo ========================================
+echo.
+echo Test Directory: releases\%RELEASE_NAME%
+echo.
+echo Next steps:
+echo 1. Test the Executable in the directory above.
+echo 2. Once verified, manually ZIP the folder.
+echo 3. Create a git tag: git tag v%VERSION%
+echo 4. Push the tag: git push origin v%VERSION%
+echo 5. Create a GitHub release and upload the ZIP.
+echo.
+echo GitHub Release Instructions:
+echo 1. Go to: https://github.com/actexxat/net2000/releases/new
+echo 2. Tag version: v%VERSION%
+echo 3. Release title: Internet 2000 v%VERSION%
+echo 4. Upload your manually created ZIP file.
+echo 5. Publish release
+echo.
 
 pause

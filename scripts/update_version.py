@@ -13,6 +13,7 @@ def update_version(new_version):
         with open(core_version_file, 'r', encoding='utf-8') as f:
             content = f.read()
         content = re.sub(r'__version__ = "[^"]+"', f'__version__ = "{new_version}"', content)
+        content = re.sub(r'__minimum_required_version__ = "[^"]+"', f'__minimum_required_version__ = "{new_version}"', content)
         content = re.sub(r'__build_date__ = "[^"]+"', f'__build_date__ = "{today}"', content)
         with open(core_version_file, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -24,6 +25,7 @@ def update_version(new_version):
         with open(root_version_file, 'r', encoding='utf-8') as f:
             content = f.read()
         content = re.sub(r'__version__ = "[^"]+"', f'__version__ = "{new_version}"', content)
+        content = re.sub(r'__minimum_required_version__ = "[^"]+"', f'__minimum_required_version__ = "{new_version}"', content)
         content = re.sub(r'__build_date__ = "[^"]+"', f'__build_date__ = "{today}"', content)
         with open(root_version_file, 'w', encoding='utf-8') as f:
             f.write(content)

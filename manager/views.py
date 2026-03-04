@@ -7,15 +7,52 @@ from django.views.decorators.http import require_POST
 from django.db import models
 from django.db.models import Sum, Q, Prefetch, Avg, Count, Max, Min, F, ExpressionWrapper, fields
 from django.db.models.functions import Coalesce, ExtractHour, ExtractWeekDay
-from .models import Table, Item, Order, TableSession, StickyNote, QuickFireItem
+from .models import Table, Item, Order, TableSession, QuickFireItem
 from infrastructure.models import GlobalSettings
 from decimal import Decimal, InvalidOperation
 
-import re, datetime, json
-from django.utils.translation import gettext_lazy as _, get_language, get_language
+import re, datetime, json, collections
+from django.utils.translation import gettext_lazy as _, get_language
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+
+
+@login_required
+def change_password(request):
+    _activate_language(request)
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
+            messages.success(request, _('Your password was successfully updated!'))
+            
+            if request.headers.get('HX-Request'):
+                from django.template.loader import render_to_string
+                from django.http import HttpResponse
+                messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
+                response = HttpResponse(messages_html)
+                response['HX-Trigger'] = 'close-modal'
+                return response
+                
+            return redirect('dashboard')
+        else:
+            if request.headers.get('HX-Request'):
+                return render(request, 'manager/partials/modals/change_password_modal.html', {
+                    'form': form
+                })
+    else:
+        form = PasswordChangeForm(request.user)
+    
+    if request.headers.get('HX-Request'):
+        return render(request, 'manager/partials/modals/change_password_modal.html', {
+            'form': form
+        })
+        
+    return render(request, 'manager/change_password.html', {'form': form})
 
 
 def _loc(val):
@@ -228,16 +265,12 @@ def dashboard(request):
     # Now fetched from the database (QuickFireItem model)
     quick_items = _get_quick_items()
 
-    # Sticky Notes
-    notes = StickyNote.objects.all().select_related('author').order_by('-created_at')
-    
     stats = _get_dashboard_stats()
 
     return render(request, 'manager/dashboard.html', {
         'tables': tables,
         'grouped_items': grouped_items,
         'quick_items': quick_items,
-        'notes': notes,
         'global_min_charge': settings.min_charge_per_person,
         'server_now': timezone.now().isoformat(),
         **stats
@@ -284,9 +317,6 @@ def _get_dashboard_grid_state_string(request):
     # v16-localization: Force activate language using centralized helper
     user_language = _activate_language(request)
 
-    notes_agg = StickyNote.objects.aggregate(cnt=Count('id'), last_upd=Max('updated_at'))
-    n_upd = notes_agg['last_upd'].isoformat() if notes_agg['last_upd'] else 'none'
-    
     # Create a unique state string
     # v17-layout: Force refresh after layout changes (hero height)
     # v18-cache: Invalidate ETag cache to apply new styling for closed tables.
@@ -297,7 +327,7 @@ def _get_dashboard_grid_state_string(request):
     # v25-layout-reorg: Relocate Table 0 to the main grid and center metric cards.
     # v26-translations: Added missing translations for metric cards.
     lang = user_language
-    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{pending_cnt}-{notes_agg['cnt']}-{n_upd}-{lang}-v27-pending-reset"
+    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{pending_cnt}-{lang}-v27-pending-reset"
     return state_str
 
 @login_required
@@ -323,12 +353,10 @@ def dashboard_grid(request):
 
     # 2. Fetch Data & Render (Only if changed)
     tables = _get_sorted_tables(sort_by_status=True)
-    notes = StickyNote.objects.all().select_related('author').order_by('-created_at')
     stats = _get_dashboard_stats()
     
     content = render_to_string('manager/partials/table_grid_premium.html', {
         'tables': tables,
-        'notes': notes,
         **stats
     }, request=request)
     
@@ -538,13 +566,22 @@ def check_out(request, table_id):
     return redirect('dashboard')
 
 def _get_growth_metrics(today):
-    """Helper to calculate growth metrics."""
+    """Helper to calculate growth metrics using local timezone aware ranges."""
     import datetime
+    from django.utils import timezone
     
+    # 1. Today's Range
+    current_tz = timezone.get_current_timezone()
+    today_start = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min), current_tz)
+    today_end = timezone.make_aware(datetime.datetime.combine(today, datetime.time.max), current_tz)
+    
+    # 2. Last Week's Range
     last_week_day = today - datetime.timedelta(days=7)
+    last_week_start = timezone.make_aware(datetime.datetime.combine(last_week_day, datetime.time.min), current_tz)
+    last_week_end = timezone.make_aware(datetime.datetime.combine(last_week_day, datetime.time.max), current_tz)
 
-    today_sessions = TableSession.objects.filter(checkout_time__date=today)
-    last_week_sessions = TableSession.objects.filter(checkout_time__date=last_week_day)
+    today_sessions = TableSession.objects.filter(checkout_time__range=(today_start, today_end))
+    last_week_sessions = TableSession.objects.filter(checkout_time__range=(last_week_start, last_week_end))
     
     today_rev = today_sessions.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
     last_week_rev = last_week_sessions.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
@@ -564,13 +601,20 @@ def metrics_dashboard(request):
     """
     _activate_language(request)
     now = timezone.now()
-    today = now.date()
+    local_now = timezone.localtime(now)
+    today = local_now.date()
+    
+    current_tz = timezone.get_current_timezone()
+    today_start = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min), current_tz)
+    today_end = timezone.make_aware(datetime.datetime.combine(today, datetime.time.max), current_tz)
 
     growth, today_rev, last_week_rev = _get_growth_metrics(today)
 
     # 3. Efficiency Metrics
     all_sessions = TableSession.objects.all()
-    avg_duration = all_sessions.annotate(
+    sessions_for_metrics = all_sessions.exclude(table_number=0)
+    
+    avg_duration = sessions_for_metrics.annotate(
         duration=ExpressionWrapper(F('checkout_time') - F('session_start_time'), output_field=fields.DurationField())
     ).aggregate(Avg('duration'))['duration__avg']
     
@@ -587,8 +631,12 @@ def metrics_dashboard(request):
     avg_bill = all_sessions.aggregate(a=Avg('total_amount'))['a'] or 0
     avg_per_person = total_rev_all / total_people_all
 
-    table_count = Table.objects.count() or 1
-    recent_sessions = all_sessions.filter(checkout_time__date__gte=today - datetime.timedelta(days=6))
+    table_count = Table.objects.exclude(number=0).count() or 1
+    
+    recent_limit = today - datetime.timedelta(days=6)
+    recent_start = timezone.make_aware(datetime.datetime.combine(recent_limit, datetime.time.min), current_tz)
+    recent_sessions = sessions_for_metrics.filter(checkout_time__gte=recent_start)
+    
     total_active_duration = recent_sessions.annotate(
         duration=ExpressionWrapper(F('checkout_time') - F('session_start_time'), output_field=fields.DurationField())
     ).aggregate(s=Sum('duration'))['s']
@@ -598,17 +646,20 @@ def metrics_dashboard(request):
         total_possible_secs = table_count * 12 * 3600 * 7 # 12h workday
         occupancy_rate = (total_active_duration.total_seconds() / total_possible_secs) * 100
 
-    # 4. Audit & Security
-    today_sessions = TableSession.objects.filter(checkout_time__date=today)
-    opening_time = today_sessions.aggregate(m=Min('session_start_time'))['m']
-    closing_time = today_sessions.aggregate(m=Max('checkout_time'))['m']
+    # 4. Today's sessions (Fixed for local day)
+    today_sessions = list(TableSession.objects.filter(checkout_time__range=(today_start, today_end)))
+    opening_time = None
+    closing_time = None
+    highest_bill = Decimal('0.00')
+    
+    if today_sessions:
+        opening_time = min(s.session_start_time for s in today_sessions)
+        closing_time = max(s.checkout_time for s in today_sessions)
+        highest_bill = max(s.total_amount for s in today_sessions)
 
-    # 5. Month-to-Date Revenue (Replaces Total Transactions)
-    this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_revenue = TableSession.objects.filter(checkout_time__gte=this_month_start).aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
-
-    # 6. Highest Bill Today (Replaces Occupancy Rate)
-    highest_bill = today_sessions.aggregate(Max('total_amount'))['total_amount__max'] or Decimal('0.00')
+    # 5. Month-to-Date Revenue
+    this_month_start_local = local_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_revenue = TableSession.objects.filter(checkout_time__gte=this_month_start_local).aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0.00')
 
     # Top selling items
     top_selling_items = Order.objects.filter(is_paid=True, item__isnull=False).values('item__name').annotate(
@@ -645,7 +696,7 @@ def metrics_dashboard(request):
     regex_bw = re.compile(r'B/W.*?\((\d+)\s*pages\)', re.IGNORECASE)
     regex_color = re.compile(r'Color.*?\((\d+)\s*pages\)', re.IGNORECASE)
     
-    today_printing = Order.objects.filter(item__name="Printing Service", timestamp__date=today).values('description')
+    today_printing = Order.objects.filter(item__name="Printing Service", timestamp__range=(today_start, today_end)).values('description')
     today_bw = sum(int(regex_bw.search(po['description'] or "").group(1)) for po in today_printing if regex_bw.search(po['description'] or ""))
     today_color = sum(int(regex_color.search(po['description'] or "").group(1)) for po in today_printing if regex_color.search(po['description'] or ""))
 
@@ -653,46 +704,48 @@ def metrics_dashboard(request):
     table_rev_agg = all_sessions.values('table_number').annotate(revenue=Sum('total_amount'), count=Count('id')).order_by('-revenue')[:5]
     top_tables = [{'number': _loc(tr['table_number']), 'revenue': _loc(f"{tr['revenue']:.2f}"), 'count': _loc(tr['count'])} for tr in table_rev_agg]
 
-    # Hourly Heatmap
-    hourly_traffic = all_sessions.exclude(checkout_time__isnull=True).annotate(h=ExtractHour('checkout_time')).values('h').annotate(c=Count('id'), r=Sum('total_amount')).order_by('h')
+    # Hourly Heatmap (Processed in Python for local hour correctness)
     hours_labels = [f"{h:02d}:00" for h in range(24)]
     hours_data_rev = [0.0] * 24
-    for h in hourly_traffic:
-        hours_data_rev[h['h']] = float(h['r'] or 0)
+    for s in all_sessions:
+        h = timezone.localtime(s.checkout_time).hour
+        hours_data_rev[h] += float(s.total_amount)
 
-    # 7. Busiest Hour Today (Replaces Traffic Prediction)
-    peak_hour_data = today_sessions.annotate(h=ExtractHour('checkout_time')).values('h').annotate(r=Sum('total_amount')).order_by('-r').first()
-    
-    if peak_hour_data:
-        ph = peak_hour_data['h']
+    # 7. Busiest Hour Today
+    busiest_hour = "--"
+    busiest_rev = 0
+    if today_sessions:
+        today_hourly_rev = collections.defaultdict(float)
+        for s in today_sessions:
+            h = timezone.localtime(s.checkout_time).hour
+            today_hourly_rev[h] += float(s.total_amount)
+        
+        ph = max(today_hourly_rev, key=today_hourly_rev.get)
+        busiest_rev = today_hourly_rev[ph]
         ampm = _('AM') if ph < 12 else _('PM')
         display_h = (ph % 12) or 12
         busiest_hour = f"{display_h} {ampm}"
-        busiest_rev = peak_hour_data['r']
-    else:
-        busiest_hour = "--"
-        busiest_rev = 0
     
     is_ar = get_language() == 'ar' # Define is_ar here
     
     return render(request, 'manager/metrics.html', {
         'today_rev': today_rev,
-        'month_revenue': _loc(f"{month_revenue:.2f}"),
+        'month_revenue': month_revenue,
         'month_name': now.strftime('%B'),
         'growth': round(growth, 1),
         'top_items': top_selling_items,
         'category_data': category_data_raw,
         'avg_duration': avg_dur_str,
-        'avg_bill': _loc(f"{avg_bill:.2f}"),
-        'avg_per_person': _loc(f"{avg_per_person:.2f}"),
-        'highest_bill_today': _loc(f"{highest_bill:.2f}"),
+        'avg_bill': avg_bill,
+        'avg_per_person': avg_per_person,
+        'highest_bill_today': highest_bill,
         'opening_time': timezone.localtime(opening_time).strftime('%H:%M') if opening_time else "--:--",
         'closing_time': timezone.localtime(closing_time).strftime('%H:%M') if closing_time else "--:--",
-        'today_bw': _loc(today_bw),
-        'today_color': _loc(today_color),
+        'today_bw': today_bw,
+        'today_color': today_color,
         'top_tables': top_tables,
-        'busiest_hour': _loc(busiest_hour),
-        'busiest_rev': _loc(f"{busiest_rev:.0f}"),
+        'busiest_hour': busiest_hour,
+        'busiest_rev': busiest_rev,
         'hours_labels': json.dumps(hours_labels),
         'hours_data_rev': json.dumps(hours_data_rev),
         'occupancy': round(occupancy_rate, 1),
@@ -784,20 +837,19 @@ def add_print(request, table_id):
             pages = 0
         ptype = request.POST.get('print_type', 'bw')
 
-        if ptype == 'bw':
-            # per-page pricing: <=100 pages -> 1.00 EGP per page, >100 -> 0.75 EGP per page
-            if pages <= 100:
-                ppp = Decimal('1.00')
+        # Priority: use the 'price' entered or calculated in the modal
+        try:
+            total = Decimal(request.POST.get('price', '0')).quantize(Decimal('0.01'))
+        except Exception:
+            if ptype == 'bw':
+                ppp = Decimal('1.00') if pages <= 100 else Decimal('0.75')
+                total = (Decimal(pages) * ppp).quantize(Decimal('0.01'))
             else:
-                ppp = Decimal('0.75')
-            total = (Decimal(pages) * ppp).quantize(Decimal('0.01'))
+                total = Decimal('0.00')
+
+        if ptype == 'bw':
             name = _("Printing B/W (%(pages)s pages)") % {'pages': pages}
         else:
-            # color: accept manual total cost entry
-            try:
-                total = Decimal(request.POST.get('color_cost', '0')).quantize(Decimal('0.01'))
-            except Exception:
-                total = Decimal('0.00')
             name = _("Printing Color (%(pages)s pages)") % {'pages': pages}
 
         # Use generic Item. MUST exist (created by admin).
@@ -839,15 +891,17 @@ def revenue_30(request):
     """Return revenue totals for each of the last 30 days."""
     if not request.user.is_superuser:
         return redirect('unauthorized')
-    today = datetime.date.today()
+    current_tz = timezone.get_current_timezone()
+    today_local = timezone.localtime(timezone.now()).date()
+
     dates = []
     totals = []
-
-    from django.db.models import Sum
-
     for i in range(29, -1, -1):
-        day = today - datetime.timedelta(days=i)
-        day_total = TableSession.objects.filter(checkout_time__date=day).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+        day = today_local - datetime.timedelta(days=i)
+        day_start = timezone.make_aware(datetime.datetime.combine(day, datetime.time.min), current_tz)
+        day_end = timezone.make_aware(datetime.datetime.combine(day, datetime.time.max), current_tz)
+        
+        day_total = TableSession.objects.filter(checkout_time__range=(day_start, day_end)).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
         dates.append(day.strftime('%Y-%m-%d'))
         totals.append(float(day_total))
 
@@ -866,16 +920,27 @@ def busy_times(request):
 
     sessions = TableSession.objects.all()
 
-    # 1. Hourly Traffic (0-23)
-    hourly = sessions.annotate(h=ExtractHour('checkout_time')).values('h').annotate(c=Count('id')).order_by('h')
-    h_map = {x['h']: x['c'] for x in hourly}
+    # 1. Hourly Traffic (0-23) - Local Hour corrected
+    h_map = collections.defaultdict(int)
+    for s in sessions:
+        if s.checkout_time:
+            h = timezone.localtime(s.checkout_time).hour
+            h_map[h] += 1
     
     hours_labels = [f"{h:02d}:00" for h in range(24)]
-    hours_data = [h_map.get(h, 0) for h in range(24)]
+    hours_data = [h_map[h] for h in range(24)]
 
-    # 2. Daily Traffic (1=Sunday ... 7=Saturday)
-    daily = sessions.annotate(d=ExtractWeekDay('checkout_time')).values('d').annotate(c=Count('id')).order_by('d')
-    d_map = {x['d']: x['c'] for x in daily}
+    # 2. Daily Traffic (Mon=2...Sun=1) - Local Day corrected
+    d_map = collections.defaultdict(int)
+    for s in sessions:
+        if s.checkout_time:
+            # weekday() 0=Mon, 1=Tue...6=Sun. Django ExtractWeekDay is 1=Sun, 2=Mon...
+            # We use isoweekday() 1=Mon...7=Sun for better mapping
+            d = timezone.localtime(s.checkout_time).isoweekday()
+            # Convert isoweekday (1=Mon) to ExtractWeekDay style (2=Mon)
+            ewd = d + 1
+            if ewd == 8: ewd = 1
+            d_map[ewd] += 1
 
     # Sort Mon(2) -> Sun(1)
     week_order = [2, 3, 4, 5, 6, 7, 1]
@@ -1098,15 +1163,14 @@ def add_copy(request, table_id):
     except (ValueError, TypeError):
         pages = 0
         
-    # Cafe only supports B/W copying
-    if True:
-        # Tiered pricing: <=100 pages -> 1.00 EGP, >100 pages -> 0.75 EGP
-        if pages <= 100:
-            ppp = Decimal('1.00')
-        else:
-            ppp = Decimal('0.75')
+    # Priority: use the 'price' entered or calculated in the modal
+    try:
+        total = Decimal(request.POST.get('price', '0')).quantize(Decimal('0.01'))
+    except Exception:
+        ppp = Decimal('1.00') if pages <= 100 else Decimal('0.75')
         total = (Decimal(pages) * ppp).quantize(Decimal('0.01'))
-        type_str = _("B/W")
+    
+    type_str = _("B/W")
     
     name = _("Copy (%(type)s) (%(pages)s pages)") % {'type': type_str, 'pages': pages}
 
@@ -1791,51 +1855,90 @@ def deny_reset_table(request, table_id):
 
 @login_required
 @superuser_required
+def shift_handover_preview(request):
+    """Returns a specialized handover modal with business stats."""
+    _activate_language(request)
+    from .models import Table
+    from infrastructure.models import GlobalSettings
+    
+    # 1. Block if pending resets exist
+    pending_resets = Table.objects.filter(pending_reset=True).count()
+    
+    # 2. Calculate Handover Stats
+    active_tables = Table.objects.filter(is_occupied=True).exclude(number=0)
+    
+    total_unpaid = Decimal('0.00')
+    total_people = 0
+    
+    for table in active_tables:
+        summary = table.get_bill_summary()
+        total_unpaid += summary['final_total']
+        total_people += table.current_people
+        
+    # include Table 0 unpaid items if any
+    t0 = Table.objects.filter(number=0).first()
+    if t0:
+        t0_summary = t0.get_bill_summary()
+        total_unpaid += t0_summary['final_total']
+    
+    settings, _ = GlobalSettings.objects.get_or_create(id=1)
+    current_shift = settings.active_shift
+    next_shift = 'NIGHT' if current_shift == 'MORNING' else 'MORNING'
+    
+    return render(request, 'manager/partials/modals/handover_modal.html', {
+        'pending_resets': pending_resets,
+        'active_tables_count': active_tables.count(),
+        'total_people': total_people,
+        'total_unpaid': total_unpaid,
+        'current_shift': current_shift,
+        'next_shift': next_shift,
+    })
+
+@login_required
+@superuser_required
 def switch_shift(request):
-    """Toggles the current active shift. Tables remain open for manual handover."""
+    """Toggles the current active shift with robust logging."""
     _activate_language(request)
     if request.method == "POST":
+        # Decisive Validation: Check for blocked actions
+        if Table.objects.filter(pending_reset=True).exists():
+            messages.error(request, _("Cannot switch shift while table resets are pending."))
+            return redirect('dashboard')
+
         settings, created = GlobalSettings.objects.get_or_create(id=1);
         old_shift = settings.active_shift
         new_shift = 'NIGHT' if old_shift == 'MORNING' else 'MORNING'
         
+        # Calculate handover snapshot for the log
+        active_tables_count = Table.objects.filter(is_occupied=True).exclude(number=0).count()
+        total_unpaid = Decimal('0.00')
+        for table in Table.objects.all():
+            if table.is_occupied or table.number == 0:
+                 summary = table.get_bill_summary()
+                 if summary['final_total'] > 0:
+                     total_unpaid += summary['final_total']
+
         # Toggle the shift
         settings.active_shift = new_shift
         settings.save()
         
+        # Robust Logging
+        log_details = f"Shift handover: {old_shift} -> {new_shift}. Active Tables: {active_tables_count}, Unpaid Revenue: {total_unpaid} EGP."
+        log_action(request.user, 'SHIFT_SWITCH', log_details)
+        
         msg = _("Shift started: Night Shift") if new_shift == 'NIGHT' else _("Shift started: Morning Shift")
         messages.success(request, msg)
         
+        if request.headers.get('HX-Request'):
+             from django.http import HttpResponse
+             # Return a signal for the frontend to trigger the overlay
+             response = HttpResponse(status=204)
+             response['HX-Trigger'] = f'shift-switched-{new_shift.lower()}'
+             return response
+             
     return redirect('dashboard')
 
-@login_required
-def add_sticky_note(request):
-    import random
-    colors = ['bg-soft-yellow', 'bg-soft-green', 'bg-soft-blue', 'bg-soft-purple', 'bg-soft-orange', 'bg-soft-red']
-    note = StickyNote.objects.create(
-        author=request.user,
-        content='',
-        color=random.choice(colors)
-    )
-    # Refresh the dashboard
-    return HttpResponse(status=204, headers={'HX-Trigger': 'refresh'})
 
-@login_required
-def update_sticky_note(request, note_id):
-    note = get_object_or_404(StickyNote, id=note_id)
-    if request.method == 'POST':
-        note.content = request.POST.get('content', '')
-        note.save()
-        return HttpResponse(status=204, headers={'HX-Trigger': 'refresh'})
-    return HttpResponse(status=400)
-
-@login_required
-def delete_sticky_note(request, note_id):
-    note = get_object_or_404(StickyNote, id=note_id)
-    if note.author == request.user or request.user.is_superuser:
-        note.delete()
-        return HttpResponse(status=204, headers={'HX-Trigger': 'refresh'})
-    return HttpResponse(status=403)
 
 # Import update system views
 from .update_views import (

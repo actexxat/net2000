@@ -12,6 +12,7 @@ urlpatterns = [
     # Auth
     path('login/', auth_views.LoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='app_logout'),
+    path('change-password/', manager_views.change_password, name='change_password'),
 
     # Manager Actions
     path('toggle-served/<int:order_id>/', manager_views.toggle_served, name='serve_order_toggle'),       
@@ -46,15 +47,13 @@ urlpatterns = [
     path('service-modal-preview/<int:table_id>/<str:service_type>/', manager_views.service_modal_preview, name='service_modal_preview'),
     path('item-popup/<int:table_id>/', manager_views.item_popup_preview, name='item_popup_preview'),     
 
-    # Sticky Notes
-    path('sticky-note/add/', manager_views.add_sticky_note, name='add_sticky_note'),
-    path('sticky-note/<int:note_id>/update/', manager_views.update_sticky_note, name='update_sticky_note'),
-    path('sticky-note/<int:note_id>/delete/', manager_views.delete_sticky_note, name='delete_sticky_note'),
+
 
     # History & Stats
     path('history/', manager_views.session_history, name='session_history'),
     path('clear-data/', manager_views.clear_data, name='clear_data'),
     path('switch-shift/', manager_views.switch_shift, name='switch_shift'),
+    path('shift-handover-preview/', manager_views.shift_handover_preview, name='shift_handover_preview'),
     path('metrics/', manager_views.metrics_dashboard, name='metrics'),
     path('monitor/', manager_views.monitor, name='monitor'),
     path('unauthorized/', manager_views.unauthorized, name='unauthorized'),

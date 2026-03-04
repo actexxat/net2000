@@ -36,10 +36,19 @@
     <!-- Styles moved to static/css/theme.css -->
 </head>
 
-<body class="d-flex flex-column min-vh-100 theme-transition">
+{% get_shift_status as current_shift %}
+<body class="d-flex flex-column min-vh-100 theme-transition shift-{{ current_shift|lower }}">
+
+    <!-- Shift Transition Overlay Gate -->
+    <div id="shift-gate" class="shift-overlay-gate">
+        <div class="gate-content">
+            <h1 class="display-1 fw-900 mb-0" id="gate-title"></h1>
+            <p class="lead fw-bold text-uppercase tracking-widest opacity-75" id="gate-subtitle"></p>
+        </div>
+    </div>
 
     {% block navbar %}
-    <nav class="navbar navbar-dark sticky-top px-3 py-2" style="z-index: 1040; backdrop-filter: blur(12px); border-bottom: 2px solid var(--color-primary); box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+    <nav class="navbar navbar-dark sticky-top px-3 py-2" style="z-index: 1040; border-bottom: 2px solid var(--color-primary); box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
         <div class="container-fluid d-flex justify-content-between align-items-center">
             <!-- Brand -->
             <a href="{% url 'dashboard' %}" class="navbar-brand mb-0 h1 d-flex align-items-center text-decoration-none">
@@ -51,6 +60,10 @@
                     <div class="d-flex align-items-center gap-1">
                         <span class="bg-primary rounded-pill px-2 text-white fw-bold" style="font-size: 0.55rem; letter-spacing: 1px; padding-top: 1px; padding-bottom: 1px;">HQ</span>
                         <span class="text-white text-opacity-50 fw-bold" style="font-size: 0.65rem;">v{{ APP_VERSION }}</span>
+                        <!-- Server Status Indicator -->
+                        <div id="server-status-dot" class="ms-1 shadow-sm transition-all" 
+                             style="width: 8px; height: 8px; border-radius: 50%; background-color: #666; border: 1px solid rgba(255,255,255,0.1);"
+                             title="{% trans 'Server Status' %}"></div>
                     </div>
 
                 </div>
@@ -159,21 +172,31 @@
                         <i class="bi bi-bar-chart-line fs-5"></i>
                         <span class="fw-600">{% trans "Business Metrics" %}</span>
                     </a>
-                    <form action="{% url 'switch_shift' %}" method="post" 
-                          data-confirm-msg="{% trans "Start new shift? Open tables will be handed over to the new shift." %}"
-                          onsubmit="return confirm(this.dataset.confirmMsg)">
-                        {% csrf_token %}
-                        <button type="submit" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red">
-                            {% get_shift_status as menu_shift %}
-                            {% if menu_shift == 'MORNING' %}
-                                <i class="bi bi-moon-stars fs-5"></i>
-                                <span class="fw-600">{% trans "Start Night Shift" %}</span>
-                            {% else %}
-                                <i class="bi bi-sun fs-5"></i>
-                                <span class="fw-600">{% trans "Start Morning Shift" %}</span>
-                            {% endif %}
+                    {% if user.is_superuser %}
+                    <div class="mt-3 px-2">
+                        <button type="button" 
+                                class="btn nebula-toggle w-100 d-flex align-items-center gap-3 text-start shift-glow-{{ current_shift|lower }}"
+                                hx-get="{% url 'shift_handover_preview' %}"
+                                hx-target="#handover-modal-container"
+                                data-bs-toggle="modal"
+                                data-bs-target="#handoverModal">
+                            <div class="nebula-icon-box">
+                                {% if current_shift == 'MORNING' %}
+                                    <i class="bi bi-sun-fill morning-icon"></i>
+                                {% else %}
+                                    <i class="bi bi-moon-stars-fill night-icon"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <span class="d-block text-white fw-800 fs-6">{% trans "Shift Management" %}</span>
+                                <small class="text-white text-opacity-50 text-uppercase fw-bold" style="font-size: 0.6rem; letter-spacing: 1px;">
+                                    {% if current_shift == 'MORNING' %}{% trans "Active: Morning" %}{% else %}{% trans "Active: Night" %}{% endif %}
+                                </small>
+                            </div>
+                            <i class="bi bi-chevron-right text-white text-opacity-25"></i>
                         </button>
-                    </form>
+                    </div>
+                    {% endif %}
                     <a href="{% url 'qr_dashboard' %}" class="list-group-item list-group-item-action py-3 px-3 border-0 rounded-4 d-flex align-items-center gap-3 bg-transparent text-white transition-all hover-bg-red {% if request.resolver_match.url_name == 'qr_dashboard' %}active-nav-item{% endif %}">
                         <i class="bi bi-qr-code-scan fs-5"></i>
                         <span class="fw-600">{% trans "QR Management" %}</span>
@@ -211,6 +234,18 @@
                     </div>
 
                     <div class="d-grid gap-2">
+                        <button type="button" 
+                                class="btn btn-dark w-100 fw-bold border-opacity-25 py-2 rounded-3 text-start px-3 d-flex align-items-center justify-content-between scale-hover mb-2"
+                                hx-get="{% url 'change_password' %}"
+                                hx-target="#password-modal-container"
+                                data-bs-toggle="modal"
+                                data-bs-target="#passwordModal"
+                                style="font-size: 0.85rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                            <div>
+                                <i class="bi bi-shield-lock-fill me-2 text-primary"></i>{% trans "Security Settings" %}
+                            </div>
+                            <i class="bi bi-chevron-right small opacity-50"></i>
+                        </button>
                         {% if user.is_superuser %}
                         <a href="/admin" class="btn btn-danger fw-bold border-0 shadow-sm py-2 rounded-3" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
                             <i class="bi bi-gear me-2"></i>{% trans "Admin Panel" %}
@@ -283,7 +318,24 @@
 
     {% block extra_scripts %}{% endblock %}
 
+    <!-- Handover Modal -->
+    <div class="modal fade" id="handoverModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div id="handover-modal-container">
+                <!-- Content loaded via HTMX -->
+            </div>
+        </div>
+    </div>
+
     <!-- Update Modal -->
+    <!-- Password Modal -->
+    <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div id="password-modal-container" class="w-100">
+                <!-- Content loaded via HTMX -->
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="updateModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
@@ -379,6 +431,18 @@
             });
             
             confirmModal.show();
+        });
+
+        // Global session expiration handler for HTMX
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            if (evt.detail.xhr.status === 401 || evt.detail.xhr.status === 403) {
+                window.location.reload();
+            }
+        });
+        
+        // Handle custom session expired header if we decide to use it
+        document.body.addEventListener('session_expired', function() {
+            window.location.reload();
         });
     </script>
     
@@ -484,8 +548,19 @@
             isChecking = true;
             
             fetch(`/menu/check-updates/?last_check=${encodeURIComponent(lastCheck)}`)
-                .then(res => res.json())
+                .then(res => {
+                    if (res.redirected && res.url.includes('/login')) {
+                        window.location.href = res.url;
+                        return;
+                    }
+                    if (res.status === 401 || res.status === 403) {
+                        window.location.reload();
+                        return;
+                    }
+                    return res.json();
+                })
                 .then(data => {
+                    if (!data) return;
                     lastCheck = data.timestamp;
 
                     if (data.has_updates && data.orders && data.orders.length > 0) {
@@ -615,7 +690,110 @@
                 updateSoundStatus(); // Stop sound if no more notifications
             }, 150);
         }
+
+        // --- Shift Transition Logic ---
+        document.body.addEventListener('shift-switched-morning', () => triggerShiftGate('morning'));
+        document.body.addEventListener('shift-switched-night', () => triggerShiftGate('night'));
+
+        function triggerShiftGate(newShift) {
+            const gate = document.getElementById('shift-gate');
+            const title = document.getElementById('gate-title');
+            const subtitle = document.getElementById('gate-subtitle');
+            
+            // Set content
+            if (newShift === 'morning') {
+                gate.className = 'shift-overlay-gate gate-morning';
+                title.innerText = 'Good Morning';
+                subtitle.innerText = 'MORNING SHIFT IS NOW ACTIVE';
+            } else {
+                gate.className = 'shift-overlay-gate gate-night';
+                title.innerText = 'Good Evening';
+                subtitle.innerText = 'NIGHT SHIFT IS NOW ACTIVE';
+            }
+            
+            // Close sidebar if open
+            const offcanvasEl = document.getElementById('offcanvasMenu');
+            const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+            if (offcanvas) offcanvas.hide();
+
+            // Run animation
+            gate.classList.add('active');
+            
+            // Page Refresh logic (Simulate OS reload)
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        }
+
+        // --- Server Status Pulse Logic ---
+        function checkServerHeartbeat() {
+            const statusDot = document.getElementById('server-status-dot');
+            if (!statusDot) return;
+
+            fetch('/menu/heartbeat/', { cache: 'no-store' })
+                .then(res => {
+                    if (res.ok) {
+                        statusDot.style.backgroundColor = '#00ff00';
+                        statusDot.style.boxShadow = '0 0 8px rgba(0, 255, 0, 0.6)';
+                        statusDot.title = '{% trans "Server Online" %}';
+                    } else {
+                        throw new Error('Offline');
+                    }
+                })
+                .catch(() => {
+                    statusDot.style.backgroundColor = '#ff0000';
+                    statusDot.style.boxShadow = '0 0 8px rgba(255, 0, 0, 0.6)';
+                    statusDot.title = '{% trans "Server Offline" %}';
+                })
+                .finally(() => {
+                    setTimeout(checkServerHeartbeat, 10000); // Check every 10 seconds
+                });
+        }
+        document.addEventListener('DOMContentLoaded', checkServerHeartbeat);
     </script>
+
+    <!-- Auto Logout Logic -->
+    {% if user.is_authenticated and GLOBAL_SETTINGS.auto_logout_minutes > 0 %}
+        {% if GLOBAL_SETTINGS.auto_logout_target == "ALL" or not user.is_superuser %}
+    <script>
+        (function() {
+            // Use number filter and default to ensure valid JS
+            const timeoutMinutes = Number("{{ GLOBAL_SETTINGS.auto_logout_minutes|default:0 }}");
+            if (timeoutMinutes <= 0) return;
+            
+            const timeoutMs = timeoutMinutes * 60 * 1000;
+            let logoutTimer;
+
+            function resetTimer() {
+                clearTimeout(logoutTimer);
+                logoutTimer = setTimeout(forceLogout, timeoutMs);
+            }
+
+            function forceLogout() {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{% url "app_logout" %}';
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = '{{ csrf_token }}';
+                
+                form.appendChild(csrfInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+
+            const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+            events.forEach(function(name) {
+                document.addEventListener(name, resetTimer, true);
+            });
+
+            resetTimer();
+        })();
+    </script>
+        {% endif %}
+    {% endif %}
 
 </body>
 </html>

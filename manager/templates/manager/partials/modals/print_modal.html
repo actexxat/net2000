@@ -34,27 +34,37 @@
                         <label class="form-label d-block">{% trans "Print Type" %}</label>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="print_type"
-                                id="printTypeBW" value="bw" checked>
+                                id="printTypeBW" value="bw" checked onchange="updateCalculatedPrice()">
                             <label class="form-check-label" for="printTypeBW">{% trans "B/W" %}</label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="print_type"
-                                id="printTypeColor" value="color">
+                                id="printTypeColor" value="color" onchange="updateCalculatedPrice()">
                             <label class="form-check-label" for="printTypeColor">
                                 {% trans "Color" %}
                             </label>
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">{% trans "Total Price (EGP)" %}</label>
+                        <input type="number" name="price" id="totalPriceInput" class="form-control form-control-lg border-danger text-danger fw-bold" step="0.5" value="1.00" required>
+                        <div class="form-text text-muted small mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            {% trans "1.00 EGP/page (≤100), 0.75 EGP/page (>100). You can edit this manually." %}
+                        </div>
+                    </div>
+
                     <div class="mb-3" id="colorCostGroup" style="display:none;">
-                        <label class="form-label">{% trans "Total cost (EGP)" %}</label>
-                        <input type="text" name="color_cost" class="form-control" placeholder="e.g. 50.00">
-                        <div class="form-text">{% trans "Enter the total cost for color printing." %}</div>
+                        <div class="alert alert-info py-2 small mb-0">
+                            <i class="bi bi-magic me-1"></i>
+                            {% trans "For color printing, please verify the price above." %}
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
-                    <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">
+                    <button type="submit" class="btn btn-danger" data-bs-dismiss="modal">
                         {% trans "Add Print to Bill" %}
                     </button>
                 </div>
@@ -86,7 +96,38 @@
         });
 
         var pagesInput = document.getElementById('pagesInput');
+        var priceInput = document.getElementById('totalPriceInput');
 
+        window.updateCalculatedPrice = function() {
+            let pages = parseInt(pagesInput.value) || 0;
+            let isBW = document.getElementById('printTypeBW').checked;
+            
+            if (isBW) {
+                let ppp = (pages <= 100) ? 1.00 : 0.75;
+                let total = (pages * ppp).toFixed(2);
+                priceInput.value = total;
+            } else {
+                // Color pricing might be different or manual, keeping as is but ensuring it updates
+                // If user wants 1.00/0.75 for both, then we just remove the isBW check.
+                // Re-reading request: "for both copy and print, every page should cost 1 pound, if the number of pages exceded 100 the 0.75 per page"
+                let ppp = (pages <= 100) ? 1.00 : 0.75;
+                let total = (pages * ppp).toFixed(2);
+                priceInput.value = total;
+            }
+        };
+
+        window.updatePages = function(amount) {
+            let current = parseInt(pagesInput.value) || 0;
+            current += amount;
+            if (current < 1) current = 1;
+            pagesInput.value = current;
+            updateCalculatedPrice();
+        };
+
+        // Event listener for manual page input
+        pagesInput.addEventListener('input', updateCalculatedPrice);
+
+        // Print Type visibility logic
         document.querySelectorAll('input[type=radio][name="print_type"]').forEach(function (radio) {
             radio.addEventListener('change', function () {
                 var grp = document.getElementById('colorCostGroup');
@@ -95,12 +136,5 @@
                 }
             });
         });
-
-        window.updatePages = function(amount) {
-            let current = parseInt(pagesInput.value) || 0;
-            current += amount;
-            if (current < 1) current = 1;
-            pagesInput.value = current;
-        };
     })();
 </script>

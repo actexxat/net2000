@@ -7,5 +7,6 @@ urlpatterns = [
     path('<int:table_id>/order/', views_menu.public_place_order, name='public_place_order'),
     path('<int:table_id>/submit-cart/', views_menu.public_submit_cart, name='public_submit_cart'),
     path('check-updates/', views_menu.check_dashboard_updates, name='check_dashboard_updates'),
+    path('heartbeat/', views_menu.heartbeat, name='heartbeat'),
     path('toggle-served/<int:order_id>/', views_menu.toggle_served_redirect, name='serve_order_toggle_menu'),
 ]

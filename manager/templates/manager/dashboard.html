@@ -25,7 +25,7 @@ html { scroll-behavior: auto !important; }
 
 <div id="dashboard-root"
      hx-get="{% url 'dashboard_grid' %}?lang={{ LANGUAGE_CODE }}"
-     hx-trigger="every 5s [!document.querySelector('.modal.show') && !document.querySelector('.dragging-active') && !document.querySelector('.sticky-note-input:focus')], refresh"
+     hx-trigger="every 5s [!document.querySelector('.modal.show') && !document.querySelector('.dragging-active')], refresh"
      hx-swap="innerHTML transition:false show:none">
     {% include 'manager/partials/table_grid_premium.html' %}
 </div>
@@ -33,34 +33,6 @@ html { scroll-behavior: auto !important; }
 <script>
 
 
-    // Sticky Note UI Controls
-    window.toggleEditNote = function(id) {
-        const content = document.getElementById(`note-content-${id}`);
-        const edit = document.getElementById(`note-edit-${id}`);
-        if (!content || !edit) return;
-
-        if (content.classList.contains('d-none')) {
-            content.classList.remove('d-none');
-            edit.classList.add('d-none');
-        } else {
-            content.classList.add('d-none');
-            edit.classList.remove('d-none');
-            edit.querySelector('textarea')?.focus();
-        }
-    };
-
-    window.saveNoteUI = function(id) {
-        // Optimistically hide the editor
-        const content = document.getElementById(`note-content-${id}`);
-        const edit = document.getElementById(`note-edit-${id}`);
-        if (content && edit) {
-            content.classList.remove('d-none');
-            edit.classList.add('d-none');
-            // Update preview text immediately
-            const text = edit.querySelector('textarea').value;
-            content.innerText = text || "...";
-        }
-    };
 </script>
 
 
@@ -75,7 +47,7 @@ html { scroll-behavior: auto !important; }
                  <div class="d-flex flex-column align-items-center" style="width: 70px;">
                     <div class="item-icon shadow-sm">
                         {% if item.image %}
-                        <img src="{{ item.image.url }}" class="w-100 h-100 object-fit-cover" alt="{{ item.name }}">
+                        <img src="{{ item.image.url }}" class="w-100 h-100 object-fit-cover" alt="{{ item.name }}" loading="lazy" decoding="async">
                         {% else %}
                         <span class="fw-bold text-dark fs-5">{{ item.name|slice:":1" }}</span>
                         {% endif %}
@@ -343,11 +315,13 @@ html { scroll-behavior: auto !important; }
                         percentPosition: true,
                         horizontalOrder: true,
                         originLeft: !isRtl,
-                        transitionDuration: '0.1s' // Add a subtle transition for smoother snapping
+                        transitionDuration: 0 // Instant feedback for low-end devices
                     });
                 } else {
-                    msnry.reloadItems();
-                    msnry.layout();
+                    requestAnimationFrame(() => {
+                        msnry.reloadItems();
+                        msnry.layout();
+                    });
                 }
             }
 
@@ -360,11 +334,13 @@ html { scroll-behavior: auto !important; }
                         percentPosition: true,
                         horizontalOrder: true,
                         originLeft: !isRtl,
-                        transitionDuration: '0.1s'
+                        transitionDuration: 0
                     });
                 } else {
-                    msnryAvailable.reloadItems();
-                    msnryAvailable.layout();
+                    requestAnimationFrame(() => {
+                        msnryAvailable.reloadItems();
+                        msnryAvailable.layout();
+                    });
                 }
             }
         };
@@ -404,7 +380,9 @@ html { scroll-behavior: auto !important; }
         if (lastInteractedTableId) {
             const card = document.getElementById(lastInteractedTableId);
             if (card) {
-                document.querySelectorAll('.table-card').forEach(c => c.classList.remove('last-interacted'));
+                // Targeted removal: find current active and remove
+                const current = document.querySelector('.table-card.last-interacted');
+                if (current && current !== card) current.classList.remove('last-interacted');
                 card.classList.add('last-interacted');
             }
         }
