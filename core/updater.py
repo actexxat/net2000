@@ -77,7 +77,11 @@ class UpdateChecker:
             with urlopen(req, context=context, timeout=10) as response:
                 data = json.loads(response.read().decode('utf-8'))
             
-            latest_version = data.get('tag_name', '').lstrip('v')
+            import re
+            tag_name = data.get('tag_name', '')
+            match = re.search(r'(\d+\.\d+\.\d+)', tag_name)
+            latest_version = match.group(1) if match else tag_name.lstrip('v')
+            
             release_notes = data.get('body', 'No release notes available.')
             is_prerelease = data.get('prerelease', False)
             
@@ -129,7 +133,10 @@ class UpdateChecker:
                         tags_data = json.loads(response.read().decode('utf-8'))
                         
                     if tags_data:
-                        latest_version = tags_data[0]['name'].lstrip('v')
+                        import re
+                        tag_name = tags_data[0]['name']
+                        match = re.search(r'(\d+\.\d+\.\d+)', tag_name)
+                        latest_version = match.group(1) if match else tag_name.lstrip('v')
                         download_url = tags_data[0].get('zipball_url')
                         is_newer = self._compare_versions(latest_version, self.current_version)
                         
