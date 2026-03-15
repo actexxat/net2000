@@ -26,12 +26,12 @@
                                 <td class="text-nowrap text-muted">{{ log.timestamp|date:"H:i:s" }}</td>
                                 <td class="fw-bold">{{ log.user.username|default:"System" }}</td>
                                 <td>
-                                    {% if log.action_type == 'ORDER' %}<span class="badge bg-primary">ORDER</span>
-                                    {% elif log.action_type == 'PRINT' %}<span class="badge bg-secondary">PRINT</span>
-                                    {% elif log.action_type == 'COPY' %}<span class="badge bg-dark">COPY</span>
-                                    {% elif log.action_type == 'FAX' %}<span class="badge bg-info text-dark">FAX</span>
-                                    {% elif log.action_type == 'CUSTOM' %}<span class="badge bg-warning text-dark">CUSTOM</span>
-                                    {% else %}<span class="badge bg-secondary">{{ log.action_type }}</span>{% endif %}
+                                    {% if log.action_type == 'ORDER' %}<span class="badge bg-primary">{% trans "ORDER" %}</span>
+                                    {% elif log.action_type == 'PRINT' %}<span class="badge bg-secondary">{% trans "PRINT" %}</span>
+                                    {% elif log.action_type == 'COPY' %}<span class="badge bg-dark">{% trans "COPY" %}</span>
+                                    {% elif log.action_type == 'FAX' %}<span class="badge bg-info text-dark">{% trans "FAX" %}</span>
+                                    {% elif log.action_type == 'CUSTOM' %}<span class="badge bg-warning text-dark">{% trans "CUSTOM" %}</span>
+                                    {% else %}<span class="badge bg-secondary">{{ log.action_type|translate_text }}</span>{% endif %}
                                 </td>
                                 <td>{% if log.table %}{{ log.table.number }}{% else %}-{% endif %}</td>
                                 <td class="text-break">{{ log.details }}</td>

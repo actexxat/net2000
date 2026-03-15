@@ -12,7 +12,7 @@
             <div>
                 <h5 class="modal-title fw-800 mb-0">{% trans "Shift Handover" %}</h5>
                 <small class="text-uppercase fw-bold opacity-75" style="font-size: 0.65rem; letter-spacing: 1px;">
-                    {{ current_shift }} <i class="bi bi-arrow-right mx-1"></i> {{ next_shift }}
+                    {{ current_shift|translate_text }} <i class="bi bi-arrow-right mx-1"></i> {{ next_shift|translate_text }}
                 </small>
             </div>
         </div>
@@ -58,10 +58,10 @@
                         <div class="text-uppercase text-primary fw-bold" style="font-size: 0.65rem; letter-spacing: 1px;">{% trans "Unpaid Revenue Handover" %}</div>
                         <i class="bi bi-cash-stack text-primary fs-4"></i>
                     </div>
-                    <div class="display-6 fw-800 text-primary">{{ total_unpaid|floatformat:2|translate_numbers }} <span class="fs-6">EGP</span></div>
+                    <div class="display-6 fw-800 text-primary">{{ total_unpaid|floatformat:2|translate_numbers }} <span class="fs-6">{% trans "EGP" %}</span></div>
                     <p class="text-muted small mt-2 mb-0">
                         <i class="bi bi-info-circle me-1"></i>
-                        {% trans "All open orders and tables will be handed over to the" %} <strong>{{ next_shift }}</strong> {% trans "shift manager." %}
+                        {% blocktrans with shift=next_shift|translate_text %}All open orders and tables will be handed over to the <strong>{{ shift }}</strong> shift manager.{% endblocktrans %}
                     </p>
                 </div>
             </div>
