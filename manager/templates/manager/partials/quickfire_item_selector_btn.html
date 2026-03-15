@@ -1,0 +1,38 @@
+{% load i18n manager_extras %}
+<button class="qf-card w-100 rounded-4 p-3 d-flex align-items-center justify-content-between {% if is_active %}active shadow-md border-primary{% else %}border-light shadow-xs border-opacity-10{% endif %} hover-scale transition-all"
+        hx-post="{% url 'toggle_quickfire' item.id %}"
+        hx-target="#qf-selector-{{ item.id }}"
+        hx-swap="innerHTML transition:true"
+        hx-indicator="this"
+        style="border-width: 2px; border-style: solid;">
+    <div class="d-flex align-items-center gap-3 overflow-hidden">
+        <div class="rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0 position-relative" style="width: 42px; height: 42px; border: 1px solid rgba(0,0,0,0.05);">
+            <div class="htmx-indicator position-absolute top-50 start-50 translate-middle">
+                <div class="spinner-border spinner-border-sm text-primary" style="width: 1rem; height: 1rem;" role="status"></div>
+            </div>
+            <div class="htmx-indicator-hide w-100 h-100 d-flex align-items-center justify-content-center">
+                {% if item.image %}
+                    <img src="{{ item.image.url }}" class="w-100 h-100 object-fit-cover shadow-sm">
+                {% else %}
+                    <span class="fw-bold text-dark small">{{ item.name|slice:":1"|upper }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="text-start overflow-hidden">
+            <div class="fw-800 text-dark text-truncate mb-0" style="font-size: 0.85rem; letter-spacing: -0.2px;">{{ item.name|translate_text }}</div>
+            <div class="text-primary fw-bold" style="font-size: 0.7rem; opacity: 0.8;">{{ item.price|floatformat:0 }} EGP</div>
+        </div>
+    </div>
+    
+    <div class="selection-status ms-2">
+        {% if is_active %}
+            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 24px; height: 24px;">
+                <i class="bi bi-check-lg text-white" style="font-size: 0.9rem;"></i>
+            </div>
+        {% else %}
+            <div class="rounded-circle border border-dark border-opacity-10 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; background: rgba(0,0,0,0.02);">
+                <i class="bi bi-plus text-muted" style="font-size: 1.1rem;"></i>
+            </div>
+        {% endif %}
+    </div>
+</button>

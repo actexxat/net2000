@@ -1,0 +1,130 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Change Username" %} | {{ site_title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-xl">
+
+    {# ── Breadcrumb ── #}
+    <div class="mb-6">
+        <nav class="flex text-sm text-gray-500 gap-1 items-center">
+            <a href="{% url 'admin:index' %}" class="hover:text-gray-800 transition-colors">{% trans "Home" %}</a>
+            <span class="mx-1">›</span>
+            <a href="{% url 'admin:auth_user_changelist' %}" class="hover:text-gray-800 transition-colors">{% trans "Users" %}</a>
+            <span class="mx-1">›</span>
+            <a href="{% url 'admin:auth_user_change' user_obj.pk %}" class="hover:text-gray-800 transition-colors">{{ user_obj.username }}</a>
+            <span class="mx-1">›</span>
+            <span class="text-gray-800 font-semibold">{% trans "Change Username" %}</span>
+        </nav>
+    </div>
+
+    {# ── Card ── #}
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 overflow-hidden">
+
+        {# Header stripe #}
+        <div class="px-8 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                 style="background: linear-gradient(135deg, #e11d48, #9f1239);">
+                {{ user_obj.username|slice:":2"|upper }}
+            </div>
+            <div>
+                <h1 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                    {% trans "Change Username" %}
+                </h1>
+                <p class="text-sm text-gray-500">
+                    {% blocktrans with name=user_obj.username %}
+                        Currently: <strong>{{ name }}</strong>
+                    {% endblocktrans %}
+                </p>
+            </div>
+        </div>
+
+        {# Form body #}
+        <div class="px-8 py-7">
+
+            {% if form.errors %}
+            <div class="mb-5 rounded-xl bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 px-5 py-4 text-red-700 dark:text-red-300 text-sm flex gap-3 items-start">
+                <span class="material-symbols-outlined text-lg mt-0.5">error</span>
+                <div>
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <p class="font-medium">{{ error }}</p>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <p class="font-medium">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                {# New username #}
+                <div class="mb-5">
+                    <label for="{{ form.username.id_for_label }}"
+                           class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
+                        {% trans "New Username" %}
+                    </label>
+                    <input
+                        type="text"
+                        name="{{ form.username.html_name }}"
+                        id="{{ form.username.id_for_label }}"
+                        value="{{ form.username.value|default:'' }}"
+                        autofocus
+                        required
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800
+                               text-gray-900 dark:text-white px-4 py-3 text-sm
+                               focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition"
+                        placeholder="{% trans 'Enter new username' %}"
+                    >
+                    <p class="mt-2 text-xs text-gray-400">
+                        {% trans "150 characters or fewer. Letters, digits, and @/./+/-/_ only." %}
+                    </p>
+                </div>
+
+                {# Confirm username #}
+                <div class="mb-8">
+                    <label for="{{ form.username_confirm.id_for_label }}"
+                           class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
+                        {% trans "Confirm New Username" %}
+                    </label>
+                    <input
+                        type="text"
+                        name="{{ form.username_confirm.html_name }}"
+                        id="{{ form.username_confirm.id_for_label }}"
+                        value="{{ form.username_confirm.value|default:'' }}"
+                        required
+                        class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800
+                               text-gray-900 dark:text-white px-4 py-3 text-sm
+                               focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition"
+                        placeholder="{% trans 'Repeat the new username' %}"
+                    >
+                </div>
+
+                {# Actions #}
+                <div class="flex items-center justify-between gap-4">
+                    <a href="{% url 'admin:auth_user_change' user_obj.pk %}"
+                       class="text-sm text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors font-medium flex items-center gap-1">
+                        <span class="material-symbols-outlined text-base">arrow_back</span>
+                        {% trans "Cancel" %}
+                    </a>
+                    <button type="submit"
+                            class="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all
+                                   bg-gradient-to-r from-rose-600 to-rose-700
+                                   hover:from-rose-500 hover:to-rose-600
+                                   hover:shadow-lg hover:shadow-rose-200 dark:hover:shadow-rose-900
+                                   active:scale-95 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-base">badge</span>
+                        {% trans "Save Username" %}
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

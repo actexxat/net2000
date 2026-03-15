@@ -7,7 +7,7 @@ from django.views.decorators.http import require_POST
 from django.db import models
 from django.db.models import Sum, Q, Prefetch, Avg, Count, Max, Min, F, ExpressionWrapper, fields
 from django.db.models.functions import Coalesce, ExtractHour, ExtractWeekDay
-from .models import Table, Item, Order, TableSession, QuickFireItem
+from .models import Table, Item, Order, TableSession, QuickFireItem, QuickMenuItem
 from infrastructure.models import GlobalSettings
 from decimal import Decimal, InvalidOperation
 
@@ -16,44 +16,6 @@ from django.utils.translation import gettext_lazy as _, get_language
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
-from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.forms import PasswordChangeForm
-
-
-@login_required
-def change_password(request):
-    _activate_language(request)
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)  # Important!
-            messages.success(request, _('Your password was successfully updated!'))
-            
-            if request.headers.get('HX-Request'):
-                from django.template.loader import render_to_string
-                from django.http import HttpResponse
-                messages_html = render_to_string('manager/partials/messages.html', {}, request=request)
-                response = HttpResponse(messages_html)
-                response['HX-Trigger'] = 'close-modal'
-                return response
-                
-            return redirect('dashboard')
-        else:
-            if request.headers.get('HX-Request'):
-                return render(request, 'manager/partials/modals/change_password_modal.html', {
-                    'form': form
-                })
-    else:
-        form = PasswordChangeForm(request.user)
-    
-    if request.headers.get('HX-Request'):
-        return render(request, 'manager/partials/modals/change_password_modal.html', {
-            'form': form
-        })
-        
-    return render(request, 'manager/change_password.html', {'form': form})
-
 
 def _loc(val):
     from django.utils.translation import get_language
@@ -63,6 +25,8 @@ def _loc(val):
 
 def superuser_required(view_func):
     """Decorator for views that checks that the user is a superuser, redirecting to unauthorized if not."""
+    from functools import wraps
+    @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect('login')
@@ -123,6 +87,56 @@ def _get_table_context(table, settings=None):
         table.final_total = 0
         table.min_charge_progress = 0
     return table
+
+
+def sync_item_prices_for_open_orders():
+    """
+    Ensures every unpaid, pure-item order (no custom description) reflects
+    the current Item.price from the database.
+
+    Rules:
+      - Only orders with a linked Item are considered (item is not null).
+      - Orders with a non-empty description are SERVICE orders (print, copy, fax,
+        custom) whose price was deliberately set by the user -- these are SKIPPED.
+      - A single bulk UPDATE is issued per changed item to minimise DB round-trips.
+    """
+    from django.db.models import F
+
+    # Fetch all unpaid pure-item orders whose stored price differs from item price.
+    # We join to Item via the FK and compare directly in the DB.
+    stale_orders = (
+        Order.objects
+        .filter(
+            is_paid=False,
+            item__isnull=False,          # Must be linked to a catalogue item
+            description__isnull=True,    # No custom description = pure item order
+        )
+        .exclude(
+            transaction_price=F('item__price')  # Only where prices diverge
+        )
+        .select_related('item')
+    )
+
+    if not stale_orders.exists():
+        return 0
+
+    # Group by the item FK to batch the updates (one UPDATE per distinct item price)
+    item_ids_to_update = stale_orders.values_list('item_id', flat=True).distinct()
+
+    updated_total = 0
+    for item_id in item_ids_to_update:
+        try:
+            item = Item.objects.get(id=item_id)
+        except Item.DoesNotExist:
+            continue
+        count = Order.objects.filter(
+            is_paid=False,
+            item_id=item_id,
+            description__isnull=True,
+        ).update(transaction_price=item.price)
+        updated_total += count
+
+    return updated_total
 
 def _get_sorted_tables(sort_by_status=True):
     """Helper to get all tables sorted by status, with contexts prepared."""
@@ -243,8 +257,8 @@ def _get_quick_items():
             except Item.DoesNotExist:
                 continue
     
-    # Limit to reasonable number
-    return quick_items[:12]
+    # Limit to reasonable number (increased to 24 to allow more variety)
+    return quick_items[:24]
 
 @login_required
 def dashboard(request):
@@ -295,7 +309,8 @@ def _get_dashboard_grid_state_string(request):
     from django.db.models import Max, Count, Sum
     
     # 1. Cheap State Check (DB Aggregation) to avoid rendering
-    # We want to catch: New Orders, Deleted Orders, Served Status Change, People Count Change, Table Status Change
+    # We want to catch: New Orders, Deleted Orders, Served Status Change, People Count Change,
+    # Table Status Change, and Item Price Changes.
     
     orders_agg = Order.objects.filter(is_paid=False).aggregate(
         cnt=Count('id'), 
@@ -314,6 +329,21 @@ def _get_dashboard_grid_state_string(request):
 
     pending_cnt = Table.objects.filter(pending_reset=True).count()
     
+    # Detect item price changes: sum of current catalogue prices for all items
+    # that have active unpaid orders. This makes the ETag stale the moment any
+    # admin changes an item price, triggering an immediate full re-render.
+    active_item_ids = (
+        Order.objects
+        .filter(is_paid=False, item__isnull=False)
+        .values_list('item_id', flat=True)
+        .distinct()
+    )
+    price_checksum = (
+        Item.objects
+        .filter(id__in=active_item_ids)
+        .aggregate(total=Sum('price'))['total'] or 0
+    )
+    
     # v16-localization: Force activate language using centralized helper
     user_language = _activate_language(request)
 
@@ -326,8 +356,13 @@ def _get_dashboard_grid_state_string(request):
     # v24-alignment-fix: Align metric cards with the table grid.
     # v25-layout-reorg: Relocate Table 0 to the main grid and center metric cards.
     # v26-translations: Added missing translations for metric cards.
+    # v28-price-sync: Include item price checksum so price changes trigger a re-render.
     lang = user_language
-    state_str = f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-{tables_agg['occupied_cnt']}-{p_sum}-{pending_cnt}-{lang}-v27-pending-reset"
+    state_str = (
+        f"{orders_agg['cnt']}-{orders_agg['max_id']}-{s_cnt}-"
+        f"{tables_agg['occupied_cnt']}-{p_sum}-{pending_cnt}-"
+        f"{price_checksum}-{lang}-v28-price-sync"
+    )
     return state_str
 
 @login_required
@@ -338,6 +373,13 @@ def dashboard_grid(request):
     from django.template.loader import render_to_string
     
     _activate_language(request)
+
+    # --- Price Sync: runs on every poll tick ---
+    # Update any unpaid pure-item orders whose stored price no longer matches
+    # the current catalogue price.  Skips service orders (print/copy/fax/custom)
+    # which carry a user-set description and are priced deliberately.
+    sync_item_prices_for_open_orders()
+    # -------------------------------------------
     
     state_str = _get_dashboard_grid_state_string(request)
     et = hashlib.md5(state_str.encode('utf-8')).hexdigest()
@@ -446,12 +488,15 @@ def add_order(request, table_id):
     if request.method == "GET":
         # logic to populate menu items for the modal
         grouped_items = _get_grouped_items()
-         
+        quick_menu_items = _get_quick_menu_items()
+        all_items = list(Item.objects.all().order_by('category', 'name'))
         _get_table_context(table)
         
         return render(request, 'manager/partials/modals/order_modal.html', {
             'table': table,
-            'grouped_items': grouped_items
+            'grouped_items': grouped_items,
+            'quick_menu_items': quick_menu_items,
+            'all_items': all_items,
         })
 
     if request.method == "POST":
@@ -1278,10 +1323,16 @@ def service_modal_preview(request, table_id, service_type):
     if not template_name:
         return HttpResponseBadRequest("Invalid service type")
 
-    return render(request, template_name, {
+    context = {
         'table': table,
         'grouped_items': grouped_items,
-    })
+    }
+
+    if service_type == 'order':
+        context['quick_menu_items'] = _get_quick_menu_items()
+        context['all_items'] = list(Item.objects.all().order_by('category', 'name'))
+
+    return render(request, template_name, context)
 
 
 @require_POST
@@ -1938,6 +1989,200 @@ def switch_shift(request):
              
     return redirect('dashboard')
 
+@login_required
+def quickfire_selector(request):
+    """Returns a modal with all menu items to select/deselect for the Quickfire bar."""
+    _activate_language(request)
+    grouped_items = _get_grouped_items()
+    # Use the helper to get what's ACTUALY in the bar (including fallbacks)
+    current_quick_items = _get_quick_items()
+    current_quick_ids = set(i.id for i in current_quick_items)
+    
+    # We need the actual QuickFireItem objects for accurate order editing
+    db_quick_items = QuickFireItem.objects.all().order_by('order').select_related('item')
+    
+    return render(request, 'manager/partials/modals/quickfire_selector_modal.html', {
+        'grouped_items': grouped_items,
+        'current_quick_ids': current_quick_ids,
+        'db_quick_items': db_quick_items,
+    })
+
+@login_required
+def toggle_quickfire(request, item_id):
+    """Adds or removes an item from the Quickfire bar."""
+    _activate_language(request)
+    item = get_object_or_404(Item, id=item_id)
+    quick_item = QuickFireItem.objects.filter(item=item).first()
+    
+    if quick_item:
+        quick_item.delete()
+    else:
+        # Get next order
+        max_order = QuickFireItem.objects.aggregate(Max('order'))['order__max'] or 0
+        QuickFireItem.objects.create(item=item, order=max_order + 1)
+        
+    if request.headers.get('HX-Request'):
+        # We need to return the updated item selector AND the updated bar OOB.
+        quick_items = _get_quick_items()
+        
+        from django.template.loader import render_to_string
+        
+        # Button HTML for the toggled item
+        is_active = not quick_item
+        btn_html = render_to_string('manager/partials/quickfire_item_selector_btn.html', {
+            'item': item,
+            'is_active': is_active
+        }, request=request)
+        
+        # Quickfire bar fragment
+        bar_content_html = render_to_string('manager/partials/quickfire_bar.html', {
+            'quick_items': quick_items
+        }, request=request)
+        
+        # Wrap the bar in its container for OOB swap (directly without redundant inner speed-bar div)
+        bar_oob = f'<div id="speed-bar-container" hx-swap-oob="outerHTML" class="fixed-bottom d-flex justify-content-center pointer-events-none pb-4" style="z-index: 1040;">{bar_content_html}</div>'
+        
+        # New selection counter OOB
+        current_count = QuickFireItem.objects.count()
+        counter_oob = f'<span id="global-selected-count" hx-swap-oob="innerHTML">{current_count} ' + _("PINNED") + '</span>'
+        
+        # Pinned section OOB
+        db_quick_items = QuickFireItem.objects.all().order_by('order').select_related('item')
+        pinned_section_html = render_to_string('manager/partials/modals/quickfire_pinned_section.html', {
+            'db_quick_items': db_quick_items
+        }, request=request)
+        pinned_oob = f'<div id="qf-pinned-section-container" hx-swap-oob="innerHTML">{pinned_section_html}</div>'
+        
+        return HttpResponse(btn_html + bar_oob + counter_oob + pinned_oob)
+
+    return redirect('dashboard')
+
+@login_required
+def update_quickfire_order(request, item_id):
+    """Updates the display order of a Quickfire item."""
+    if request.method == "POST":
+        new_order = request.POST.get('order', 0)
+        try:
+            q_item = QuickFireItem.objects.get(item_id=item_id)
+            q_item.order = int(new_order)
+            q_item.save()
+        except (QuickFireItem.DoesNotExist, ValueError):
+            pass
+
+    if request.headers.get('HX-Request'):
+        quick_items = _get_quick_items()
+        db_quick_items = QuickFireItem.objects.all().order_by('order').select_related('item')
+        
+        from django.template.loader import render_to_string
+        
+        # Quickfire bar fragment
+        bar_content_html = render_to_string('manager/partials/quickfire_bar.html', {
+            'quick_items': quick_items
+        }, request=request)
+        bar_oob = f'<div id="speed-bar-container" hx-swap-oob="outerHTML" class="fixed-bottom d-flex justify-content-center pointer-events-none pb-4" style="z-index: 1040;">{bar_content_html}</div>'
+        
+        # Pinned section HTML
+        pinned_section_html = render_to_string('manager/partials/modals/quickfire_pinned_section.html', {
+            'db_quick_items': db_quick_items
+        }, request=request)
+        
+        return HttpResponse(pinned_section_html + bar_oob)
+
+    return redirect('dashboard')
+
+
+
+
+# ── Quick Menu Tab (order-modal) views ─────────────────────────────────────
+
+def _get_quick_menu_items():
+    """Returns ordered QuickMenuItem queryset with item prefetched."""
+    return list(QuickMenuItem.objects.select_related('item').order_by('order', 'id'))
+
+
+@login_required
+def quick_menu_tab(request, table_id):
+    """
+    Returns the full Quick-tab panel HTML (for HTMX reload after add/remove).
+    GET-safe; all users can view, only superusers get the edit controls.
+    """
+    from django.http import HttpResponse
+    from django.template.loader import render_to_string
+    _activate_language(request)
+    table = get_object_or_404(Table, id=table_id)
+    quick_menu_items = _get_quick_menu_items()
+    all_items = list(Item.objects.all().order_by('category', 'name'))
+    html = render_to_string(
+        'manager/partials/modals/quick_menu_panel.html',
+        {'quick_menu_items': quick_menu_items, 'all_items': all_items, 'table': table},
+        request=request,
+    )
+    return HttpResponse(html)
+
+
+@login_required
+def add_quick_menu_item(request, item_id):
+    """POST: Superuser adds an item to the Quick Menu tab."""
+    from django.http import HttpResponse
+    from django.template.loader import render_to_string
+    _activate_language(request)
+    if not request.user.is_superuser:
+        return HttpResponse(status=403)
+    if request.method == 'POST':
+        item = get_object_or_404(Item, id=item_id)
+        if not QuickMenuItem.objects.filter(item=item).exists():
+            max_order = QuickMenuItem.objects.aggregate(m=models.Max('order'))['m'] or 0
+            QuickMenuItem.objects.create(item=item, order=max_order + 1)
+    table_id = request.POST.get('table_id', 0)
+    table = get_object_or_404(Table, id=table_id) if table_id else None
+    quick_menu_items = _get_quick_menu_items()
+    all_items = list(Item.objects.all().order_by('category', 'name'))
+    html = render_to_string(
+        'manager/partials/modals/quick_menu_panel.html',
+        {'quick_menu_items': quick_menu_items, 'all_items': all_items, 'table': table},
+        request=request,
+    )
+    return HttpResponse(html)
+
+
+@login_required
+def remove_quick_menu_item(request, item_id):
+    """POST: Superuser removes an item from the Quick Menu tab."""
+    from django.http import HttpResponse
+    from django.template.loader import render_to_string
+    _activate_language(request)
+    if not request.user.is_superuser:
+        return HttpResponse(status=403)
+    if request.method == 'POST':
+        QuickMenuItem.objects.filter(item_id=item_id).delete()
+    table_id = request.POST.get('table_id', 0)
+    table = get_object_or_404(Table, id=table_id) if table_id else None
+    quick_menu_items = _get_quick_menu_items()
+    all_items = list(Item.objects.all().order_by('category', 'name'))
+    html = render_to_string(
+        'manager/partials/modals/quick_menu_panel.html',
+        {'quick_menu_items': quick_menu_items, 'all_items': all_items, 'table': table},
+        request=request,
+    )
+    return HttpResponse(html)
+
+
+def get_usernames(request):
+    """
+    Public endpoint: returns a JSON list of active usernames for the login
+    quick-picker. Intentionally requires NO authentication — it runs on the
+    login page. Only usernames (no passwords, emails, or private data) are
+    returned.
+    """
+    from django.contrib.auth import get_user_model
+    from django.http import JsonResponse
+    User = get_user_model()
+    usernames = list(
+        User.objects.filter(is_active=True)
+        .order_by('username')
+        .values_list('username', flat=True)
+    )
+    return JsonResponse({'usernames': usernames})
 
 
 # Import update system views

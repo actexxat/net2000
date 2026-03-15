@@ -53,6 +53,13 @@ def update_check_view(request):
         }, status=500)
 
 
+# Global state to prevent DB locks from threaded Django session saves
+_UPDATE_STATE = {
+    'progress': 0,
+    'ready': False,
+    'script': None
+}
+
 @staff_member_required
 @require_http_methods(["POST"])
 def update_download_view(request):
@@ -66,21 +73,20 @@ def update_download_view(request):
     
     checker = UpdateChecker()
     
-    # Store progress in session
-    request.session['update_progress'] = 0
+    _UPDATE_STATE['progress'] = 0
+    _UPDATE_STATE['ready'] = False
+    _UPDATE_STATE['script'] = None
     
     def progress_callback(progress):
-        request.session['update_progress'] = progress
-        request.session.save()
+        _UPDATE_STATE['progress'] = progress
     
     # Download in background thread
     def download_task():
         zip_path = checker.download_update(download_url, progress_callback)
         if zip_path:
             update_script = checker.install_update(zip_path)
-            request.session['update_script'] = update_script
-            request.session['update_ready'] = True
-            request.session.save()
+            _UPDATE_STATE['script'] = update_script
+            _UPDATE_STATE['ready'] = True
     
     thread = threading.Thread(target=download_task, daemon=True)
     thread.start()
@@ -91,12 +97,9 @@ def update_download_view(request):
 @staff_member_required
 def update_progress_view(request):
     """Get download progress."""
-    progress = request.session.get('update_progress', 0)
-    ready = request.session.get('update_ready', False)
-    
     return JsonResponse({
-        'progress': progress,
-        'ready': ready
+        'progress': _UPDATE_STATE['progress'],
+        'ready': _UPDATE_STATE['ready']
     })
 
 
@@ -107,7 +110,7 @@ def update_apply_view(request):
     if not UPDATER_AVAILABLE:
         return JsonResponse({'error': 'Updater not available'}, status=400)
     
-    update_script = request.session.get('update_script')
+    update_script = _UPDATE_STATE.get('script')
     if not update_script:
         return JsonResponse({'error': 'No update ready to apply'}, status=400)
     

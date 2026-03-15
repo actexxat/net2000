@@ -36,34 +36,9 @@ html { scroll-behavior: auto !important; }
 </script>
 
 
-
     <div id="speed-bar-container" class="fixed-bottom d-flex justify-content-center pointer-events-none pb-4" style="z-index: 1040;">
-        <div class="speed-bar pointer-events-auto shadow-lg">
-             <div class="px-3 fw-bold small text-muted border-end sticky-start bg-transparent">
-             </div>
-             
-             {% for item in quick_items %}
-             <div class="quick-item draggable-item d-inline-block" draggable="true" data-item-id="{{ item.id }}">
-                 <div class="d-flex flex-column align-items-center" style="width: 70px;">
-                    <div class="item-icon shadow-sm">
-                        {% if item.image %}
-                        <img src="{{ item.image.url }}" class="w-100 h-100 object-fit-cover" alt="{{ item.name }}" loading="lazy" decoding="async">
-                        {% else %}
-                        <span class="fw-bold text-dark fs-5">{{ item.name|slice:":1" }}</span>
-                        {% endif %}
-                    </div>
-                    <span class="small fw-bold text-truncate w-100 text-center mt-1 text-dark" style="font-size: 0.65rem; opacity: 0.8;">{{ item.short_name|default:item.name|translate_text }}</span>
-                 </div>
-             </div>
-             {% endfor %}
-        </div>
+        {% include 'manager/partials/quickfire_bar.html' %}
     </div>
-</div>
-
-<!-- Container for Dynamic Checkout & Service Modals -->
-<div id="checkout-modal-container"></div>
-<div id="service-modal-container"></div>
-
 {% endblock %}
 
 {% block extra_scripts %}

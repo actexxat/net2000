@@ -67,13 +67,13 @@ exe = EXE(
 
     version_info={
         "name": "Internet2000_win10",
-        "version": (1, 1, 1, 0),
+        "version": (1, 1, 3, 0),
         "company_name": "Internet 2000 Team",
         "file_description": "Cafe Management System Server",
         "legal_copyright": "Copyright (C) 2026 Internet 2000 Team",
         "original_filename": "Internet2000_win10.exe",
         "product_name": "Internet 2000 Cafe Management System",
-        "product_version": (1, 1, 1, 0),
+        "product_version": (1, 1, 3, 0),
     },
 )
 coll = COLLECT(

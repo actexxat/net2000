@@ -10,9 +10,10 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns # Import thi
 
 urlpatterns = [
     # Auth
+    path('api/usernames/', manager_views.get_usernames, name='get_usernames'),
     path('login/', auth_views.LoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='app_logout'),
-    path('change-password/', manager_views.change_password, name='change_password'),
+
 
     # Manager Actions
     path('toggle-served/<int:order_id>/', manager_views.toggle_served, name='serve_order_toggle'),       
@@ -63,6 +64,16 @@ urlpatterns = [
     path('notification-history/', manager_views.notification_history, name='notification_history'), # Notification center endpoint
     path('log-modal/', manager_views.log_modal, name='log_modal'),
     path('clear-log/', manager_views.clear_log, name='clear_log'),
+    
+    # Quickfire Management
+    path('quickfire/selector/', manager_views.quickfire_selector, name='quickfire_selector'),
+    path('quickfire/toggle/<int:item_id>/', manager_views.toggle_quickfire, name='toggle_quickfire'),
+    path('quickfire/update-order/<int:item_id>/', manager_views.update_quickfire_order, name='update_quickfire_order'),
+
+    # Quick Menu Tab (order modal)
+    path('quick-menu/panel/<int:table_id>/', manager_views.quick_menu_tab, name='quick_menu_tab'),
+    path('quick-menu/add/<int:item_id>/', manager_views.add_quick_menu_item, name='add_quick_menu_item'),
+    path('quick-menu/remove/<int:item_id>/', manager_views.remove_quick_menu_item, name='remove_quick_menu_item'),
 
     path('clear-log/', manager_views.clear_log, name='clear_log'),
 

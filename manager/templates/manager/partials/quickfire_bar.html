@@ -1,0 +1,36 @@
+{% load static i18n manager_extras %}
+<div id="quickfire-bar-inner" class="speed-bar pointer-events-auto shadow-lg d-flex align-items-center">
+    <div class="px-3 fw-bold small text-muted border-end sticky-start d-flex align-items-center h-100 pointer-events-auto" style="background: rgba(255,255,255,0.98); border-top-left-radius: 16px; border-bottom-left-radius: 16px; min-width: 64px; z-index: 50;">
+        <button type="button" 
+                class="btn btn-link p-0 text-primary hover-scale transition-all d-flex align-items-center justify-content-center"
+                hx-get="{% url 'quickfire_selector' %}"
+                hx-target="#quickfire-modal-container"
+                hx-swap="innerHTML"
+                hx-trigger="click"
+                hx-on:click="console.log('Quickfire button clicked')"
+                hx-indicator="#qf-loader"
+                title="{% trans 'Manage Quickfire items' %}">
+            <i class="bi bi-plus-circle-fill htmx-indicator-hide" style="font-size: 1.75rem;"></i>
+            <div id="qf-loader" class="htmx-indicator spinner-border spinner-border-sm text-primary" role="status"></div>
+        </button>
+    </div>
+    
+    <div class="d-flex align-items-center overflow-auto no-scrollbar py-1 gap-1 px-2">
+        {% for item in quick_items %}
+        <div class="quick-item draggable-item" draggable="true" data-item-id="{{ item.id }}" style="width: 75px; flex-shrink: 0;">
+            <div class="d-flex flex-column align-items-center">
+                <div class="item-icon shadow-sm mb-1" style="width: 44px; height: 44px; border-radius: 14px; background: white; border: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    {% if item.image %}
+                    <img src="{{ item.image.url }}" class="w-100 h-100 object-fit-cover" alt="{{ item.name }}" loading="lazy" decoding="async">
+                    {% else %}
+                    <span class="fw-bold text-dark fs-5">{{ item.name|slice:":1"|upper }}</span>
+                    {% endif %}
+                </div>
+                <span class="small fw-800 text-truncate w-100 text-center text-dark px-1" style="font-size: 0.6rem; opacity: 0.9;">{{ item.short_name|default:item.name|translate_text }}</span>
+            </div>
+        </div>
+        {% empty %}
+        <div class="px-4 text-muted small italic">{% trans "No quick items" %}</div>
+        {% endfor %}
+    </div>
+</div>

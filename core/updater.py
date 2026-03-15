@@ -189,6 +189,7 @@ class UpdateChecker:
             with urlopen(req, context=context, timeout=30) as response:
                 total_size = int(response.headers.get('content-length', 0))
                 downloaded = 0
+                last_reported_progress = -1
                 
                 with open(zip_path, 'wb') as f:
                     while True:
@@ -200,7 +201,9 @@ class UpdateChecker:
                         
                         if progress_callback and total_size > 0:
                             progress = int((downloaded / total_size) * 100)
-                            progress_callback(progress)
+                            if progress != last_reported_progress:
+                                progress_callback(progress)
+                                last_reported_progress = progress
             
             return zip_path
             
@@ -276,7 +279,7 @@ mkdir "{app_dir}\\_backup"
 
 echo Copying files to backup...
 rem Use simple copy for backup to avoid complexity
-xcopy "{app_dir}\\*.*" "{app_dir}\\_backup\\" /E /I /Y /EXCLUDE:{app_dir}\\_update_temp\\exclude.txt >nul
+xcopy "{app_dir}\\*.*" "{app_dir}\\_backup\\" /E /I /Y /EXCLUDE:{app_dir}\\_update_temp\\backup_exclude.txt >nul
 
 echo Preparing directory for new version...
 rem Delete the existing executable and _internal folder to prevent "two server files"
@@ -284,7 +287,7 @@ if exist "{app_dir}\\{exe_name}" del /f /q "{app_dir}\\{exe_name}"
 if exist "{app_dir}\\_internal" rmdir /s /q "{app_dir}\\_internal"
 
 echo Installing new version...
-xcopy "{content_dir}\\*.*" "{app_dir}\\" /E /I /Y /EXCLUDE:{app_dir}\\_update_temp\\exclude.txt >nul
+xcopy "{content_dir}\\*.*" "{app_dir}\\" /E /I /Y /EXCLUDE:{app_dir}\\_update_temp\\update_exclude.txt >nul
 
 echo Cleaning up...
 rmdir /s /q "{app_dir}\\_update_temp"
@@ -322,9 +325,15 @@ exit
 '''
         
         
-        # Create exclusion list (don't backup or overwrite temp/data files)
-        exclude_path = app_dir / '_update_temp' / 'exclude.txt'
-        with open(exclude_path, 'w') as f:
+        # Create backup exclusion list (don't backup temp things, DO backup db/media)
+        backup_exclude_path = app_dir / '_update_temp' / 'backup_exclude.txt'
+        with open(backup_exclude_path, 'w') as f:
+            f.write('\\_update_temp\\\n')
+            f.write('\\_backup\\\n')
+
+        # Create update exclusion list (don't overwrite db/media with blank ones from github)
+        update_exclude_path = app_dir / '_update_temp' / 'update_exclude.txt'
+        with open(update_exclude_path, 'w') as f:
             f.write('\\_update_temp\\\n')
             f.write('\\_backup\\\n')
             f.write('\\db.sqlite3\n')

@@ -4,32 +4,32 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Log in | Admin{% endblock %}</title>
+    <title>{% block title %}{% trans "Log in | Admin" %}{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 <div class="d-flex align-items-center justify-content-center" style="min-height:80vh;">
     <div class="login-card p-4" style="background:#fff; border-radius:8px; max-width:420px; width:100%;">
-        <h2 class="mb-1 align-items-center">Admin Login</h2>
+        <h2 class="mb-1 align-items-center">{% trans "Admin Login" %}</h2>
 
         {% if form.errors %}
-            <div class="alert alert-danger">Invalid credentials, please try again.</div>
+            <div class="alert alert-danger">{% trans "Invalid credentials, please try again." %}</div>
         {% endif %}
 
         <form method="post" class="mb-3">
             {% csrf_token %}
             <div class="mb-3">
-                <input type="text" name="username" class="form-control" placeholder="Username" aria-label="Username" required>
+                <input type="text" name="username" class="form-control" placeholder="{% trans 'Username' %}" aria-label="{% trans 'Username' %}" required>
             </div>
             <div class="mb-3">
-                <input type="password" name="password" class="form-control" placeholder="Password" aria-label="Password" required>
+                <input type="password" name="password" class="form-control" placeholder="{% trans 'Password' %}" aria-label="{% trans 'Password' %}" required>
             </div>
-            <button type="submit" class="btn btn-danger w-100 mb-2">Log In</button>
+            <button type="submit" class="btn btn-danger w-100 mb-2">{% trans "Log In" %}</button>
         </form>
 
         <div class="d-flex gap-2">
-            <a href="{% url 'dashboard' %}" class="btn btn-secondary w-50">Home</a>
-            <a href="/admin/password_reset/" class="btn btn-link w-50">Forgot password?</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary w-50">{% trans "Home" %}</a>
+            <a href="/admin/password_reset/" class="btn btn-link w-50">{% trans "Forgot password?" %}</a>
         </div>
     </div>
 </div>

@@ -1,0 +1,137 @@
+{% load i18n manager_extras %}
+<!-- ══ QUICK FIRE PANEL ══ -->
+<div id="quick-menu-panel-content">
+    {% if request.user.is_superuser %}
+    <!-- Admin Edit Controls -->
+    <div class="mb-4 position-relative z-3">
+        <!-- Floating Toggle Button -->
+        <button class="btn btn-light rounded-circle shadow-sm border border-danger border-opacity-25 d-flex align-items-center justify-content-center p-0" 
+                style="width: 40px; height: 40px; color: var(--bs-danger);"
+                type="button" data-bs-toggle="collapse" data-bs-target="#quickMenuManageCollapse" aria-expanded="false" aria-controls="quickMenuManageCollapse"
+                title="{% trans 'Manage Quick Menu' %}">
+            <i class="bi bi-gear-fill fs-5 qm-toggle-icon" style="transition: transform 0.3s ease;"></i>
+        </button>
+
+        <!-- Collapsible Content -->
+        <div class="collapse position-absolute top-100 start-0 mt-2" id="quickMenuManageCollapse" style="min-width: 320px;">
+            <div class="card card-body bg-white rounded-4 shadow-lg border border-danger border-opacity-25" style="border-style: dashed !important;">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="fw-bold mb-0 text-dark small text-uppercase">{% trans "Manage Quick Menu" %}</h6>
+                    <span class="badge bg-danger">{% trans "Admin Only" %}</span>
+                </div>
+                
+                <!-- Add Item Form -->
+                <div class="d-flex flex-column gap-2">
+                    <select class="form-select form-select-sm rounded-pill fw-bold border-secondary border-opacity-25 bg-light w-100" id="quick-menu-add-select">
+                        <option value="" selected disabled>{% trans "Select an item to add..." %}</option>
+                        {% for item in all_items %}
+                        <option value="{{ item.id }}">{{ item.name|translate_text }} ({{ item.price|floatformat:0 }} EGP)</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-dark rounded-pill fw-bold px-3 shadow-sm w-100"
+                            onclick="addQuickMenuItem()">
+                        <i class="bi bi-plus-lg me-1"></i>{% trans "Add to Quick Menu" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        [data-bs-target="#quickMenuManageCollapse"][aria-expanded="true"] .qm-toggle-icon {
+            transform: rotate(90deg);
+        }
+    </style>
+    <script>
+        function addQuickMenuItem() {
+            const select = document.getElementById('quick-menu-add-select');
+            const itemId = select.value;
+            if (!itemId) return;
+            
+            htmx.ajax('POST', `/quick-menu/add/${itemId}/`, {
+                target: '#quick-menu-panel-content',
+                swap: 'outerHTML',
+                values: {
+                    'csrfmiddlewaretoken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'table_id': '{{ table.id }}'
+                }
+            });
+        }
+    </script>
+    {% endif %}
+
+    {% if quick_menu_items %}
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 pb-5">
+        {% for qm in quick_menu_items %}
+        <div class="col position-relative">
+            <!-- QF card — same cinema layout as regular cards -->
+            <div class="card h-100 border-0 shadow-sm overflow-hidden cursor-pointer qf-card position-relative"
+                 style="border-radius: 16px; background-color: #1a1a2e; min-height: 160px;"
+                 data-id="{{ qm.item.id }}"
+                 data-name="{{ qm.item.name|escapejs }}"
+                 data-price="{{ qm.item.price|stringformat:'.2f' }}"
+                 onclick="window.cartManager.add(this.dataset.id, this.dataset.name, this.dataset.price, this)">
+
+                <!-- Background image / gradient -->
+                <div class="position-absolute w-100 h-100 top-0 start-0"
+                     {% if qm.item.image %}style="background-image: url('{{ qm.item.image.url }}'); background-size: cover; background-position: center;"
+                     {% else %}style="background: linear-gradient(135deg, #0f3460 0%, #533483 100%);"{% endif %}>
+                </div>
+
+                <!-- ⚡ badge -->
+                <div class="position-absolute top-0 start-0 m-2" style="z-index:6;">
+                    <span class="badge rounded-pill" style="background: rgba(255,193,7,0.9); color:#000; font-size:0.6rem; padding:0.25em 0.5em;">
+                        <i class="bi bi-lightning-fill"></i>
+                    </span>
+                </div>
+
+                <!-- Qty badge -->
+                <span class="card-qty-badge position-absolute top-0 end-0 m-2 badge rounded-pill bg-danger border border-white shadow scale-in d-none"
+                      style="z-index: 5; font-size: 0.9rem; padding: 0.35em 0.6em;" id="badge-{{ qm.item.id }}">0</span>
+
+                <!-- Bottom gradient + content -->
+                <div class="position-absolute bottom-0 w-100 d-flex flex-column justify-content-end p-3"
+                     style="height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0) 100%); z-index: 2;">
+                    <div class="d-flex justify-content-between align-items-end w-100">
+                        <div class="text-white fw-bold lh-sm text-shadow text-truncate-2 small pe-2" style="font-size: 0.9rem; letter-spacing: 0.3px;">
+                            {{ qm.item.name|translate_text }}
+                        </div>
+                        <div class="text-warning fw-bold fs-5 lh-1 text-shadow">
+                            {{ qm.item.price|floatformat:0|translate_numbers }}
+                            <span class="text-white-50 fs-xs d-block text-end" style="font-size: 0.6rem;">{% trans "EGP" %}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if request.user.is_superuser %}
+            <!-- Remove Button Overlay for Admin -->
+            <button class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 m-1 shadow" 
+                    style="z-index: 10; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;"
+                    title="{% trans 'Remove from Quick Menu' %}"
+                    hx-post="{% url 'remove_quick_menu_item' qm.item.id %}"
+                    hx-vals='{"table_id": "{{ table.id }}"}'
+                    hx-target="#quick-menu-panel-content"
+                    hx-swap="outerHTML"
+                    onclick="event.stopPropagation();">
+                <i class="bi bi-x mb-0 pb-0" style="line-height: 1;"></i>
+            </button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty state when there are no quick menu items configured -->
+    <div class="d-flex flex-column align-items-center justify-content-center text-muted py-5 opacity-75">
+        <i class="bi bi-lightning fs-1 mb-3 text-warning"></i>
+        <div class="fw-bold mb-1">{% trans "No Quick Menu items yet" %}</div>
+        <div class="small text-center">
+            {% if request.user.is_superuser %}
+                {% trans "Use the controls above to add items to the Quick Menu." %}
+            {% else %}
+                {% trans "The administrator hasn't added any quick items." %}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>

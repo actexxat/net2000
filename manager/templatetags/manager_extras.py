@@ -72,3 +72,10 @@ def sum_values(queryset, field_name):
             # Handle cases where value might not be directly convertible to Decimal
             pass
     return total
+
+@register.filter
+def in_list(value, list_obj):
+    """Checks if value is in list_obj."""
+    if list_obj is None:
+        return False
+    return value in list_obj

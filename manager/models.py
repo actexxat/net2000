@@ -196,6 +196,22 @@ class QuickFireItem(models.Model):
     def __str__(self):
         return _("%s (Order %s)") % (self.item.name, self.order)
 
+class QuickMenuItem(models.Model):
+    """
+    Items shown in the ⚡ Quick tab of the Add-Order modal.
+    Completely separate from QuickFireItem (the dashboard bar).
+    """
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='quick_menu_entries', verbose_name=_("Item"))
+    order = models.PositiveIntegerField(default=0, verbose_name=_("Order"))
+
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name = _("Quick Menu Item")
+        verbose_name_plural = _("Quick Menu Items")
+
+    def __str__(self):
+        return _("%s (slot %s)") % (self.item.name, self.order)
+
 class ActionLog(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("User"))
     action_type = models.CharField(max_length=50, verbose_name=_("Action Type")) # 'ORDER', 'PRINT', 'COPY', 'CHECKIN', 'CHECKOUT', etc.

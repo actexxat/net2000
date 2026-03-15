@@ -34,7 +34,6 @@
                         <span class="badge bg-danger rounded-pill" id="live-order-badge">
                            {{ table.orders|length|translate_numbers }}
                         </span>
-
                     </button>
                 </div>
             </div>
@@ -46,8 +45,20 @@
                         
                         <!-- Top Tabs -->
                         <div class="d-flex gap-2 pb-3 sticky-top bg-light" style="z-index: 10; overflow-x: auto; padding-top: 5px;">
-                            <button class="btn btn-dark rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm transition-all" 
+
+                            <!-- ⚡ Quick Fire tab — always first -->
+                            <button class="btn btn-dark rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm transition-all d-flex align-items-center gap-1"
+                                    id="qf-tab-btn"
+                                    onclick="showQuickFireTab(this)">
+                                <i class="bi bi-lightning-fill" style="font-size:0.85rem;"></i>
+                                {% trans "Quick" %}
+                            </button>
+
+                            <!-- All items tab -->
+                            <button class="btn btn-white border text-dark bg-white rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm transition-all" 
                                     onclick="filterCategoryDynamic('all', this)">{% trans "All" %}</button>
+
+                            <!-- Category tabs -->
                             {% for category in grouped_items %}
                             {% if category != "Services" %}
                             <button class="btn btn-white border text-dark bg-white rounded-pill px-4 fw-bold tab-btn-dynamic shadow-sm transition-all" 
@@ -56,8 +67,13 @@
                             {% endfor %}
                         </div>
 
-                        <!-- Grid -->
-                        <div id="menu-container-dynamic" class="pb-5 select-none">
+                        <!-- ══ QUICK FIRE PANEL ══ -->
+                        <div id="quick-fire-panel">
+                            {% include "manager/partials/modals/quick_menu_panel.html" %}
+                        </div>
+
+                        <!-- ══ FULL MENU PANEL ══ -->
+                        <div id="menu-container-dynamic" class="pb-5 select-none" style="display:none;">
                             {% for category, cat_items in grouped_items.items %}
                             {% if category != "Services" %}
                             <div class="mb-5 category-section" data-category="{{ category|slugify }}">
@@ -168,6 +184,7 @@
                             {% endif %}
                             {% endfor %}
                         </div>
+
                     </div>
 
                     <!-- Cart Side (Right) -->
@@ -252,10 +269,18 @@
     .card-backdrop { transition: background 0.2s; }
     .item-card-dynamic:active .card-backdrop { background-color: rgba(220, 53, 69, 0.2) !important; }
     .item-card-dynamic:active { transform: scale(0.98); }
+    .qf-card:active { transform: scale(0.97); }
     
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
     .shadow-up { box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
+
+    /* Quick Fire tab active glow */
+    #qf-tab-btn.btn-dark {
+        background: linear-gradient(135deg, #1a1a2e, #0f3460) !important;
+        border-color: transparent !important;
+        box-shadow: 0 4px 15px rgba(83,52,131,0.4) !important;
+    }
 </style>
 
 <script>
@@ -308,14 +333,13 @@
                 let html = '';
                 let hiddenHtml = '';
 
-                // Reset Badges
+                // Reset Badges (both panels)
                 document.querySelectorAll('.card-qty-badge').forEach(b => {
                     b.classList.add('d-none');
                     b.innerText = '0';
-                    // Reset overlay color if needed
                 });
 
-                const sortedIds = Object.keys(this.items).sort(); // Keep order stable
+                const sortedIds = Object.keys(this.items).sort();
                 
                 if (sortedIds.length === 0) {
                     container.innerHTML = `
@@ -332,7 +356,7 @@
                         total += (item.qty * item.price);
                         count += item.qty;
 
-                        // Update Card Badge
+                        // Update Card Badge (works for both QF panel and full-menu panel)
                         const badgeEl = document.getElementById(`badge-${id}`);
                         if(badgeEl) {
                             badgeEl.classList.remove('d-none');
@@ -364,8 +388,7 @@
                             </div>
                         </li>`;
 
-                        // Hidden Inputs (Repeated for backend compatibility or grouped if backend supports)
-                        // Current backend expects 'item_ids' list. We duplicate ID qty times.
+                        // Hidden Inputs
                         for(let i=0; i<item.qty; i++) {
                             hiddenHtml += `<input type="hidden" name="item_ids" value="${id}">`;
                         }
@@ -381,63 +404,41 @@
             }
         };
 
-        // --- 2. Enhanced Search & UX ---
-        
-        // Global focus on type
-        document.addEventListener('keydown', function(e) {
-            const modal = document.getElementById('orderModal');
-            if (!modal || modal.classList.contains('show') === false) return;
-            
-            // If typing a-z or 0-9 and not focused on input
-            if (e.key.length === 1 && document.activeElement.tagName !== 'INPUT') {
-                const search = document.getElementById('itemSearchDynamic');
-                if(search) {
-                    search.focus();
-                    // Let the key press populate the input naturally? 
-                    // Usually better to prevent default if handling manual append, 
-                    // but focusing works for subsequent chars.
-                }
-            }
-        });
+        // --- 2. Tab Switching ---
+        const qfPanel  = document.getElementById('quick-fire-panel');
+        const menu     = document.getElementById('menu-container-dynamic');
 
-        // Initialize Modal
-        const modalEl = document.getElementById('orderModal');
-        if (modalEl) {
-             const myModal = new bootstrap.Modal(modalEl);
-             myModal.show();
-             modalEl.addEventListener('shown.bs.modal', function () {
-                 const s = document.getElementById('itemSearchDynamic');
-                 if(s) s.focus();
-             });
-             modalEl.addEventListener('hidden.bs.modal', function () {
-                 myModal.dispose();
-                 modalEl.remove();
-                 document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
-                 document.body.classList.remove('modal-open');
-                 document.body.style.overflow = '';
-                 document.body.style.paddingRight = '';
-             });
-        }
-        
-        // --- 3. Filter/Search Logic ---
-         window.searchItemsDynamic = function() {
-            const query = document.getElementById('itemSearchDynamic').value.toLowerCase();
-            const itemCols = document.querySelectorAll('#menu-container-dynamic .col');
-            itemCols.forEach(col => {
-                col.style.display = col.innerText.toLowerCase().includes(query) ? 'block' : 'none';
+        // Show Quick Fire panel, hide full menu
+        window.showQuickFireTab = function(btn) {
+            qfPanel.style.display = 'block';
+            menu.style.display    = 'none';
+
+            // Clear search
+            const s = document.getElementById('itemSearchDynamic');
+            if(s) s.value = '';
+
+            // Highlight button
+            document.querySelectorAll('.tab-btn-dynamic').forEach(b => {
+                b.classList.remove('btn-dark');
+                b.classList.add('btn-white', 'border', 'text-dark', 'bg-white');
             });
-            document.querySelectorAll('.category-section').forEach(sec => {
-                let visible = Array.from(sec.querySelectorAll('.col')).some(c => c.style.display !== 'none');
-                sec.style.display = visible ? 'block' : 'none';
-            });
+            btn.classList.add('btn-dark');
+            btn.classList.remove('btn-white', 'border', 'text-dark', 'bg-white');
         };
 
+        // Show full menu, hide QF panel
         window.filterCategoryDynamic = function(slug, btn) {
+            qfPanel.style.display = 'none';
+            menu.style.display    = 'block';
+
             document.getElementById('itemSearchDynamic').value = '';
             document.querySelectorAll('.tab-btn-dynamic').forEach(b => {
-                 b.classList.remove('btn-dark'); b.classList.add('btn-white'); 
+                b.classList.remove('btn-dark');
+                b.classList.add('btn-white', 'border', 'text-dark', 'bg-white');
             });
-            btn.classList.remove('btn-white'); btn.classList.add('btn-dark');
+            btn.classList.add('btn-dark');
+            btn.classList.remove('btn-white', 'border', 'text-dark', 'bg-white');
+
             document.querySelectorAll('.category-section').forEach(sec => {
                 if (slug === 'all' || sec.dataset.category === slug) {
                     sec.style.display = 'block';
@@ -448,5 +449,67 @@
             });
         };
 
+        // --- 3. Search (only applies when full menu visible) ---
+        window.searchItemsDynamic = function() {
+            const query = document.getElementById('itemSearchDynamic').value.toLowerCase();
+            if(query && qfPanel.style.display !== 'none') {
+                // Automatically switch to All tab when searching
+                qfPanel.style.display = 'none';
+                menu.style.display    = 'block';
+                document.querySelectorAll('.category-section').forEach(s => {
+                    s.style.display = 'block';
+                    s.querySelectorAll('.col').forEach(c => c.style.display = 'block');
+                });
+                // Activate "All" button visually
+                document.querySelectorAll('.tab-btn-dynamic').forEach(b => {
+                    b.classList.remove('btn-dark');
+                    b.classList.add('btn-white', 'border', 'text-dark', 'bg-white');
+                });
+                const allBtn = document.querySelector('.tab-btn-dynamic:nth-child(2)');
+                if(allBtn) { allBtn.classList.add('btn-dark'); allBtn.classList.remove('btn-white', 'border', 'text-dark', 'bg-white'); }
+            }
+            const itemCols = document.querySelectorAll('#menu-container-dynamic .col');
+            itemCols.forEach(col => {
+                col.style.display = col.innerText.toLowerCase().includes(query) ? 'block' : 'none';
+            });
+            document.querySelectorAll('.category-section').forEach(sec => {
+                let visible = Array.from(sec.querySelectorAll('.col')).some(c => c.style.display !== 'none');
+                sec.style.display = visible ? 'block' : 'none';
+            });
+        };
+
+        // --- 4. Global keyboard focus-to-search ---
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('orderModal');
+            if (!modal || !modal.classList.contains('show')) return;
+            if (e.key.length === 1 && document.activeElement.tagName !== 'INPUT') {
+                const search = document.getElementById('itemSearchDynamic');
+                if(search) search.focus();
+            }
+        });
+
+        // --- 5. Init Modal & activate Quick Fire tab by default ---
+        const modalEl = document.getElementById('orderModal');
+        if (modalEl) {
+            const myModal = new bootstrap.Modal(modalEl);
+            myModal.show();
+            modalEl.addEventListener('shown.bs.modal', function () {
+                // Activate Quick Fire tab on open
+                const qfBtn = document.getElementById('qf-tab-btn');
+                if(qfBtn) showQuickFireTab(qfBtn);
+                // Scroll to top
+                const scrollArea = document.getElementById('menu-scroll-area');
+                if(scrollArea) scrollArea.scrollTop = 0;
+            });
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                myModal.dispose();
+                modalEl.remove();
+                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            });
+        }
+        
     })();
 </script>

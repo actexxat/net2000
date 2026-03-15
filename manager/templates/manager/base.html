@@ -234,18 +234,7 @@
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="button" 
-                                class="btn btn-dark w-100 fw-bold border-opacity-25 py-2 rounded-3 text-start px-3 d-flex align-items-center justify-content-between scale-hover mb-2"
-                                hx-get="{% url 'change_password' %}"
-                                hx-target="#password-modal-container"
-                                data-bs-toggle="modal"
-                                data-bs-target="#passwordModal"
-                                style="font-size: 0.85rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
-                            <div>
-                                <i class="bi bi-shield-lock-fill me-2 text-primary"></i>{% trans "Security Settings" %}
-                            </div>
-                            <i class="bi bi-chevron-right small opacity-50"></i>
-                        </button>
+
                         {% if user.is_superuser %}
                         <a href="/admin" class="btn btn-danger fw-bold border-0 shadow-sm py-2 rounded-3" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
                             <i class="bi bi-gear me-2"></i>{% trans "Admin Panel" %}
@@ -288,6 +277,9 @@
     </div>
     <div id="notification-stack"></div>
     <div id="log-modal-container"></div>
+    <div id="quickfire-modal-container"></div>
+    <div id="service-modal-container"></div>
+    <div id="checkout-modal-container"></div>
 
     <!-- Styled Confirmation Modal -->
     <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
@@ -329,13 +321,7 @@
 
     <!-- Update Modal -->
     <!-- Password Modal -->
-    <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div id="password-modal-container" class="w-100">
-                <!-- Content loaded via HTMX -->
-            </div>
-        </div>
-    </div>
+
     <div class="modal fade" id="updateModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">

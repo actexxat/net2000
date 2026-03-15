@@ -1,0 +1,248 @@
+{% load i18n static manager_extras %}
+<!-- Full Screen Quickfire Overlay -->
+<div id="qf-overlay" class="qf-fullscreen-overlay d-flex flex-column" style="display: flex !important;">
+    <!-- Modern Fixed Header -->
+    <div class="qf-header p-4 shadow-sm">
+        <div class="container-fluid max-w-lg">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="qf-logo-box rounded-circle d-flex align-items-center justify-content-center shadow-red" style="width: 56px; height: 56px; background: #dc2626;">
+                        <i class="bi bi-lightning-fill fs-3 text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="fw-900 text-white mb-0 mt-1">{% trans "Quickfire Center" %}</h3>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <span class="badge bg-white bg-opacity-10 text-white text-uppercase tracking-widest fw-bold" style="font-size: 0.6rem;">{% trans "Control Panel" %}</span>
+                            <span id="global-selected-count" class="badge bg-primary rounded-pill fw-bold" style="font-size: 0.7rem;">
+                                {{ current_quick_ids|length }} {% trans "PINNED" %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" class="btn btn-primary d-none d-md-flex align-items-center gap-2 rounded-pill px-4 fw-800" onclick="closeQuickfireOverlay()">
+                        <i class="bi bi-check2-circle fs-5"></i> {% trans "Done" %}
+                    </button>
+                    <button type="button" class="btn btn-outline-light rounded-circle p-2 border-opacity-25 hover-scale" onclick="closeQuickfireOverlay()">
+                        <i class="bi bi-x-lg fs-5"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="position-relative">
+                <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-white text-opacity-50 fs-5"></i>
+                <input type="text" id="qf-search" class="form-control bg-white bg-opacity-10 border-0 text-white ps-5 py-3 rounded-4 fs-5" 
+                       placeholder="{% trans 'Search for an item or category...' %}" autocomplete="off"
+                       onkeyup="filterQuickfireItems(this.value)">
+                <!-- Clear Button for Search -->
+                <button type="button" class="btn btn-link position-absolute top-50 end-0 translate-middle-y me-2 text-white text-opacity-25" 
+                        onclick="document.getElementById('qf-search').value=''; filterQuickfireItems('')">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scrollable Content -->
+    <div class="qf-body flex-grow-1 p-4 custom-scrollbar" style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);">
+        <div class="container-fluid max-w-lg">
+
+            <!-- Pinned Items - Order Management Section -->
+            <div id="qf-pinned-section-container">
+                {% include 'manager/partials/modals/quickfire_pinned_section.html' %}
+            </div>
+
+            <!-- Section Divider -->
+            <div class="d-flex align-items-center gap-3 mb-5">
+                <div class="flex-grow-1 border-bottom border-dark border-opacity-10"></div>
+                <span class="badge bg-dark bg-opacity-10 text-dark fw-bold small px-3 py-2 rounded-pill text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">
+                    <i class="bi bi-grid-3x3-gap me-1"></i>{% trans "All Items" %}
+                </span>
+                <div class="flex-grow-1 border-bottom border-dark border-opacity-10"></div>
+            </div>
+            <div id="qf-no-results" class="text-center py-5 d-none">
+                <div class="bg-white rounded-circle d-inline-flex align-items-center justify-content-center mb-4 shadow-sm" style="width: 100px; height: 100px;">
+                    <i class="bi bi-search fs-1 text-muted opacity-25"></i>
+                </div>
+                <h4 class="text-dark fw-800 mb-2">{% trans "No items found" %}</h4>
+                <p class="text-muted">{% trans "Try searching for a different name or category." %}</p>
+                <button type="button" class="btn btn-outline-primary rounded-pill mt-2" onclick="document.getElementById('qf-search').value=''; filterQuickfireItems('')">
+                    {% trans "Clear Search" %}
+                </button>
+            </div>
+
+            {% for category, items in grouped_items.items %}
+                <div class="qf-category-section mb-5" data-category="{{ category|translate_text }}">
+                    <div class="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom border-dark border-opacity-10">
+                        <div class="d-flex align-items-center gap-3">
+                            <h5 class="fw-800 text-dark mb-0 text-uppercase tracking-tighter" style="letter-spacing: -0.5px;">
+                                {{ category|translate_text }}
+                            </h5>
+                            <span class="badge rounded-pill bg-dark bg-opacity-5 text-dark fw-bold px-2 py-1" style="font-size: 0.65rem;">
+                                {{ items|length }} {% trans "Items" %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+                        {% for item in items %}
+                        <div class="col qf-item-col" data-name="{{ item.name|lower }} {{ item.name|translate_text|lower }}">
+                            <div id="qf-selector-{{ item.id }}" class="h-100 selection-card-wrapper transition-all">
+                                {% include 'manager/partials/quickfire_item_selector_btn.html' with is_active=item.id|in_list:current_quick_ids %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Fixed Footer -->
+    <div class="qf-footer p-4 border-top bg-white d-flex justify-content-center shadow-lg-up">
+        <button type="button" class="btn btn-primary btn-lg rounded-pill px-5 fw-800 shadow-red" onclick="closeQuickfireOverlay()">
+            {% trans "Finish & Return" %}
+        </button>
+    </div>
+</div>
+
+<script>
+    function filterQuickfireItems(query) {
+        const q = query.toLowerCase().trim();
+        const items = document.querySelectorAll('.qf-item-col');
+        const categories = document.querySelectorAll('.qf-category-section');
+        let totalVisible = 0;
+
+        categories.forEach(cat => {
+            let catVisible = 0;
+            const catItems = cat.querySelectorAll('.qf-item-col');
+            
+            catItems.forEach(item => {
+                const name = item.dataset.name;
+                if (name.includes(q)) {
+                    item.style.display = 'block';
+                    catVisible++;
+                    totalVisible++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            if (catVisible > 0) {
+                cat.style.display = 'block';
+            } else {
+                cat.style.display = 'none';
+            }
+        });
+
+        const noResults = document.getElementById('qf-no-results');
+        if (totalVisible === 0) {
+            noResults.classList.remove('d-none');
+        } else {
+            noResults.classList.add('d-none');
+        }
+    }
+
+    function closeQuickfireOverlay() {
+        const overlay = document.getElementById('qf-overlay');
+        if (overlay) {
+            overlay.classList.add('fading-out');
+            setTimeout(() => {
+                const container = document.getElementById('quickfire-modal-container');
+                if (container) container.innerHTML = '';
+                document.body.style.overflow = '';
+            }, 250);
+        }
+    }
+
+    (function() {
+        console.log('Quickfire full-screen overlay active');
+        document.body.style.overflow = 'hidden';
+        
+        // Focus search bar
+        setTimeout(() => {
+            const search = document.getElementById('qf-search');
+            if(search) search.focus();
+        }, 100);
+
+        // Auto-close on Esc
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeQuickfireOverlay();
+            }
+        }, { once: true });
+    })();
+</script>
+
+<style>
+    .qf-fullscreen-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #f8fafc;
+        z-index: 9999;
+        animation: qfFadeIn 0.3s ease-out;
+    }
+    
+    .qf-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: white;
+    }
+    
+    .qf-body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .max-w-lg {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .fading-out {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.25s ease-in;
+    }
+
+    @keyframes qfFadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    .qf-card {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        border: 2px solid transparent;
+        background: #ffffff;
+        min-height: 64px;
+        height: 100%;
+    }
+    
+    .shadow-lg-up {
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
+    }
+    
+    .qf-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.06) !important;
+    }
+    
+    .qf-card.active {
+        border-color: var(--color-primary);
+        background: #eff6ff;
+    }
+    
+    .qf-card.active .bi-check-circle-fill {
+        color: var(--color-primary);
+    }
+</style>
